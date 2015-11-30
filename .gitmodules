@@ -1,0 +1,3 @@
+[submodule "src/github.com/astaxie/beego"]
+	path = src/github.com/astaxie/beego
+	url = git@github.com:astaxie/beego.git
