@@ -1,3 +1,12 @@
 [submodule "src/github.com/astaxie/beego"]
 	path = src/github.com/astaxie/beego
 	url = git@github.com:astaxie/beego.git
+[submodule "src/github.com/PuerkitoBio/goquery"]
+	path = src/github.com/PuerkitoBio/goquery
+	url = git@github.com:PuerkitoBio/goquery.git
+[submodule "src/github.com/twinj/uuid"]
+	path = src/github.com/twinj/uuid
+	url = git@github.com:twinj/uuid.git
+[submodule "src/golang.org/x/net"]
+	path = src/golang.org/x/net
+	url = git@github.com:golang/net.git
