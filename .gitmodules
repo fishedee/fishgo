@@ -10,3 +10,6 @@
 [submodule "src/golang.org/x/net"]
 	path = src/golang.org/x/net
 	url = git@github.com:golang/net.git
+[submodule "src/github.com/jinzhu/gorm"]
+	path = src/github.com/jinzhu/gorm
+	url = git@github.com:jinzhu/gorm.git
