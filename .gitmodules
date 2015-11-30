@@ -13,3 +13,9 @@
 [submodule "src/github.com/jinzhu/gorm"]
 	path = src/github.com/jinzhu/gorm
 	url = git@github.com:jinzhu/gorm.git
+[submodule "src/github.com/go-sql-driver/mysql"]
+	path = src/github.com/go-sql-driver/mysql
+	url = git@github.com:go-sql-driver/mysql.git
+[submodule "src/github.com/garyburd/redigo"]
+	path = src/github.com/garyburd/redigo
+	url = git@github.com:garyburd/redigo.git
