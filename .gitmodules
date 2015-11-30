@@ -19,3 +19,21 @@
 [submodule "src/github.com/garyburd/redigo"]
 	path = src/github.com/garyburd/redigo
 	url = git@github.com:garyburd/redigo.git
+[submodule "src/github.com/beego/bee"]
+	path = src/github.com/beego/bee
+	url = git@github.com:beego/bee.git
+[submodule "src/github.com/howeyc/fsnotify"]
+	path = src/github.com/howeyc/fsnotify
+	url = git@github.com:howeyc/fsnotify.git
+[submodule "src/github.com/lib/pq"]
+	path = src/github.com/lib/pq
+	url = git@github.com:lib/pq.git
+[submodule "src/github.com/smartystreets/goconvey"]
+	path = src/github.com/smartystreets/goconvey
+	url = git@github.com:smartystreets/goconvey.git
+[submodule "src/github.com/jtolds/gls"]
+	path = src/github.com/jtolds/gls
+	url = git@github.com:jtolds/gls.git
+[submodule "src/github.com/smartystreets/assertions"]
+	path = src/github.com/smartystreets/assertions
+	url = git@github.com:smartystreets/assertions.git
