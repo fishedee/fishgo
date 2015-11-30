@@ -67,3 +67,18 @@
 [submodule "src/github.com/gin-gonic/gin"]
 	path = src/github.com/gin-gonic/gin
 	url = git@github.com:gin-gonic/gin.git
+[submodule "src/gopkg.in/natefinch/lumberjack.v2"]
+	path = src/gopkg.in/natefinch/lumberjack.v2
+	url = https://gopkg.in/natefinch/lumberjack.v2
+[submodule "src/github.com/coocood/freecache"]
+	path = src/github.com/coocood/freecache
+	url = git@github.com:coocood/freecache.git
+[submodule "src/github.com/mholt/caddy"]
+	path = src/github.com/mholt/caddy
+	url = git@github.com:mholt/caddy.git
+[submodule "src/github.com/flynn/go-shlex"]
+	path = src/github.com/flynn/go-shlex
+	url = git@github.com:flynn-archive/go-shlex.git
+[submodule "src/github.com/spaolacci/murmur3"]
+	path = src/github.com/spaolacci/murmur3
+	url = git@github.com:spaolacci/murmur3.git
