@@ -49,6 +49,9 @@
 [submodule "src/github.com/gorilla/securecookie"]
 	path = src/github.com/gorilla/securecookie
 	url = git@github.com:gorilla/securecookie.git
+[submodule "src/github.com/gorilla/sessions"]
+	path = src/github.com/gorilla/sessions
+	url = git@github.com:gorilla/sessions.git
 [submodule "src/github.com/manucorporat/sse"]
 	path = src/github.com/manucorporat/sse
 	url = git@github.com:manucorporat/sse.git
