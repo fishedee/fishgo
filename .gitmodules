@@ -58,3 +58,9 @@
 [submodule "src/github.com/qor/inflection"]
 	path = src/github.com/qor/inflection
 	url = git@github.com:qor/inflection.git
+[submodule "src/gopkg.in/bluesuncorp/validator.v5"]
+	path = src/gopkg.in/bluesuncorp/validator.v5
+	url = https://gopkg.in/bluesuncorp/validator.v5
+[submodule "src/github.com/gin-gonic/gin"]
+	path = src/github.com/gin-gonic/gin
+	url = git@github.com:gin-gonic/gin.git
