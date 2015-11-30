@@ -37,3 +37,24 @@
 [submodule "src/github.com/smartystreets/assertions"]
 	path = src/github.com/smartystreets/assertions
 	url = git@github.com:smartystreets/assertions.git
+[submodule "src/github.com/andybalholm/cascadia"]
+	path = src/github.com/andybalholm/cascadia
+	url = git@github.com:andybalholm/cascadia.git
+[submodule "src/github.com/yvasiyarov/php_session_decoder"]
+	path = src/github.com/yvasiyarov/php_session_decoder
+	url = git@github.com:yvasiyarov/php_session_decoder.git
+[submodule "src/github.com/gorilla/context"]
+	path = src/github.com/gorilla/context
+	url = git@github.com:gorilla/context.git
+[submodule "src/github.com/gorilla/securecookie"]
+	path = src/github.com/gorilla/securecookie
+	url = git@github.com:gorilla/securecookie.git
+[submodule "src/github.com/manucorporat/sse"]
+	path = src/github.com/manucorporat/sse
+	url = git@github.com:manucorporat/sse.git
+[submodule "src/github.com/mattn/go-colorable"]
+	path = src/github.com/mattn/go-colorable
+	url = git@github.com:mattn/go-colorable.git
+[submodule "src/github.com/qor/inflection"]
+	path = src/github.com/qor/inflection
+	url = git@github.com:qor/inflection.git
