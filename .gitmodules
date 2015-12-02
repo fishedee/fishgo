@@ -82,3 +82,6 @@
 [submodule "src/github.com/spaolacci/murmur3"]
 	path = src/github.com/spaolacci/murmur3
 	url = git@github.com:spaolacci/murmur3.git
+[submodule "src/github.com/go-errors/errors"]
+	path = src/github.com/go-errors/errors
+	url = git@github.com:go-errors/errors.git
