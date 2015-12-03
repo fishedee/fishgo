@@ -22,9 +22,13 @@ func (this *BeegoValidateController)Finish(){
 
 func (this *BeegoValidateController)runMethod(method reflect.Value,arguments []reflect.Value)(result []reflect.Value){
 	defer language.Catch(func(exception language.Exception){
+		Log.Error(exception.GetStackTrace())
 		result = []reflect.Value{reflect.ValueOf(exception)}
 	})
 	result = method.Call(arguments)
+	if len(result) == 0 {
+		result = []reflect.Value{reflect.ValueOf(nil)}
+	}
 	return
 }
 
