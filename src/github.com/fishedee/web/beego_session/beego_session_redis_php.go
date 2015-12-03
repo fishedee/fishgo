@@ -30,7 +30,7 @@
 //	}
 //
 // more docs: http://beego.me/docs/module/session.md
-package web
+package beegon_session
 
 import (
 	"net/http"
@@ -39,9 +39,8 @@ import (
 	"sync"
 
 	"github.com/astaxie/beego/session"
-
 	"github.com/garyburd/redigo/redis"
-	"github.com/yvasiyarov/php_session_decoder"
+	"github.com/fishedee/encoding"
 )
 
 var redispder = &RedisProvider{}
@@ -105,10 +104,7 @@ func (rs *RedisSessionStore) SessionRelease(w http.ResponseWriter) {
 	c := rs.p.Get()
 	defer c.Close()
 
-	data := make(php_session_decoder.PhpSession)
-	data["userId"] = rs.values["userId"]
-	encoder := php_session_decoder.NewPhpEncoder(data)
-	b, err := encoder.Encode()
+	b, err := encoding.EncodePhp(rs.values)
 	if err != nil {
 		return
 	}
@@ -182,21 +178,19 @@ func (rp *RedisProvider) SessionInit(maxlifetime int64, savePath string) error {
 
 // read redis session by sid
 func (rp *RedisProvider) SessionRead(sid string) (session.SessionStore, error) {
+	sid = "ci_session:" + sid
+
 	c := rp.poollist.Get()
 	defer c.Close()
-	kvs, err := redis.String(c.Do("GET", "ci_session:"+sid))
-	if err != nil {
-		return nil, err
-	}
+
+	kvs, err := redis.String(c.Do("GET", sid))
 	var kv map[interface{}]interface{}
 	if len(kvs) == 0 {
 		kv = make(map[interface{}]interface{})
 	} else {
-		decoder := php_session_decoder.NewPhpDecoder(kvs)
-		if sessionDataDecoded, err := decoder.Decode(); err == nil {
-			kv = map[interface{}]interface{}{
-				"userId": sessionDataDecoded["userId"],
-			}
+		kv, err = encoding.DecodePhp([]byte(kvs))
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -206,10 +200,10 @@ func (rp *RedisProvider) SessionRead(sid string) (session.SessionStore, error) {
 
 // check redis session exist by sid
 func (rp *RedisProvider) SessionExist(sid string) bool {
+	sid = "ci_session:" + sid
+
 	c := rp.poollist.Get()
 	defer c.Close()
-
-	sid = "ci_session:" + sid
 
 	if existed, err := redis.Int(c.Do("EXISTS", sid)); err != nil || existed == 0 {
 		return false
@@ -220,6 +214,9 @@ func (rp *RedisProvider) SessionExist(sid string) bool {
 
 // generate new sid for redis session
 func (rp *RedisProvider) SessionRegenerate(oldsid, sid string) (session.SessionStore, error) {
+	oldsid = "ci_session:" + oldsid
+	sid = "ci_session:" + sid
+
 	c := rp.poollist.Get()
 	defer c.Close()
 
@@ -233,19 +230,14 @@ func (rp *RedisProvider) SessionRegenerate(oldsid, sid string) (session.SessionS
 		c.Do("EXPIRE", sid, rp.maxlifetime)
 	}
 
-	kvs, err := redis.String(c.Do("GET", "ci_session:"+sid))
-	if err != nil {
-		return nil, err
-	}
+	kvs, err := redis.String(c.Do("GET", sid))
 	var kv map[interface{}]interface{}
 	if len(kvs) == 0 {
 		kv = make(map[interface{}]interface{})
 	} else {
-		decoder := php_session_decoder.NewPhpDecoder(kvs)
-		if sessionDataDecoded, err := decoder.Decode(); err == nil {
-			kv = map[interface{}]interface{}{
-				"userId": sessionDataDecoded["userId"],
-			}
+		kv, err = encoding.DecodePhp([]byte(kvs))
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -255,6 +247,8 @@ func (rp *RedisProvider) SessionRegenerate(oldsid, sid string) (session.SessionS
 
 // delete redis session by id
 func (rp *RedisProvider) SessionDestroy(sid string) error {
+	sid = "ci_session:" + sid
+
 	c := rp.poollist.Get()
 	defer c.Close()
 
@@ -273,5 +267,5 @@ func (rp *RedisProvider) SessionAll() int {
 }
 
 func init() {
-	session.Register("phpRedis", redispder)
+	session.Register("redisphp", redispder)
 }

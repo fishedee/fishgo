@@ -21,7 +21,7 @@ func InitEnumStruct( this interface{} ){
 
 		singleFieldName := singleField.Name
 		singleFieldTag := singleField.Tag.Get("enum")
-		singleFieldTagArray := strings.Split(singleFieldTag,";")
+		singleFieldTagArray := strings.Split(singleFieldTag,",")
 		if len(singleFieldTagArray) != 2{
 			continue
 		}
