@@ -27,7 +27,7 @@ func (this *BeegoValidateController)runMethod(method reflect.Value,arguments []r
 	})
 	result = method.Call(arguments)
 	if len(result) == 0 {
-		result = []reflect.Value{reflect.ValueOf(nil)}
+		result = []reflect.Value{reflect.Zero( reflect.TypeOf(this) )}
 	}
 	return
 }
@@ -43,19 +43,27 @@ func (this *BeegoValidateController)AutoRouteMethod(){
 	lastUrlSegment := urlArray[ len(urlArray) - 1 ]
 
 	//执行路由
+	appControllerType := reflect.TypeOf(appController)
 	appControllerValue := reflect.ValueOf(appController)
-	methodName := firstUpperName(lastUrlSegment)
-	appControllerResult := this.runMethod(appControllerValue.MethodByName(methodName),[]reflect.Value{})
+	appMethodInfos,ok := routerControllerMethod[appControllerType]
+	if !ok{
+		panic("appMethodInfo not found router "+appControllerType.String())
+	}
+	appMethodInfo,ok := appMethodInfos[lastUrlSegment]
+	if !ok{
+		panic("appMethodInfo not found router "+appControllerType.String()+","+lastUrlSegment)
+	}
+	appControllerResult := this.runMethod(appMethodInfo.method.Func,[]reflect.Value{appControllerValue})
 	
 	//处理返回值
 	if len(appControllerResult) != 1 {
 		panic("url controller should has return value "+url)
 	}
-	appControllerValueResult := []reflect.Value{appControllerResult[0]}
+	appControllerValueResult := []reflect.Value{appControllerResult[0],reflect.ValueOf(appMethodInfo.viewName)}
 	appControllerValue.MethodByName("AutoRender").Call(appControllerValueResult)
 }
 
-func (this *BeegoValidateController)AutoRender(result interface{}){
+func (this *BeegoValidateController)AutoRender(result interface{},view string){
 
 }
 
@@ -105,15 +113,15 @@ func (this *BeegoValidateController)CheckPost(requireStruct interface{}){
 	this.check(requireStruct)
 }
 
-var vaildateControllerMethod map[string]bool
+type methodInfo struct{
+	name string
+	viewName string
+	method reflect.Method
+}
+var routerControllerMethod map[reflect.Type]map[string]methodInfo
 
 func init(){
-	vaildateControllerMethod = map[string]bool{}
-	vaildateControllerType := reflect.TypeOf(&BeegoValidateController{}).Elem()
-	for i := 0 ; i != vaildateControllerType.NumMethod() ; i++{
-		singleMethod := vaildateControllerType.Method(i).Name
-		vaildateControllerMethod[ singleMethod ] = true
-	}
+	routerControllerMethod = map[reflect.Type]map[string]methodInfo{}
 }
 
 func firstLowerName(name string)(string){
@@ -124,17 +132,34 @@ func firstUpperName(name string)(string){
 	return strings.ToUpper(name[0:1]) + name[1:]
 }
 
+func getMethodInfo(name string)(*methodInfo){
+	data := strings.Split(name,"_")
+	if len(data) != 2{
+		return nil
+	}
+	return &methodInfo{
+		name:firstLowerName(data[0]),
+		viewName:firstLowerName(data[1]),
+	}
+}
+
 func InitBeegoVaildateControllerRoute(namespace string,target beego.ControllerInterface){
 	controllerType := reflect.TypeOf(target)
+	routerControllerMethod[controllerType] = map[string]methodInfo{}
+
 	for i := 0 ; i != controllerType.NumMethod() ; i++{
-		singleMethod := firstLowerName(controllerType.Method(i).Name)
-		if _,ok := vaildateControllerMethod[singleMethod];ok{
+		singleMethod := controllerType.Method(i)
+		singleMethodInfo := getMethodInfo( singleMethod.Name )
+		if singleMethodInfo == nil{
 			continue
 		}
+		singleMethodInfo.method = singleMethod
+
 		beego.Router(
-			namespace+"/"+singleMethod,
+			namespace+"/"+singleMethodInfo.name,
 			target,
 			"*:AutoRouteMethod",
 		);
+		routerControllerMethod[controllerType][singleMethodInfo.name] = *singleMethodInfo
 	}
 }
