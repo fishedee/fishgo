@@ -3,7 +3,7 @@ package web
 import (
 	"fmt"
 	"github.com/astaxie/beego"
-	_ "github.com/Go-SQL-Driver/MySQL"
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/jinzhu/gorm"
 )
 
