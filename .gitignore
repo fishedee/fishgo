@@ -1,1 +1,4 @@
 pkg/*
+bin/*
+!pkg/.gitignore
+!bin/.gitignore
