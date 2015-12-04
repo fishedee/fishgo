@@ -13,7 +13,9 @@ func changeToValue(data interface{})(interface{}){
 	var result interface{}
 	dataType := reflect.TypeOf(data)
 	dataValue := reflect.ValueOf(data)
-	if dataType.Kind() == reflect.Struct{
+	if data == nil{
+		result = data
+	}else if dataType.Kind() == reflect.Struct{
 		if dataType == reflect.TypeOf(time.Time{}){
 			timeValue := data.(time.Time)
 			result = timeValue.Format("2006-01-02 15:04:05")
