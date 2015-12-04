@@ -29,7 +29,7 @@ func getLevel(in string)(int){
 	return logs.LevelDebug
 }
 
-func init(){
+func initFileLog(){
 	fishlogfile := beego.AppConfig.String("fishlogfile")
 	fishlogmaxline := beego.AppConfig.String("fishlogmaxline")
 	fishlogmaxsize := beego.AppConfig.String("fishlogmaxsize")
@@ -68,5 +68,33 @@ func init(){
 	err = Log.SetLogger("file", string(logConfigString))
 	if err != nil{
 		panic(err)
+	}
+}
+
+func initConsoleLog(){
+	fishloglevel := beego.AppConfig.String("fishloglevel")
+	var logConfig struct{
+		Level int `json:"level"`
+	}
+	logConfig.Level = getLevel(fishloglevel)
+
+	logConfigString,err := json.Marshal(logConfig)
+	if err != nil{
+		panic(err)
+	}
+
+	Log = logs.NewLogger(10000)
+	err = Log.SetLogger("console",string(logConfigString))
+	if err != nil{
+		panic(err)
+	}
+}
+
+func init(){
+	logmode := beego.AppConfig.String("fishlogmode")
+	if logmode == "file"{
+		initFileLog()
+	}else{
+		initConsoleLog()
 	}
 }

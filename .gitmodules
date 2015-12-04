@@ -85,3 +85,9 @@
 [submodule "src/github.com/go-errors/errors"]
 	path = src/github.com/go-errors/errors
 	url = git@github.com:go-errors/errors.git
+[submodule "src/github.com/go-xorm/xorm"]
+	path = src/github.com/go-xorm/xorm
+	url = git@github.com:go-xorm/xorm.git
+[submodule "src/github.com/go-xorm/core"]
+	path = src/github.com/go-xorm/core
+	url = git@github.com:go-xorm/core.git

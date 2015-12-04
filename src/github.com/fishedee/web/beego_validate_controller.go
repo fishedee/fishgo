@@ -94,7 +94,8 @@ func (this *BeegoValidateController)check(requireStruct interface{}){
 			}
 			singleRequireStructValue.SetInt( int64(resultInt) )
 		}else{
-			language.Throw(1,"不合法的参数"+singleRequireStructValueKind.String())
+			//FIXME 缺少time的解析
+			//language.Throw(1,"不合法的参数"+singleRequireStructValueKind.String())
 		}
 	}
 }
