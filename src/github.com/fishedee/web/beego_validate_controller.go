@@ -133,6 +133,15 @@ func firstUpperName(name string)(string){
 	return strings.ToUpper(name[0:1]) + name[1:]
 }
 
+func isPublic(name string)bool{
+	fisrtStr := name[0:1]
+	if fisrtStr >= "A" && fisrtStr <= "Z"{
+		return true
+	}else{
+		return false
+	}
+}
+
 func getMethodInfo(name string)(*methodInfo){
 	data := strings.Split(name,"_")
 	if len(data) != 2{
@@ -150,7 +159,11 @@ func InitBeegoVaildateControllerRoute(namespace string,target beego.ControllerIn
 
 	for i := 0 ; i != controllerType.NumMethod() ; i++{
 		singleMethod := controllerType.Method(i)
-		singleMethodInfo := getMethodInfo( singleMethod.Name )
+		singleMethodName := singleMethod.Name
+		if isPublic( singleMethodName ) == false{
+			continue
+		}
+		singleMethodInfo := getMethodInfo( singleMethodName )
 		if singleMethodInfo == nil{
 			continue
 		}
