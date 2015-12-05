@@ -1,4 +1,8 @@
 pkg/*
 bin/*
+src/*
 !pkg/.gitignore
 !bin/.gitignore
+!src/github.com/*
+!src/golang.org/*
+!src/gopkg.in/*
