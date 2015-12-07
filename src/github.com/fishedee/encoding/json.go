@@ -9,6 +9,22 @@ import (
 func nameMapper(name string)(string){
 	return strings.ToLower(name[0:1])+name[1:]
 }
+
+func isPublic(name string)(bool){
+	first := name[0:1]
+	return first >= "A" && first <= "Z"
+}
+
+func combileMap(result map[string]interface{},singleResultMap interface{}){
+	singleResultMapMap,ok := singleResultMap.(map[string]interface{})
+	if ok == false{
+		panic("Anonymous field is not a struct")
+	}
+	for key,value := range singleResultMapMap{
+		result[key] = value
+	}
+}
+
 func changeToValue(data interface{})(interface{}){
 	var result interface{}
 	dataType := reflect.TypeOf(data)
@@ -24,8 +40,16 @@ func changeToValue(data interface{})(interface{}){
 			for i := 0 ; i != dataValue.NumField() ; i++{
 				singleDataType := dataType.Field(i)
 				singleDataValue := dataValue.Field(i)
+				if isPublic( singleDataType.Name) == false{
+					continue
+				}
 				singleName := nameMapper(singleDataType.Name)
-				resultMap[singleName] = changeToValue(singleDataValue.Interface())
+				singleResultMap := changeToValue(singleDataValue.Interface())
+				if singleDataType.Anonymous == false{
+					resultMap[singleName] = singleResultMap
+				}else{
+					combileMap(resultMap,singleResultMap)
+				}
 			}
 			result = resultMap
 		}

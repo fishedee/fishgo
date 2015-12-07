@@ -6,6 +6,8 @@ import (
 	"strings"
 	"reflect"
 	"strconv"
+	"time"
+	"fmt"
 )
 
 type BeegoValidateController struct {
@@ -74,14 +76,17 @@ func (this *BeegoValidateController)check(requireStruct interface{}){
 	for i := 0 ; i != requireStructType.NumField() ; i++{
 		singleRequireStruct := requireStructType.Field(i)
 		singleRequireStructName := firstLowerName(singleRequireStruct.Name)
+		if isPublic(singleRequireStruct.Name) == false{
+			continue
+		}
 
 		result := this.Ctx.Input.Query(singleRequireStructName)
 
 		singleRequireStructValue := requireStructValue.Field(i)
-		singleRequireStructValueKind := singleRequireStructValue.Kind()
-		if singleRequireStructValueKind == reflect.String{
+		singleRequireStructValueType := singleRequireStructValue.Type()
+		if singleRequireStructValueType == reflect.TypeOf(""){
 			singleRequireStructValue.SetString(result)
-		}else if singleRequireStructValueKind == reflect.Int{
+		}else if singleRequireStructValueType == reflect.TypeOf(1){
 			var resultInt int
 			var err error
 			if result == ""{
@@ -93,9 +98,21 @@ func (this *BeegoValidateController)check(requireStruct interface{}){
 				}
 			}
 			singleRequireStructValue.SetInt( int64(resultInt) )
+		}else if singleRequireStructValueType == reflect.TypeOf(time.Time{}){
+			var resultTime time.Time
+			var err error
+			if result != ""{
+				resultTime,err = time.ParseInLocation("2006-01-02 15:04:05",result,time.Now().Local().Location())
+				if err != nil{
+					language.Throw(1,"参数"+singleRequireStructName+"不是合法的时间，其值为：["+result+"]")
+				}
+				fmt.Println(resultTime.String())
+			}else{
+
+			}
+			singleRequireStructValue.Set( reflect.ValueOf(resultTime) )
 		}else{
-			//FIXME 缺少time的解析
-			//language.Throw(1,"不合法的参数"+singleRequireStructValueKind.String())
+			language.Throw(1,"不合法的参数类型： "+singleRequireStructValueType.String())
 		}
 	}
 }
