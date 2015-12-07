@@ -42,7 +42,7 @@ func (this *BeegoValidateController)AutoRouteMethod(){
 	if len(urlArray) == 0{
 		panic("unknown url segement"+url)
 	}
-	lastUrlSegment := urlArray[ len(urlArray) - 1 ]
+	lastUrlSegment := urlArray[ 2 ]
 
 	//执行路由
 	appControllerType := reflect.TypeOf(appController)
@@ -188,6 +188,11 @@ func InitBeegoVaildateControllerRoute(namespace string,target beego.ControllerIn
 
 		beego.Router(
 			namespace+"/"+singleMethodInfo.name,
+			target,
+			"*:AutoRouteMethod",
+		);
+		beego.Router(
+			namespace+"/"+singleMethodInfo.name+"/*.*",
 			target,
 			"*:AutoRouteMethod",
 		);
