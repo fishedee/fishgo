@@ -39,8 +39,6 @@ func (this *JsSdkModel) GetAccessToken(appId string, appSecret string) string {
 	}
 	if v, ok := value["access_token"]; ok {
 		accessToken = v.(string)
-	} else {
-		panic(err)
 	}
 
 	return accessToken
