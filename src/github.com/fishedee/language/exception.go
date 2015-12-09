@@ -11,8 +11,8 @@ type Exception struct{
 	stack string
 }
 
-func NewException(code int,message string)(error){
-	var stack string
+func NewException(code int,message string)(*Exception){
+	stack := ""
 	for i := 1; ; i++ {
 		_, file, line, ok := runtime.Caller(i)
 		if !ok {
@@ -46,6 +46,13 @@ func (this *Exception)GetStackTrace()(string){
 
 func Throw(code int,message string){
 	panic(NewException(code,message))
+}
+
+func CatchCrash(handler func(Exception)){
+	err := recover();
+	if err != nil{
+		handler(*NewException(1,fmt.Sprint(err)))
+	}
 }
 
 func Catch(handler func(Exception)){

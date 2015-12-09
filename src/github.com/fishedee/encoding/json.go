@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strings"
 	"time"
+	"errors"
 )
 func nameMapper(name string)(string){
 	return strings.ToLower(name[0:1])+name[1:]
@@ -15,17 +16,18 @@ func isPublic(name string)(bool){
 	return first >= "A" && first <= "Z"
 }
 
-func combileMap(result map[string]interface{},singleResultMap interface{}){
+func combileMap(result map[string]interface{},singleResultMap interface{})(error){
 	singleResultMapMap,ok := singleResultMap.(map[string]interface{})
 	if ok == false{
-		panic("Anonymous field is not a struct")
+		return errors.New("Anonymous field is not a struct")
 	}
 	for key,value := range singleResultMapMap{
 		result[key] = value
 	}
+	return nil
 }
 
-func changeToValue(data interface{})(interface{}){
+func changeToValue(data interface{})(interface{},error){
 	var result interface{}
 	dataType := reflect.TypeOf(data)
 	dataValue := reflect.ValueOf(data)
@@ -44,11 +46,17 @@ func changeToValue(data interface{})(interface{}){
 					continue
 				}
 				singleName := nameMapper(singleDataType.Name)
-				singleResultMap := changeToValue(singleDataValue.Interface())
+				singleResultMap,err := changeToValue(singleDataValue.Interface())
+				if err != nil{
+					return nil,err
+				}
 				if singleDataType.Anonymous == false{
 					resultMap[singleName] = singleResultMap
 				}else{
-					combileMap(resultMap,singleResultMap)
+					err := combileMap(resultMap,singleResultMap)
+					if err != nil{
+						return nil,err
+					}
 				}
 			}
 			result = resultMap
@@ -57,17 +65,25 @@ func changeToValue(data interface{})(interface{}){
 		resultSlice := []interface{}{}
 		for i := 0 ; i != dataValue.Len() ; i++{
 			singleDataValue := dataValue.Index(i)
-			resultSlice = append(resultSlice,changeToValue(singleDataValue.Interface()) )
+			singleDataResult,err := changeToValue(singleDataValue.Interface())
+			if err != nil{
+				return nil,err
+			}
+			resultSlice = append(resultSlice,singleDataResult)
 		}
 		result = resultSlice
 	}else{
 		result = data
 	}
-	return result
+	return result,nil
 }
 
 func EncodeJson(data interface{})([]byte,error){
-	return json.Marshal(changeToValue(data))
+	changeValue,err := changeToValue(data)
+	if err != nil{
+		return nil,err
+	}
+	return json.Marshal(changeValue)
 }
 
 func DecodeJson(data []byte,value interface{})(error){
