@@ -91,3 +91,12 @@
 [submodule "src/github.com/go-xorm/core"]
 	path = src/github.com/go-xorm/core
 	url = git@github.com:go-xorm/core.git
+[submodule "src/github.com/gwoo/goforever"]
+	path = src/github.com/gwoo/goforever
+	url = git@github.com:gwoo/goforever.git
+[submodule "src/github.com/gwoo/greq"]
+	path = src/github.com/gwoo/greq
+	url = git@github.com:gwoo/greq.git
+[submodule "src/github.com/BurntSushi/toml"]
+	path = src/github.com/BurntSushi/toml
+	url = git@github.com:BurntSushi/toml.git
