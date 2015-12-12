@@ -69,6 +69,7 @@ func initFileLog(){
 	if err != nil{
 		panic(err)
 	}
+	beego.BeeLogger = Log
 }
 
 func initConsoleLog(){
@@ -88,6 +89,7 @@ func initConsoleLog(){
 	if err != nil{
 		panic(err)
 	}
+	beego.BeeLogger = Log
 }
 
 func init(){
