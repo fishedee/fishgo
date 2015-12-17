@@ -47,14 +47,44 @@ type wxSdkJsSignature struct {
 	Url         string
 }
 
-func (this *WxSdk) DownloadMedia(accessToken, mediaId string) (*http.Response, error) {
-	//下载
+type wxSdkDownload struct {
+	Errcode int    `json:"errcode,omitempty"`
+	Errmsg  string `json:"errmsg,omitempty"`
+}
+
+//下载
+func (this *WxSdk) DownloadMedia(accessToken, mediaId string) (io.ReadCloser, int64, error) {
 	response, err := http.Get("http://file.api.weixin.qq.com/cgi-bin/media/get?access_token=" + accessToken + "&media_id=" + mediaId)
 	if err != nil {
-		return &http.Response{}, err
+		return nil, 0, err
 	}
 
-	return response, nil
+	if response.StatusCode != 200 {
+		return nil, 0, errors.New("网络错误:" + strconv.Itoa(response.StatusCode))
+	} else {
+		if response.Header.Get("Content-Type") == "text/plain" {
+			result := wxSdkDownload{}
+			body, err := ioutil.ReadAll(response.Body)
+			if err != nil {
+				return nil, 0, err
+			}
+
+			err = json.Unmarshal(body, &result)
+			if err != nil {
+				return nil, 0, err
+			}
+			return nil, 0, errors.New("errcode: " + strconv.Itoa(result.Errcode) + ", errmsg: " + result.Errmsg)
+		}
+	}
+
+	var contentLength int64
+	if response.ContentLength >= 0 {
+		contentLength = response.ContentLength
+	} else {
+		contentLength = 0
+	}
+
+	return response.Body, contentLength, nil
 }
 
 func (this *WxSdk) GetAccessToken() (WxSdkToken, error) {
