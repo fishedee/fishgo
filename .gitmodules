@@ -100,3 +100,6 @@
 [submodule "src/github.com/BurntSushi/toml"]
 	path = src/github.com/BurntSushi/toml
 	url = git@github.com:BurntSushi/toml.git
+[submodule "src/github.com/tealeg/xlsx"]
+	path = src/github.com/tealeg/xlsx
+	url = git@github.com:tealeg/xlsx.git

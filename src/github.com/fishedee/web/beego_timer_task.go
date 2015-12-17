@@ -16,9 +16,23 @@ func startSingleTimerTask(handler func()){
 }
 
 func StartTimerTask(duraction time.Duration,handler func() ){
+	//带有延后属性的定时器
 	go func(){
+		timeChan := time.After(duraction)
 		for {
-			time.Sleep(duraction)
+			<- timeChan
+			startSingleTimerTask(handler)
+			timeChan = time.After(duraction)
+		}
+	}();
+}
+
+func StartTickTask(duraction time.Duration,handler func() ){
+	//没有延后属性的定时器
+	go func(){
+		tickChan := time.Tick(duraction)
+		for {
+			<- tickChan
 			startSingleTimerTask(handler)
 		}
 	}();

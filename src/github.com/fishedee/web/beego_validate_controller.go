@@ -3,11 +3,11 @@ package web
 import (
 	"github.com/astaxie/beego"
 	"github.com/fishedee/language"
+	"net/url"
 	"strings"
 	"reflect"
 	"strconv"
 	"time"
-	"fmt"
 )
 
 type BeegoValidateController struct {
@@ -69,18 +69,30 @@ func (this *BeegoValidateController)AutoRender(result interface{},view string){
 
 }
 
-func (this *BeegoValidateController)check(requireStruct interface{}){	
+func (this *BeegoValidateController)Check(requireStruct interface{}){	
 	//获取require字段
 	requireStructType := reflect.TypeOf(requireStruct).Elem()
 	requireStructValue := reflect.ValueOf(requireStruct).Elem()
 	for i := 0 ; i != requireStructType.NumField() ; i++{
 		singleRequireStruct := requireStructType.Field(i)
-		singleRequireStructName := firstLowerName(singleRequireStruct.Name)
-		if isPublic(singleRequireStruct.Name) == false{
+		singleRequireStructName := singleRequireStruct.Name
+		if isPublic(singleRequireStructName) == false {
 			continue
 		}
 
-		result := this.Ctx.Input.Query(singleRequireStructName)
+		filedName := singleRequireStruct.Tag.Get("validate")
+		if filedName == ""{
+			filedName = firstLowerName(singleRequireStructName)
+		}
+
+		result := this.Ctx.Input.Query(filedName)
+		if result == ""{
+			continue
+		}
+		result,err := url.QueryUnescape(result)
+		if err != nil{
+			language.Throw(1,"参数"+singleRequireStructName+"解析失败，其值为：["+result+"]")
+		}
 
 		singleRequireStructValue := requireStructValue.Field(i)
 		singleRequireStructValueType := singleRequireStructValue.Type()
@@ -88,27 +100,16 @@ func (this *BeegoValidateController)check(requireStruct interface{}){
 			singleRequireStructValue.SetString(result)
 		}else if singleRequireStructValueType == reflect.TypeOf(1){
 			var resultInt int
-			var err error
-			if result == ""{
-				resultInt = 0
-			}else{
-				resultInt,err = strconv.Atoi(result)
-				if err != nil{
-					language.Throw(1,"参数"+singleRequireStructName+"不是合法的整数，其值为：["+result+"]")
-				}
+			resultInt,err := strconv.Atoi(result)
+			if err != nil{
+				language.Throw(1,"参数"+singleRequireStructName+"不是合法的整数，其值为：["+result+"]")
 			}
 			singleRequireStructValue.SetInt( int64(resultInt) )
 		}else if singleRequireStructValueType == reflect.TypeOf(time.Time{}){
 			var resultTime time.Time
-			var err error
-			if result != ""{
-				resultTime,err = time.ParseInLocation("2006-01-02 15:04:05",result,time.Now().Local().Location())
-				if err != nil{
-					language.Throw(1,"参数"+singleRequireStructName+"不是合法的时间，其值为：["+result+"]")
-				}
-				fmt.Println(resultTime.String())
-			}else{
-
+			resultTime,err := time.ParseInLocation("2006-01-02 15:04:05",result,time.Now().Local().Location())
+			if err != nil{
+				language.Throw(1,"参数"+singleRequireStructName+"不是合法的时间，其值为：["+result+"]")
 			}
 			singleRequireStructValue.Set( reflect.ValueOf(resultTime) )
 		}else{
@@ -121,14 +122,14 @@ func (this *BeegoValidateController)CheckGet(requireStruct interface{}){
 	if this.Ctx.Input.Method() != "GET"{
 		language.Throw(1,"请求Method不是Get方法")
 	}
-	this.check(requireStruct)
+	this.Check(requireStruct)
 }
 
 func (this *BeegoValidateController)CheckPost(requireStruct interface{}){
 	if this.Ctx.Input.Method() != "POST"{
 		language.Throw(1,"请求Method不是POST方法")
 	}
-	this.check(requireStruct)
+	this.Check(requireStruct)
 }
 
 type methodInfo struct{
