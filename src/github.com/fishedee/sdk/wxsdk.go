@@ -53,38 +53,36 @@ type wxSdkDownload struct {
 }
 
 //下载
-func (this *WxSdk) DownloadMedia(accessToken, mediaId string) (io.ReadCloser, int64, error) {
+func (this *WxSdk) DownloadMedia(accessToken, mediaId string) ([]byte, error) {
 	response, err := http.Get("http://file.api.weixin.qq.com/cgi-bin/media/get?access_token=" + accessToken + "&media_id=" + mediaId)
 	if err != nil {
-		return nil, 0, err
+		return []byte{}, err
 	}
+	defer response.Body.Close()
 
 	if response.StatusCode != 200 {
-		return nil, 0, errors.New("网络错误:" + strconv.Itoa(response.StatusCode))
+		return []byte{}, errors.New("网络错误:" + strconv.Itoa(response.StatusCode))
 	} else {
 		if response.Header.Get("Content-Type") == "text/plain" {
 			result := wxSdkDownload{}
 			body, err := ioutil.ReadAll(response.Body)
 			if err != nil {
-				return nil, 0, err
+				return []byte{}, err
 			}
 
 			err = json.Unmarshal(body, &result)
 			if err != nil {
-				return nil, 0, err
+				return []byte{}, err
 			}
-			return nil, 0, errors.New("errcode: " + strconv.Itoa(result.Errcode) + ", errmsg: " + result.Errmsg)
+			return []byte{}, errors.New("errcode: " + strconv.Itoa(result.Errcode) + ", errmsg: " + result.Errmsg)
 		}
 	}
 
-	var contentLength int64
-	if response.ContentLength >= 0 {
-		contentLength = response.ContentLength
-	} else {
-		contentLength = 0
+	data, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return []byte{}, err
 	}
-
-	return response.Body, contentLength, nil
+	return data, nil
 }
 
 func (this *WxSdk) GetAccessToken() (WxSdkToken, error) {

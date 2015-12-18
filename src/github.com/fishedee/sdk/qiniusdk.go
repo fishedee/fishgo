@@ -1,9 +1,14 @@
 package sdk
 
 import (
-	"io"
+	"bytes"
+	"errors"
 	"net/url"
 	. "qiniupkg.com/api.v7/kodo"
+)
+
+const (
+	maxSize = 16 * 1024 * 1024
 )
 
 type QiniuSdk struct {
@@ -11,7 +16,14 @@ type QiniuSdk struct {
 	SecretKey string
 }
 
-func (this *QiniuSdk) UploadString(bucketName string, data io.Reader, fsize int64) (string, error) {
+func (this *QiniuSdk) UploadString(bucketName string, data []byte) (string, error) {
+	//判断图片文件大小
+	fsize := int64(len(data))
+	if fsize > maxSize {
+		return "", errors.New("上传图片太大！")
+	}
+
+	uploadReader := bytes.NewReader(data)
 	cfg := &Config{
 		AccessKey: this.AccessKey,
 		SecretKey: this.SecretKey,
@@ -19,7 +31,7 @@ func (this *QiniuSdk) UploadString(bucketName string, data io.Reader, fsize int6
 	client := New(0, cfg)
 	bucket := client.Bucket(bucketName)
 	putRet := PutRet{}
-	err := bucket.PutWithoutKey(nil, &putRet, data, fsize, &PutExtra{})
+	err := bucket.PutWithoutKey(nil, &putRet, uploadReader, fsize, &PutExtra{})
 	if err != nil {
 		return "", err
 	}
