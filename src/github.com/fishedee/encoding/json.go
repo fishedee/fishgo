@@ -6,7 +6,7 @@ import (
 )
 
 func EncodeJson(data interface{})([]byte,error){
-	changeValue := StructToMap(data)
+	changeValue := ArrayMapping(data)
 	return json.Marshal(changeValue)
 }
 

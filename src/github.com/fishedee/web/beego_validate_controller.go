@@ -132,6 +132,45 @@ func (this *BeegoValidateController)CheckPost(requireStruct interface{}){
 	this.Check(requireStruct)
 }
 
+func (this *BeegoValidateController)Write(data []byte){
+	writer := this.Ctx.ResponseWriter
+	writer.Write(data)
+}
+
+func (this *BeegoValidateController)WriteMimeHeader(mime string,title string){
+	writer := this.Ctx.ResponseWriter
+	writerHeader := writer.Header()
+	if mime == "json"{
+		writerHeader.Set("Content-Type","application/x-javascript; charset=utf-8");
+	}else if mime == "javascript"{
+		writerHeader.Set("Content-Type","application/x-javascript; charset=utf-8"); 
+	}else if mime == "plain"{
+		writerHeader.Set("Content-Type","text/plain; charset=utf-8")
+	}else if mime == "xlsx"{
+		writerHeader.Set("Content-Type","application/vnd.openxmlformats-officedocument; charset=UTF-8"); 
+		writerHeader.Set("Pragma","public"); 
+		writerHeader.Set("Expires","0"); 
+		writerHeader.Set("Cache-Control","must-revalidate, post-check=0, pre-check=0"); 
+		writerHeader.Set("Content-Type","application/force-download"); 
+		writerHeader.Set("Content-Type","application/octet-stream"); 
+		writerHeader.Set("Content-Type","application/download"); 
+		writerHeader.Set("Content-Disposition","attachment;filename="+title+".xlsx"); 
+		writerHeader.Set("Content-Transfer-Encoding","binary");
+	}else if mime == "csv"{
+		writerHeader.Set("Content-Type","application/vnd.ms-excel; charset=UTF-8"); 
+		writerHeader.Set("Pragma","public"); 
+		writerHeader.Set("Expires","0"); 
+		writerHeader.Set("Cache-Control","must-revalidate, post-check=0, pre-check=0"); 
+		writerHeader.Set("Content-Type","application/force-download"); 
+		writerHeader.Set("Content-Type","application/octet-stream"); 
+		writerHeader.Set("Content-Type","application/download"); 
+		writerHeader.Set("Content-Disposition","attachment;filename="+title+".csv"); 
+		writerHeader.Set("Content-Transfer-Encoding","binary");
+	}else{
+		panic("invalid mime ["+mime+"]")
+	}
+}
+
 type methodInfo struct{
 	name string
 	viewName string

@@ -2,15 +2,15 @@ package encoding
 
 import (
 	"github.com/tealeg/xlsx"
-	"net/http"
-	"io"
+	"bytes"
 )
 
-func EncodeXlsx(data [][]string,writer io.Writer)(error){
+func EncodeXlsx(data [][]string)([]byte,error){
+	var writer bytes.Buffer
 	file := xlsx.NewFile()
  	sheet, err := file.AddSheet("Sheet1")
 	if err != nil{
-		return err
+		return nil,err
 	}
 	for i := 0 ; i != len(data[0]) ; i++{
 		sheet.Col(i).Width = 25
@@ -23,20 +23,6 @@ func EncodeXlsx(data [][]string,writer io.Writer)(error){
 			cell.SetString( data[i][j] )
 		}
 	}
-	file.Write(writer)
-	return nil
-}
-
-func EncodeXlsxToRespnseWriter(data [][]string,writer http.ResponseWriter,title string)(error){
-	writerHeader := writer.Header()
-	writerHeader.Set("Content-Type","application/vnd.openxmlformats-officedocument; charset=UTF-8"); 
-	writerHeader.Set("Pragma","public"); 
-	writerHeader.Set("Expires","0"); 
-	writerHeader.Set("Cache-Control","must-revalidate, post-check=0, pre-check=0"); 
-	writerHeader.Set("Content-Type","application/force-download"); 
-	writerHeader.Set("Content-Type","application/octet-stream"); 
-	writerHeader.Set("Content-Type","application/download"); 
-	writerHeader.Set("Content-Disposition","attachment;filename="+title+".xlsx"); 
-	writerHeader.Set("Content-Transfer-Encoding","binary");
-	return EncodeXlsx(data,writer)
+	file.Write(&writer)
+	return writer.Bytes(),nil
 }
