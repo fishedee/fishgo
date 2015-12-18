@@ -105,4 +105,4 @@
 	url = git@github.com:tealeg/xlsx.git
 [submodule "src/qiniupkg.com/api.v7"]
 	path = src/qiniupkg.com/api.v7
-	url = git@github.com/qiniu/api.v7
+	url = git@github.com:qiniu/api.v7.git
