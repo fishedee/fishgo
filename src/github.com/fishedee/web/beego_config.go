@@ -2,7 +2,6 @@ package web
 
 import (
 	"github.com/astaxie/beego"
-	"fmt"
 )
 
 func init(){
