@@ -6,6 +6,7 @@ import (
 	"strings"
 	"errors"
 	"time"
+	"sync"
 )
 
 func ArrayColumnKey(data interface{},name string)(interface{}){
@@ -118,11 +119,6 @@ func nameMapper(name string)(string){
 	return strings.ToLower(name[0:1])+name[1:]
 }
 
-func isPublic(name string)(bool){
-	first := name[0:1]
-	return first >= "A" && first <= "Z"
-}
-
 func combileMap(result map[string]interface{},singleResultMap interface{})(error){
 	singleResultMapMap,ok := singleResultMap.(map[string]interface{})
 	if ok == false{
@@ -134,51 +130,101 @@ func combileMap(result map[string]interface{},singleResultMap interface{})(error
 	return nil
 }
 
-func structToMap(data interface{})(interface{},error){
-	var result interface{}
-	dataType := reflect.TypeOf(data)
-	dataValue := reflect.ValueOf(data)
-	if data == nil{
-		result = data
-	}else if dataType.Kind() == reflect.Struct{
+type arrayMappingStructInfo struct{
+	name string
+	num int
+	anonymous bool
+}
+
+type arrayMappingInfo struct{
+	kind int
+	field []arrayMappingStructInfo
+}
+
+var arrayMappingInfoMap struct{
+	mutex sync.RWMutex
+	data map[reflect.Type]arrayMappingInfo
+}
+
+func getArrayMappingInfoInner(dataType reflect.Type)(arrayMappingInfo){
+	result := arrayMappingInfo{}
+	if dataType.Kind() == reflect.Struct{
 		if dataType == reflect.TypeOf(time.Time{}){
-			timeValue := data.(time.Time)
-			result = timeValue.Format("2006-01-02 15:04:05")
+			result.kind = 1
 		}else{
-			resultMap := map[string]interface{}{}
-			for i := 0 ; i != dataValue.NumField() ; i++{
+			result.kind = 2
+			result.field = []arrayMappingStructInfo{}
+			for i := 0 ; i != dataType.NumField() ; i++{
 				singleDataType := dataType.Field(i)
-				singleDataValue := dataValue.Field(i)
-				if isPublic( singleDataType.Name) == false{
+				if singleDataType.PkgPath != "" && singleDataType.Anonymous == false{
 					continue
 				}
-				singleName := nameMapper(singleDataType.Name)
-				singleResultMap,err := structToMap(singleDataValue.Interface())
-				if err != nil{
-					return nil,err
-				}
-				if singleDataType.Anonymous == false{
-					resultMap[singleName] = singleResultMap
-				}else{
-					err := combileMap(resultMap,singleResultMap)
-					if err != nil{
-						return nil,err
-					}
-				}
+				single := arrayMappingStructInfo{}
+				single.name = nameMapper( singleDataType.Name )
+				single.num = i
+				single.anonymous = singleDataType.Anonymous
+				result.field = append(result.field,single)
 			}
-			result = resultMap
 		}
 	}else if( dataType.Kind() == reflect.Slice ){
-		resultSlice := []interface{}{}
-		for i := 0 ; i != dataValue.Len() ; i++{
-			singleDataValue := dataValue.Index(i)
-			singleDataResult,err := structToMap(singleDataValue.Interface())
+		result.kind = 3
+	}else{
+		result.kind = 4
+	}
+	return result
+}
+
+func getArrayMappingInfo(target reflect.Type)(arrayMappingInfo){
+	arrayMappingInfoMap.mutex.RLock()
+	result,ok := arrayMappingInfoMap.data[target]
+	arrayMappingInfoMap.mutex.RUnlock()
+
+	if ok{
+		return result
+	}
+	result = getArrayMappingInfoInner(target)
+
+	arrayMappingInfoMap.mutex.Lock()
+	arrayMappingInfoMap.data[target] = result
+	arrayMappingInfoMap.mutex.Unlock()
+
+	return result
+}
+
+func arrayMappingInner(data reflect.Value)(reflect.Value,error){
+	var result reflect.Value
+	dataType := getArrayMappingInfo(data.Type())
+	if dataType.kind == 1{
+		timeValue := data.Interface().(time.Time)
+		result = reflect.ValueOf( timeValue.Format("2006-01-02 15:04:05") )
+	}else if dataType.kind == 2{
+		resultMap := map[string]interface{}{}
+		for _,singleType := range dataType.field{
+			singleResultMap,err := arrayMappingInner(data.Field(singleType.num))
 			if err != nil{
-				return nil,err
+				return result,err
+			}
+			if singleType.anonymous == false{
+				resultMap[singleType.name] = singleResultMap.Interface()
+			}else{
+				err := combileMap(resultMap,singleResultMap.Interface())
+				if err != nil{
+					return result,err
+				}
+			}
+		}
+		result = reflect.ValueOf(resultMap)
+	}else if dataType.kind == 3{
+		resultSlice := []interface{}{}
+		for i := 0 ; i != data.Len() ; i++{
+			singleDataValue := data.Index(i)
+			singleDataResult,err := arrayMappingInner(singleDataValue)
+			if err != nil{
+				return result,err
 			}
 			resultSlice = append(resultSlice,singleDataResult)
 		}
-		result = resultSlice
+		result = reflect.ValueOf(resultSlice)
 	}else{
 		result = data
 	}
@@ -186,10 +232,14 @@ func structToMap(data interface{})(interface{},error){
 }
 
 func ArrayMapping(data interface{})(interface{}){
-	result,err := structToMap(data)
+	result,err := arrayMappingInner(reflect.ValueOf(data))
 	if err != nil{
 		panic(err)
 	}
-	return result
+	return result.Interface()
+}
+
+func init(){
+	arrayMappingInfoMap.data = map[reflect.Type]arrayMappingInfo{}
 }
 

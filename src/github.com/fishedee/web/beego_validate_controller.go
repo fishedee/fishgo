@@ -2,24 +2,49 @@ package web
 
 import (
 	"github.com/astaxie/beego"
+	"github.com/astaxie/beego/context"
 	"github.com/fishedee/language"
 	"net/url"
 	"strings"
 	"reflect"
 	"strconv"
 	"time"
+	"sync"
 )
+
+type beegoValidateControllerInfo struct{
+	getContextFunc int
+}
+
+var beegoValidateControllerInfoMap struct{
+	mutex sync.RWMutex
+	data map[reflect.Type]beegoValidateControllerInfo
+}
+
+var beegoValidateControllerType reflect.Type
+
+var routerControllerMethod map[reflect.Type]map[string]methodInfo
+
+func init(){
+	beegoValidateControllerInfoMap.data = map[reflect.Type]beegoValidateControllerInfo{}
+	beegoValidateControllerType = reflect.TypeOf(BeegoValidateController{})
+	routerControllerMethod = map[reflect.Type]map[string]methodInfo{}
+}
 
 type BeegoValidateController struct {
 	beego.Controller
 }
 
 func (this *BeegoValidateController)Prepare(){
-	this.Controller.Prepare();
+	PrepareBeegoValidateModel(this.AppController)
 }
 
 func (this *BeegoValidateController)Finish(){
-	this.Controller.Finish();
+	FinishBeegoValidateModel(this.AppController)
+}
+
+func (this *BeegoValidateController)GetContext()(*context.Context){
+	return this.Ctx
 }
 
 func (this *BeegoValidateController)runMethod(method reflect.Value,arguments []reflect.Value)(result []reflect.Value){
@@ -176,10 +201,36 @@ type methodInfo struct{
 	viewName string
 	method reflect.Method
 }
-var routerControllerMethod map[reflect.Type]map[string]methodInfo
 
-func init(){
-	routerControllerMethod = map[reflect.Type]map[string]methodInfo{}
+func getControllerInfoInner(target reflect.Type)(beegoValidateControllerInfo){
+	result := beegoValidateControllerInfo{
+		-1,
+	}
+	targetType := reflect.TypeOf(target)
+	for i := 0 ; i != targetType.NumMethod() ; i++{
+		singleMethod := target.Method(i)
+		if singleMethod.Name == "GetContext"{
+			result.getContextFunc = i
+		}
+	}
+	return result
+}
+
+func getControllerInfo(target reflect.Type)(beegoValidateControllerInfo){
+	beegoValidateControllerInfoMap.mutex.RLock()
+	singleMethodInfo,ok := beegoValidateControllerInfoMap.data[target]
+	beegoValidateControllerInfoMap.mutex.RUnlock()
+
+	if ok{
+		return singleMethodInfo
+	}
+
+	result := getControllerInfoInner(target)
+
+	beegoValidateControllerInfoMap.mutex.Lock()
+	beegoValidateControllerInfoMap.data[target] = result
+	beegoValidateControllerInfoMap.mutex.Unlock()
+	return result
 }
 
 func firstLowerName(name string)(string){
