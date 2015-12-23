@@ -10,9 +10,11 @@ import (
 	_ "github.com/fishedee/web/beego_session"
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/session"
+	. "github.com/fishedee/util"
 )
 
-type MySessionManagerConfig struct{
+type SessionManagerConfig struct{
+	Driver 			string `json:driver`
 	CookieName      string `json:"cookieName"`
 	EnableSetCookie bool   `json:"enableSetCookie,omitempty"`
 	GcLifeTime      int  `json:"gclifetime"`
@@ -23,28 +25,61 @@ type MySessionManagerConfig struct{
 	SessionIdLength int  `json:"sessionIdLength"`
 }
 
-type MySessionManager struct{
+type SessionManager struct{
 	*session.Manager
-	config *MySessionManagerConfig
+	config SessionManagerConfig
 }
 
-var Session *MySessionManager
+var newSessionManagerMemory *MemoryFunc
+var newSessionManagerFromConfigMemory *MemoryFunc
 
-func init() {
-	sessiondirver := beego.AppConfig.String("fishsessiondriver")
-	sessionname := beego.AppConfig.String("fishsessionname")
-	sessiongclifttime := beego.AppConfig.String("fishsessiongclifttime")
-	sessioncookielifetime := beego.AppConfig.String("fishsessioncookielifetime")
-	sessionsavepath := beego.AppConfig.String("fishsessionsavepath")
-	sessionsecure := beego.AppConfig.String("fishsessionsecure")
-	sessiondomain := beego.AppConfig.String("fishsessiondomain")
-	sessionlength := beego.AppConfig.String("fishsessionlength")
-
-	if sessiondirver == ""{
-		return
+func init(){
+	var err error
+	newSessionManagerMemory,err = NewMemoryFunc(newSessionManager,MemoryFuncCacheNormal)
+	if err != nil{
+		panic(err)
 	}
-	
-	sessionlink := &MySessionManagerConfig{}
+	newSessionManagerFromConfigMemory,err = NewMemoryFunc(newSessionManagerFromConfig,MemoryFuncCacheNormal)
+	if err != nil{
+		panic(err)
+	}
+}
+
+func newSessionManager(config SessionManagerConfig)(*SessionManager,error){
+	result,err := json.Marshal(config)
+	if err != nil{
+		return nil,err
+	}
+
+	sessionManager, err := session.NewManager(config.Driver, string(result))
+	if err != nil {
+		return nil,err
+	}
+	go sessionManager.GC()
+
+	return &SessionManager{
+		Manager:sessionManager,
+		config:config,
+	},nil
+}
+
+func NewSessionManager(config SessionManagerConfig)(*SessionManager,error){
+	result,err := newSessionManagerMemory.Call(config)
+	return result.(*SessionManager),err
+}
+
+func newSessionManagerFromConfig(configName string)(*SessionManager,error){
+	sessiondirver := beego.AppConfig.String(configName+"driver")
+	sessionname := beego.AppConfig.String(configName+"name")
+	sessiongclifttime := beego.AppConfig.String(configName+"gclifttime")
+	sessioncookielifetime := beego.AppConfig.String(configName+"cookielifetime")
+	sessionsavepath := beego.AppConfig.String(configName+"savepath")
+	sessionsecure := beego.AppConfig.String(configName+"secure")
+	sessiondomain := beego.AppConfig.String(configName+"domain")
+	sessionlength := beego.AppConfig.String(configName+"length")
+
+	sessionlink := SessionManagerConfig{}
+	sessionlink.Driver = sessiondirver
 	sessionlink.CookieName = sessionname
 	sessionlink.EnableSetCookie = true
 	sessionlink.GcLifeTime,_ = strconv.Atoi(sessiongclifttime)
@@ -54,24 +89,15 @@ func init() {
 	sessionlink.Domain = sessiondomain
 	sessionlink.SessionIdLength,_ = strconv.Atoi(sessionlength)
 
-	result,err := json.Marshal(sessionlink)
-	if err != nil{
-		panic(err)
-	}
-
-	sessionManager, err := session.NewManager(sessiondirver, string(result))
-	if err != nil {
-		panic(err)
-	}
-	go sessionManager.GC()
-
-	Session = &MySessionManager{
-		Manager:sessionManager,
-		config:sessionlink,
-	}
+	return NewSessionManager(sessionlink)
 }
 
-func (manager *MySessionManager) SessionStart(w http.ResponseWriter, r *http.Request) (session session.SessionStore, err error) {
+func NewSessionManagerFromConfig(configName string)(*SessionManager,error){
+	result,err := newSessionManagerFromConfigMemory.Call(configName)
+	return result.(*SessionManager),err
+}
+
+func (manager *SessionManager) SessionStart(w http.ResponseWriter, r *http.Request) (session session.SessionStore, err error) {
 	result,errOrgin := manager.Manager.SessionStart(w,r)
 	if errOrgin != nil{
 		return result,errOrgin

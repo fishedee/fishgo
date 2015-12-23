@@ -191,52 +191,57 @@ func getArrayMappingInfo(target reflect.Type)(arrayMappingInfo){
 	return result
 }
 
-func arrayMappingInner(data reflect.Value)(reflect.Value,error){
-	var result reflect.Value
-	dataType := getArrayMappingInfo(data.Type())
-	if dataType.kind == 1{
-		timeValue := data.Interface().(time.Time)
-		result = reflect.ValueOf( timeValue.Format("2006-01-02 15:04:05") )
-	}else if dataType.kind == 2{
-		resultMap := map[string]interface{}{}
-		for _,singleType := range dataType.field{
-			singleResultMap,err := arrayMappingInner(data.Field(singleType.num))
-			if err != nil{
-				return result,err
-			}
-			if singleType.anonymous == false{
-				resultMap[singleType.name] = singleResultMap.Interface()
-			}else{
-				err := combileMap(resultMap,singleResultMap.Interface())
+func arrayMappingInner(data interface{})(interface{},error){
+	var result interface{}
+	if data == nil{
+		result = nil
+	}else{
+		dataType := getArrayMappingInfo(reflect.TypeOf(data))
+		dataValue := reflect.ValueOf(data)
+		if dataType.kind == 1{
+			timeValue := data.(time.Time)
+			result = timeValue.Format("2006-01-02 15:04:05")
+		}else if dataType.kind == 2{
+			resultMap := map[string]interface{}{}
+			for _,singleType := range dataType.field{
+				singleResultMap,err := arrayMappingInner(dataValue.Field(singleType.num).Interface())
 				if err != nil{
 					return result,err
 				}
+				if singleType.anonymous == false{
+					resultMap[singleType.name] = singleResultMap
+				}else{
+					err := combileMap(resultMap,singleResultMap)
+					if err != nil{
+						return result,err
+					}
+				}
 			}
-		}
-		result = reflect.ValueOf(resultMap)
-	}else if dataType.kind == 3{
-		resultSlice := []interface{}{}
-		for i := 0 ; i != data.Len() ; i++{
-			singleDataValue := data.Index(i)
-			singleDataResult,err := arrayMappingInner(singleDataValue)
-			if err != nil{
-				return result,err
+			result = resultMap
+		}else if dataType.kind == 3{
+			resultSlice := []interface{}{}
+			for i := 0 ; i != dataValue.Len() ; i++{
+				singleDataValue := dataValue.Index(i)
+				singleDataResult,err := arrayMappingInner(singleDataValue.Interface())
+				if err != nil{
+					return result,err
+				}
+				resultSlice = append(resultSlice,singleDataResult)
 			}
-			resultSlice = append(resultSlice,singleDataResult)
+			result = resultSlice
+		}else{
+			result = data
 		}
-		result = reflect.ValueOf(resultSlice)
-	}else{
-		result = data
 	}
 	return result,nil
 }
 
 func ArrayMapping(data interface{})(interface{}){
-	result,err := arrayMappingInner(reflect.ValueOf(data))
+	result,err := arrayMappingInner(data)
 	if err != nil{
 		panic(err)
 	}
-	return result.Interface()
+	return result
 }
 
 func init(){

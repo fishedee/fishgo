@@ -90,6 +90,9 @@ func getModelInfoInner(target reflect.Type)(beegoValidateModelInfo){
 		if singleFiled.Anonymous{
 			continue
 		}
+		if singleFiled.PkgPath != ""{
+			continue
+		}
 		if isFromModelType(singleFiled.Type){
 			result.subModelFields = append(result.subModelFields,i)
 		}
