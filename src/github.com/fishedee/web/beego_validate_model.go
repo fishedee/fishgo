@@ -28,27 +28,22 @@ func init(){
 }
 
 type BeegoValidateModel struct {
+	*BeegoValidateBasic
 	AppController beego.ControllerInterface
 	AppModel interface{}
-}
-
-func (this *BeegoValidateModel)Prepare(){
-}
-
-func (this *BeegoValidateModel)Finish(){
+	Ctx *context.Context
 }
 
 func (this *BeegoValidateModel)SetAppController(controller beego.ControllerInterface){
 	this.AppController = controller
+	controllerInfo := getControllerInfo(reflect.TypeOf(this.AppController))
+	basicInfo := reflect.ValueOf(this.AppController).Method(controllerInfo.getBasicFunc).Call(nil)[0].Interface().(*BeegoValidateBasic)
+	this.BeegoValidateBasic = basicInfo
+	this.Ctx = this.BeegoValidateBasic.ctx
 }
 
 func (this *BeegoValidateModel)SetAppModel(model interface{}){
 	this.AppModel = model
-}
-
-func (this *BeegoValidateModel)GetContext()(*context.Context){
-	controllerInfo := getControllerInfo(reflect.TypeOf(this.AppController))
-	return reflect.ValueOf(this.AppController).Method(controllerInfo.getContextFunc).Call(nil)[0].Interface().(*context.Context)
 }
 
 func isFromModelType(target reflect.Type)(bool){

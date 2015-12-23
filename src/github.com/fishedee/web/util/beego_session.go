@@ -1,4 +1,4 @@
-package web
+package util
 
 import (
 	"net/http"
@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 	"encoding/json"
-	_ "github.com/fishedee/web/beego_session"
+	_ "github.com/fishedee/web/util/beego_session"
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/session"
 	. "github.com/fishedee/util"
@@ -46,6 +46,9 @@ func init(){
 }
 
 func newSessionManager(config SessionManagerConfig)(*SessionManager,error){
+	if config.Driver == ""{
+		return nil,nil
+	}
 	result,err := json.Marshal(config)
 	if err != nil{
 		return nil,err

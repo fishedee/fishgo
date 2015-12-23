@@ -10,36 +10,39 @@ type timerController struct{
 	BeegoValidateController
 }
 
-func getTimerController()(*BeegoValidateController){
-	return &BeegoValidateController{}
+func (this *timerController)startSingleTimerTask(handler reflect.Value,handlerArgv []reflect.Value){
+	defer CatchCrash(func(exception Exception){
+		this.Log.Critical("TimerTask Crash Code:[%d] Message:[%s]\nStackTrace:[%s]",exception.GetCode(),exception.GetMessage(),exception.GetStackTrace())
+	})
+	defer Catch(func(exception Exception){
+		this.Log.Error("TimerTask Error Code:[%d] Message:[%s]\nStackTrace:[%s]",exception.GetCode(),exception.GetMessage(),exception.GetStackTrace())
+	})
+	handler.Call(handlerArgv)
 }
 
-func getTimeModel(targetType reflect.Type)(reflect.Value){
+func newTimerController()(*timerController){
+	controller := &timerController{}
+	controller.AppController = controller
+	controller.Prepare()
+	return controller
+}
+
+func newTimeModel(targetType reflect.Type,controller *timerController)(reflect.Value){
 	model := reflect.New(targetType.Elem())
-	controller := getTimerController()
 	controllerValue := reflect.ValueOf(controller)
 	prepareBeegoValidateModelInner(model,controllerValue)
 	return model
 }
 
-func startSingleTimerTask(handler reflect.Value,handlerArgv []reflect.Value){
-	defer CatchCrash(func(exception Exception){
-		Log.Critical("TimerTask Crash Code:[%d] Message:[%s]\nStackTrace:[%s]",exception.GetCode(),exception.GetMessage(),exception.GetStackTrace())
-	})
-	defer Catch(func(exception Exception){
-		Log.Error("TimerTask Error Code:[%d] Message:[%s]\nStackTrace:[%s]",exception.GetCode(),exception.GetMessage(),exception.GetStackTrace())
-	})
-	handler.Call(handlerArgv)
-}
-
 func startSingleTask(handler interface{}){
+	controller := newTimerController()
 	handlerType := reflect.TypeOf(handler)
 	handlerValue := reflect.ValueOf(handler)
 	if handlerType.NumIn() == 0{
-		startSingleTimerTask(handlerValue,nil)
+		controller.startSingleTimerTask(handlerValue,nil)
 	}else{
-		handlerArgv := getTimeModel(handlerType.In(0))
-		startSingleTimerTask(handlerValue,[]reflect.Value{handlerArgv})
+		modelArgv := newTimeModel(handlerType.In(0),controller)
+		controller.startSingleTimerTask(handlerValue,[]reflect.Value{modelArgv})
 	}
 }
 

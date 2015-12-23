@@ -1,4 +1,4 @@
-package web
+package util
 
 import (
 	"fmt"
@@ -41,6 +41,9 @@ func init(){
 }
 
 func newDatabaseManager(config DatabaseManagerConfig) (*DatabaseManager, error) {
+	if config.Driver == ""{
+		return nil,nil
+	}
 	dblink := fmt.Sprintf(
 		"%s:%s@tcp(%s:%d)/%s?charset=utf8",
 		config.User,

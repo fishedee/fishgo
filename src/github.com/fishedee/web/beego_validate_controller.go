@@ -2,7 +2,6 @@ package web
 
 import (
 	"github.com/astaxie/beego"
-	"github.com/astaxie/beego/context"
 	"github.com/fishedee/language"
 	"net/url"
 	"strings"
@@ -13,7 +12,7 @@ import (
 )
 
 type beegoValidateControllerInfo struct{
-	getContextFunc int
+	getBasicFunc int
 }
 
 var beegoValidateControllerInfoMap struct{
@@ -33,9 +32,11 @@ func init(){
 
 type BeegoValidateController struct {
 	beego.Controller
+	*BeegoValidateBasic
 }
 
 func (this *BeegoValidateController)Prepare(){
+	this.BeegoValidateBasic = NewBeegoValidateBasic(this.Ctx)
 	PrepareBeegoValidateModel(this.AppController)
 }
 
@@ -43,13 +44,13 @@ func (this *BeegoValidateController)Finish(){
 	FinishBeegoValidateModel(this.AppController)
 }
 
-func (this *BeegoValidateController)GetContext()(*context.Context){
-	return this.Ctx
+func (this *BeegoValidateController)GetBasic()(*BeegoValidateBasic){
+	return this.BeegoValidateBasic
 }
 
 func (this *BeegoValidateController)runMethod(method reflect.Value,arguments []reflect.Value)(result []reflect.Value){
 	defer language.Catch(func(exception language.Exception){
-		Log.Error("Buiness Error Code:[%d] Message:[%s]\nStackTrace:[%s]",exception.GetCode(),exception.GetMessage(),exception.GetStackTrace())
+		this.Log.Error("Buiness Error Code:[%d] Message:[%s]\nStackTrace:[%s]",exception.GetCode(),exception.GetMessage(),exception.GetStackTrace())
 		result = []reflect.Value{reflect.ValueOf(exception)}
 	})
 	result = method.Call(arguments)
@@ -209,8 +210,8 @@ func getControllerInfoInner(target reflect.Type)(beegoValidateControllerInfo){
 	targetType := reflect.TypeOf(target)
 	for i := 0 ; i != targetType.NumMethod() ; i++{
 		singleMethod := target.Method(i)
-		if singleMethod.Name == "GetContext"{
-			result.getContextFunc = i
+		if singleMethod.Name == "GetBasic"{
+			result.getBasicFunc = i
 		}
 	}
 	return result
