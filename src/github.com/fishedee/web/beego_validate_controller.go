@@ -51,6 +51,9 @@ func (this *BeegoValidateController)GetBasic()(*BeegoValidateBasic){
 func (this *BeegoValidateController)runMethod(method reflect.Value,arguments []reflect.Value)(result []reflect.Value){
 	defer language.Catch(func(exception language.Exception){
 		this.Log.Error("Buiness Error Code:[%d] Message:[%s]\nStackTrace:[%s]",exception.GetCode(),exception.GetMessage(),exception.GetStackTrace())
+		if this.Monitor != nil{
+			this.Monitor.AscErrorCount()
+		}
 		result = []reflect.Value{reflect.ValueOf(exception)}
 	})
 	result = method.Call(arguments)
@@ -61,6 +64,14 @@ func (this *BeegoValidateController)runMethod(method reflect.Value,arguments []r
 }
 
 func (this *BeegoValidateController)AutoRouteMethod(){
+	defer language.CatchCrash(func(exception language.Exception){
+		this.Log.Critical("Buiness Crash Code:[%d] Message:[%s]\nStackTrace:[%s]",exception.GetCode(),exception.GetMessage(),exception.GetStackTrace())
+		if this.Monitor != nil{
+			this.Monitor.AscCriticalCount()
+		}
+		this.Ctx.Output.SetStatus(500)
+		this.Ctx.WriteString("server internal error!")
+	})
 	//查找路由
 	appController := this.AppController
 	url := this.Ctx.Input.Url()

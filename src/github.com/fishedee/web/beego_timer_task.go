@@ -13,9 +13,15 @@ type timerController struct{
 func (this *timerController)startSingleTimerTask(handler reflect.Value,handlerArgv []reflect.Value){
 	defer CatchCrash(func(exception Exception){
 		this.Log.Critical("TimerTask Crash Code:[%d] Message:[%s]\nStackTrace:[%s]",exception.GetCode(),exception.GetMessage(),exception.GetStackTrace())
+		if this.Monitor != nil{
+			this.Monitor.AscCriticalCount()
+		}
 	})
 	defer Catch(func(exception Exception){
 		this.Log.Error("TimerTask Error Code:[%d] Message:[%s]\nStackTrace:[%s]",exception.GetCode(),exception.GetMessage(),exception.GetStackTrace())
+		if this.Monitor != nil{
+			this.Monitor.AscErrorCount()
+		}
 	})
 	handler.Call(handlerArgv)
 }

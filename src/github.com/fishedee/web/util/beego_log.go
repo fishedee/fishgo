@@ -87,14 +87,14 @@ func NewLogManager(config LogManagerConfig)(*logs.BeeLogger,error){
 }
 
 func newLogManagerFromConfig(configName string)(*logs.BeeLogger,error){
-	fishlogdriver := beego.AppConfig.String("fishlogdriver")
-	fishlogfile := beego.AppConfig.String("fishlogfile")
-	fishlogmaxline := beego.AppConfig.String("fishlogmaxline")
-	fishlogmaxsize := beego.AppConfig.String("fishlogmaxsize")
-	fishlogdaily := beego.AppConfig.String("fishlogdaily")
-	fishlogmaxday := beego.AppConfig.String("fishlogmaxday")
-	fishlogrotate := beego.AppConfig.String("fishlogrotate")
-	fishloglevel := beego.AppConfig.String("fishloglevel")
+	fishlogdriver := beego.AppConfig.String(configName+"driver")
+	fishlogfile := beego.AppConfig.String(configName+"file")
+	fishlogmaxline := beego.AppConfig.String(configName+"maxline")
+	fishlogmaxsize := beego.AppConfig.String(configName+"maxsize")
+	fishlogdaily := beego.AppConfig.String(configName+"daily")
+	fishlogmaxday := beego.AppConfig.String(configName+"maxday")
+	fishlogrotate := beego.AppConfig.String(configName+"rotate")
+	fishloglevel := beego.AppConfig.String(configName+"level")
 
 	logConfig := LogManagerConfig{}
 	logConfig.Driver = fishlogdriver

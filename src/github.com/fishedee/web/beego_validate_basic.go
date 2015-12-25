@@ -16,6 +16,7 @@ type BeegoValidateBasic struct {
 	DB5 *DatabaseManager
 	logger *logs.BeeLogger
 	Log *LogManager
+	Monitor *MonitorManager
 }
 
 var globalBasic BeegoValidateBasic
@@ -47,6 +48,10 @@ func init(){
 		panic(err)
 	}
 	globalBasic.logger,err = NewLogManagerFromConfig("fishlog")
+	if err != nil{
+		panic(err)
+	}
+	globalBasic.Monitor,err = NewMonitorManagerFromConfig("fishmonitor")
 	if err != nil{
 		panic(err)
 	}

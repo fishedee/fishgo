@@ -40,6 +40,12 @@ type Ajax struct {
 	ResponseCookie interface{}
 }
 
+var DefaultAjaxPool *AjaxPool
+
+func init(){
+	DefaultAjaxPool = NewAjaxPool(nil)
+}
+
 func NewAjaxPool(option *AjaxPoolOption)(*AjaxPool) {
 	if option == nil{
 		option = &AjaxPoolOption{
