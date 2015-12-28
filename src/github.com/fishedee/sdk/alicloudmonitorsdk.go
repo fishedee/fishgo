@@ -1,104 +1,104 @@
 package sdk
 
 import (
+	"encoding/json"
+	"fmt"
 	. "github.com/fishedee/util"
 	"sync"
 	"time"
-	"fmt"
-	"encoding/json"
 )
 
-type AliCloudMonitorSdkData struct{
+type AliCloudMonitorSdkData struct {
 	metricName string
-	value int64
-	timestamp time.Time
+	value      int64
+	timestamp  time.Time
 }
 
-type AliCloudMonitorSdk struct{
-	AppId string
+type AliCloudMonitorSdk struct {
+	AppId     string
 	dataMutex sync.Mutex
-	data map[string]AliCloudMonitorSdkData
+	data      map[string]AliCloudMonitorSdkData
 }
 
-func (this *AliCloudMonitorSdk) getInner(name string)(int64){
-	if this.data == nil{
+func (this *AliCloudMonitorSdk) getInner(name string) int64 {
+	if this.data == nil {
 		return 0
-	}else{
-		value,ok := this.data[name]
-		if !ok{
+	} else {
+		value, ok := this.data[name]
+		if !ok {
 			return 0
-		}else{
+		} else {
 			return value.value
 		}
 	}
 }
 
-func (this *AliCloudMonitorSdk) setInner(name string,value int64){
-	if this.data == nil{
+func (this *AliCloudMonitorSdk) setInner(name string, value int64) {
+	if this.data == nil {
 		this.data = map[string]AliCloudMonitorSdkData{}
 	}
 	this.data[name] = AliCloudMonitorSdkData{
-		metricName:name,
-		value:value,
-		timestamp:time.Now(),
+		metricName: name,
+		value:      value,
+		timestamp:  time.Now(),
 	}
 }
 
-func (this *AliCloudMonitorSdk) Max(name string,value int64){
+func (this *AliCloudMonitorSdk) Max(name string, value int64) {
 	this.dataMutex.Lock()
 	defer this.dataMutex.Unlock()
 
 	oldvalue := this.getInner(name)
-	if oldvalue < value{
+	if oldvalue < value {
 		oldvalue = value
 	}
-	this.setInner(name,oldvalue)	
+	this.setInner(name, oldvalue)
 }
 
-func (this *AliCloudMonitorSdk) Min(name string,value int64){
+func (this *AliCloudMonitorSdk) Min(name string, value int64) {
 	this.dataMutex.Lock()
 	defer this.dataMutex.Unlock()
 
 	oldvalue := this.getInner(name)
-	if oldvalue > value{
+	if oldvalue > value {
 		oldvalue = value
 	}
-	this.setInner(name,oldvalue)
+	this.setInner(name, oldvalue)
 }
 
-func (this *AliCloudMonitorSdk) Set(name string,value int64){
+func (this *AliCloudMonitorSdk) Set(name string, value int64) {
 	this.dataMutex.Lock()
 	defer this.dataMutex.Unlock()
 
-	this.setInner(name,value)
+	this.setInner(name, value)
 }
 
-func (this *AliCloudMonitorSdk) Asc(name string,value int64){
+func (this *AliCloudMonitorSdk) Asc(name string, value int64) {
 	this.dataMutex.Lock()
 	defer this.dataMutex.Unlock()
 
 	oldvalue := this.getInner(name)
 	oldvalue += value
-	this.setInner(name,oldvalue)
+	this.setInner(name, oldvalue)
 }
 
-func (this *AliCloudMonitorSdk) Dec(name string,value int64){
+func (this *AliCloudMonitorSdk) Dec(name string, value int64) {
 	this.dataMutex.Lock()
 	defer this.dataMutex.Unlock()
 
 	oldvalue := this.getInner(name)
 	oldvalue -= value
-	this.setInner(name,oldvalue)
+	this.setInner(name, oldvalue)
 }
 
-func (this *AliCloudMonitorSdk) Clear(){
+func (this *AliCloudMonitorSdk) Clear() {
 	this.dataMutex.Lock()
 	defer this.dataMutex.Unlock()
 
 	this.data = map[string]AliCloudMonitorSdkData{}
 }
 
-func (this *AliCloudMonitorSdk) GetAllAndClear()(map[string]AliCloudMonitorSdkData){
+func (this *AliCloudMonitorSdk) GetAllAndClear() map[string]AliCloudMonitorSdkData {
 	this.dataMutex.Lock()
 	defer this.dataMutex.Unlock()
 
@@ -107,24 +107,24 @@ func (this *AliCloudMonitorSdk) GetAllAndClear()(map[string]AliCloudMonitorSdkDa
 	return result
 }
 
-func (this *AliCloudMonitorSdk) Sync(){
-	go func(){
+func (this *AliCloudMonitorSdk) Sync() {
+	go func() {
 		tickChan := time.Tick(time.Minute)
 		for {
-			<- tickChan
+			<-tickChan
 			err := this.syncInner()
-			if err != nil{
-				fmt.Println("AliCloudMonitorSdk Sync Error "+err.Error())
+			if err != nil {
+				fmt.Println("AliCloudMonitorSdk Sync Error " + err.Error())
 			}
 		}
-	}();
+	}()
 }
 
-func (this *AliCloudMonitorSdk) syncInner()(error){
+func (this *AliCloudMonitorSdk) syncInner() error {
 	//获取IP信息
 	ip138 := &Ip138Sdk{}
-	ip,err := ip138.GetCurrentIP()
-	if err != nil{
+	ip, err := ip138.GetCurrentIP()
+	if err != nil {
 		return err
 	}
 
@@ -132,35 +132,35 @@ func (this *AliCloudMonitorSdk) syncInner()(error){
 	pushData := this.GetAllAndClear()
 
 	//执行同步
-	if pushData == nil || len(pushData) == 0{
+	if pushData == nil || len(pushData) == 0 {
 		return nil
 	}
 	var metrics []interface{}
-	for _,singleData := range pushData{
+	for _, singleData := range pushData {
 		singleMetric := map[string]interface{}{
-			"metricName":singleData.metricName,
-			"value":singleData.value,
-			"unit":"None",
-			"dimensions":map[string]string{
-				"machineIP":ip.String(),
+			"metricName": singleData.metricName,
+			"value":      singleData.value,
+			"unit":       "None",
+			"dimensions": map[string]string{
+				"machineIP": ip.String(),
 			},
-			"timestamp":singleData.timestamp.Unix()*1000+int64(singleData.timestamp.Nanosecond()/1000000),
+			"timestamp": singleData.timestamp.Unix()*1000 + int64(singleData.timestamp.Nanosecond()/1000000),
 		}
-		metrics = append(metrics,singleMetric)
+		metrics = append(metrics, singleMetric)
 	}
-	metricsJson,err := json.Marshal(metrics)
-	if err != nil{
+	metricsJson, err := json.Marshal(metrics)
+	if err != nil {
 		return err
 	}
 	err = DefaultAjaxPool.Get(&Ajax{
-		Url:"http://open.cms.aliyun.com/metrics/put",
-		Data:map[string]string{
-			"userId":this.AppId,
-			"namespace":"acs/custom/"+this.AppId,
-			"metrics":string(metricsJson),
+		Url: "http://open.cms.aliyun.com/metrics/put",
+		Data: map[string]string{
+			"userId":    this.AppId,
+			"namespace": "acs/custom/" + this.AppId,
+			"metrics":   string(metricsJson),
 		},
 	})
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	return nil

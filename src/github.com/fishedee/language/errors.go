@@ -4,32 +4,32 @@ import (
 	"github.com/go-errors/errors"
 )
 
-type Error struct{
+type Error struct {
 	innerError *errors.Error
-	code int 
-	message string
+	code       int
+	message    string
 }
 
-func NewError(code int,message string)(*Error){
+func NewError(code int, message string) *Error {
 	return &Error{
-		innerError:errors.New(message),
-		code:code,
-		message:message,
+		innerError: errors.New(message),
+		code:       code,
+		message:    message,
 	}
 }
 
-func (this *Error)GetCode()(int){
+func (this *Error) GetCode() int {
 	return this.code
 }
 
-func (this *Error)GetMessage()(string){
+func (this *Error) GetMessage() string {
 	return this.message
 }
 
-func (this *Error)Error()(string){
-	return this.message;
+func (this *Error) Error() string {
+	return this.message
 }
 
-func (this *Error)ErrorStack()(string){
-	return this.innerError.ErrorStack();
+func (this *Error) ErrorStack() string {
+	return this.innerError.ErrorStack()
 }

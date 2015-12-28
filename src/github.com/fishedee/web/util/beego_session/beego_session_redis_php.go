@@ -39,8 +39,8 @@ import (
 	"sync"
 
 	"github.com/astaxie/beego/session"
-	"github.com/garyburd/redigo/redis"
 	"github.com/fishedee/encoding"
+	"github.com/garyburd/redigo/redis"
 )
 
 var redispder = &RedisProvider{}

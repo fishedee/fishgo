@@ -1,31 +1,31 @@
 package util
 
 import (
-	"net/http"
-	"net/url"
-	"strings"
-	"strconv"
-	"time"
 	"encoding/json"
-	_ "github.com/fishedee/web/util/beego_session"
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/session"
 	. "github.com/fishedee/util"
+	_ "github.com/fishedee/web/util/beego_session"
+	"net/http"
+	"net/url"
+	"strconv"
+	"strings"
+	"time"
 )
 
-type SessionManagerConfig struct{
-	Driver 			string `json:driver`
+type SessionManagerConfig struct {
+	Driver          string `json:driver`
 	CookieName      string `json:"cookieName"`
 	EnableSetCookie bool   `json:"enableSetCookie,omitempty"`
-	GcLifeTime      int  `json:"gclifetime"`
+	GcLifeTime      int    `json:"gclifetime"`
 	Secure          bool   `json:"secure"`
 	CookieLifeTime  int    `json:"cookieLifeTime"`
 	ProviderConfig  string `json:"providerConfig"`
 	Domain          string `json:"domain"`
-	SessionIdLength int  `json:"sessionIdLength"`
+	SessionIdLength int    `json:"sessionIdLength"`
 }
 
-type SessionManager struct{
+type SessionManager struct {
 	*session.Manager
 	config SessionManagerConfig
 }
@@ -33,93 +33,93 @@ type SessionManager struct{
 var newSessionManagerMemory *MemoryFunc
 var newSessionManagerFromConfigMemory *MemoryFunc
 
-func init(){
+func init() {
 	var err error
-	newSessionManagerMemory,err = NewMemoryFunc(newSessionManager,MemoryFuncCacheNormal)
-	if err != nil{
+	newSessionManagerMemory, err = NewMemoryFunc(newSessionManager, MemoryFuncCacheNormal)
+	if err != nil {
 		panic(err)
 	}
-	newSessionManagerFromConfigMemory,err = NewMemoryFunc(newSessionManagerFromConfig,MemoryFuncCacheNormal)
-	if err != nil{
+	newSessionManagerFromConfigMemory, err = NewMemoryFunc(newSessionManagerFromConfig, MemoryFuncCacheNormal)
+	if err != nil {
 		panic(err)
 	}
 }
 
-func newSessionManager(config SessionManagerConfig)(*SessionManager,error){
-	if config.Driver == ""{
-		return nil,nil
+func newSessionManager(config SessionManagerConfig) (*SessionManager, error) {
+	if config.Driver == "" {
+		return nil, nil
 	}
-	result,err := json.Marshal(config)
-	if err != nil{
-		return nil,err
+	result, err := json.Marshal(config)
+	if err != nil {
+		return nil, err
 	}
 
 	sessionManager, err := session.NewManager(config.Driver, string(result))
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 	go sessionManager.GC()
 
 	return &SessionManager{
-		Manager:sessionManager,
-		config:config,
-	},nil
+		Manager: sessionManager,
+		config:  config,
+	}, nil
 }
 
-func NewSessionManager(config SessionManagerConfig)(*SessionManager,error){
-	result,err := newSessionManagerMemory.Call(config)
-	return result.(*SessionManager),err
+func NewSessionManager(config SessionManagerConfig) (*SessionManager, error) {
+	result, err := newSessionManagerMemory.Call(config)
+	return result.(*SessionManager), err
 }
 
-func newSessionManagerFromConfig(configName string)(*SessionManager,error){
-	sessiondirver := beego.AppConfig.String(configName+"driver")
-	sessionname := beego.AppConfig.String(configName+"name")
-	sessiongclifttime := beego.AppConfig.String(configName+"gclifttime")
-	sessioncookielifetime := beego.AppConfig.String(configName+"cookielifetime")
-	sessionsavepath := beego.AppConfig.String(configName+"savepath")
-	sessionsecure := beego.AppConfig.String(configName+"secure")
-	sessiondomain := beego.AppConfig.String(configName+"domain")
-	sessionlength := beego.AppConfig.String(configName+"length")
+func newSessionManagerFromConfig(configName string) (*SessionManager, error) {
+	sessiondirver := beego.AppConfig.String(configName + "driver")
+	sessionname := beego.AppConfig.String(configName + "name")
+	sessiongclifttime := beego.AppConfig.String(configName + "gclifttime")
+	sessioncookielifetime := beego.AppConfig.String(configName + "cookielifetime")
+	sessionsavepath := beego.AppConfig.String(configName + "savepath")
+	sessionsecure := beego.AppConfig.String(configName + "secure")
+	sessiondomain := beego.AppConfig.String(configName + "domain")
+	sessionlength := beego.AppConfig.String(configName + "length")
 
 	sessionlink := SessionManagerConfig{}
 	sessionlink.Driver = sessiondirver
 	sessionlink.CookieName = sessionname
 	sessionlink.EnableSetCookie = true
-	sessionlink.GcLifeTime,_ = strconv.Atoi(sessiongclifttime)
-	sessionlink.Secure,_ = strconv.ParseBool(sessionsecure)
-	sessionlink.CookieLifeTime,_ = strconv.Atoi(sessioncookielifetime)
+	sessionlink.GcLifeTime, _ = strconv.Atoi(sessiongclifttime)
+	sessionlink.Secure, _ = strconv.ParseBool(sessionsecure)
+	sessionlink.CookieLifeTime, _ = strconv.Atoi(sessioncookielifetime)
 	sessionlink.ProviderConfig = sessionsavepath
 	sessionlink.Domain = sessiondomain
-	sessionlink.SessionIdLength,_ = strconv.Atoi(sessionlength)
+	sessionlink.SessionIdLength, _ = strconv.Atoi(sessionlength)
 
 	return NewSessionManager(sessionlink)
 }
 
-func NewSessionManagerFromConfig(configName string)(*SessionManager,error){
-	result,err := newSessionManagerFromConfigMemory.Call(configName)
-	return result.(*SessionManager),err
+func NewSessionManagerFromConfig(configName string) (*SessionManager, error) {
+	result, err := newSessionManagerFromConfigMemory.Call(configName)
+	return result.(*SessionManager), err
 }
 
 func (manager *SessionManager) SessionStart(w http.ResponseWriter, r *http.Request) (session session.SessionStore, err error) {
-	result,errOrgin := manager.Manager.SessionStart(w,r)
-	if errOrgin != nil{
-		return result,errOrgin
+	result, errOrgin := manager.Manager.SessionStart(w, r)
+	if errOrgin != nil {
+		return result, errOrgin
 	}
 	//获取当前的cookie值
 	cookie, err := r.Cookie(manager.config.CookieName)
-	if err != nil || cookie.Value == ""{
-		return result,errOrgin
+	if err != nil || cookie.Value == "" {
+		return result, errOrgin
 	}
 	sid, err := url.QueryUnescape(cookie.Value)
-	if err != nil{
-		return result,errOrgin
+	if err != nil {
+		return result, errOrgin
 	}
 
 	//补充延续session时间的逻辑
 	cookieValue := w.Header().Get("Set-Cookie")
 	cookieName := manager.config.CookieName
-	if strings.Index(cookieValue,cookieName) != -1{
-		return result,err
+	if strings.Index(cookieValue, cookieName) != -1 {
+		return result, err
 	}
 	cookie = &http.Cookie{
 		Name:     manager.config.CookieName,
@@ -136,5 +136,5 @@ func (manager *SessionManager) SessionStart(w http.ResponseWriter, r *http.Reque
 	if manager.config.EnableSetCookie {
 		http.SetCookie(w, cookie)
 	}
-	return result,errOrgin
+	return result, errOrgin
 }

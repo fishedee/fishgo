@@ -3,9 +3,9 @@ package util
 import (
 	"fmt"
 	"github.com/astaxie/beego"
+	. "github.com/fishedee/util"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/go-xorm/xorm"
-	. "github.com/fishedee/util"
 	"strconv"
 	"strings"
 )
@@ -28,21 +28,21 @@ type DatabaseManager struct {
 var newDatabaseManagerMemory *MemoryFunc
 var newDatabaseManagerFromConfigMemory *MemoryFunc
 
-func init(){
+func init() {
 	var err error
-	newDatabaseManagerMemory,err = NewMemoryFunc(newDatabaseManager,MemoryFuncCacheNormal)
-	if err != nil{
+	newDatabaseManagerMemory, err = NewMemoryFunc(newDatabaseManager, MemoryFuncCacheNormal)
+	if err != nil {
 		panic(err)
 	}
-	newDatabaseManagerFromConfigMemory,err = NewMemoryFunc(newDatabaseManagerFromConfig,MemoryFuncCacheNormal)
-	if err != nil{
+	newDatabaseManagerFromConfigMemory, err = NewMemoryFunc(newDatabaseManagerFromConfig, MemoryFuncCacheNormal)
+	if err != nil {
 		panic(err)
 	}
 }
 
 func newDatabaseManager(config DatabaseManagerConfig) (*DatabaseManager, error) {
-	if config.Driver == ""{
-		return nil,nil
+	if config.Driver == "" {
+		return nil, nil
 	}
 	dblink := fmt.Sprintf(
 		"%s:%s@tcp(%s:%d)/%s?charset=utf8",
@@ -68,9 +68,9 @@ func newDatabaseManager(config DatabaseManagerConfig) (*DatabaseManager, error) 
 	}, nil
 }
 
-func NewDatabaseManager(config DatabaseManagerConfig)(*DatabaseManager,error){
-	result,err := newDatabaseManagerMemory.Call(config)
-	return result.(*DatabaseManager),err
+func NewDatabaseManager(config DatabaseManagerConfig) (*DatabaseManager, error) {
+	result, err := newDatabaseManagerMemory.Call(config)
+	return result.(*DatabaseManager), err
 }
 
 func newDatabaseManagerFromConfig(configName string) (*DatabaseManager, error) {
@@ -94,9 +94,9 @@ func newDatabaseManagerFromConfig(configName string) (*DatabaseManager, error) {
 	return NewDatabaseManager(config)
 }
 
-func NewDatabaseManagerFromConfig(configName string)(*DatabaseManager,error){
-	result,err := newDatabaseManagerFromConfigMemory.Call(configName)
-	return result.(*DatabaseManager),err
+func NewDatabaseManagerFromConfig(configName string) (*DatabaseManager, error) {
+	result, err := newDatabaseManagerFromConfigMemory.Call(configName)
+	return result.(*DatabaseManager), err
 }
 
 type tableMapper struct {

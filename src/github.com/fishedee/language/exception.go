@@ -5,13 +5,13 @@ import (
 	"runtime"
 )
 
-type Exception struct{
-	code int
+type Exception struct {
+	code    int
 	message string
-	stack string
+	stack   string
 }
 
-func NewException(code int,message string)(*Exception){
+func NewException(code int, message string) *Exception {
 	stack := ""
 	for i := 1; ; i++ {
 		_, file, line, ok := runtime.Caller(i)
@@ -22,46 +22,46 @@ func NewException(code int,message string)(*Exception){
 	}
 
 	return &Exception{
-		code:code,
-		message:message,
-		stack:stack,
+		code:    code,
+		message: message,
+		stack:   stack,
 	}
 }
 
-func (this *Exception)Error()(string){
+func (this *Exception) Error() string {
 	return this.message
 }
 
-func (this *Exception)GetCode()(int){
+func (this *Exception) GetCode() int {
 	return this.code
 }
 
-func (this *Exception)GetMessage()(string){
+func (this *Exception) GetMessage() string {
 	return this.message
 }
 
-func (this *Exception)GetStackTrace()(string){
+func (this *Exception) GetStackTrace() string {
 	return this.stack
 }
 
-func Throw(code int,message string){
-	panic(NewException(code,message))
+func Throw(code int, message string) {
+	panic(NewException(code, message))
 }
 
-func CatchCrash(handler func(Exception)){
-	err := recover();
-	if err != nil{
-		handler(*NewException(1,fmt.Sprint(err)))
+func CatchCrash(handler func(Exception)) {
+	err := recover()
+	if err != nil {
+		handler(*NewException(1, fmt.Sprint(err)))
 	}
 }
 
-func Catch(handler func(Exception)){
-	err := recover();
-	if err != nil{
-		exceptionErrr,ok := err.(*Exception)
-		if ok{
+func Catch(handler func(Exception)) {
+	err := recover()
+	if err != nil {
+		exceptionErrr, ok := err.(*Exception)
+		if ok {
 			handler(*exceptionErrr)
-		}else{
+		} else {
 			panic(err)
 		}
 	}
