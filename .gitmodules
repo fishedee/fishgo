@@ -109,3 +109,6 @@
 [submodule "src/qiniupkg.com/x"]
 	path = src/qiniupkg.com/x
 	url = git@github.com:qiniu/x.git
+[submodule "src/github.com/davecheney/profile"]
+	path = src/github.com/davecheney/profile
+	url = git@github.com:davecheney/profile.git

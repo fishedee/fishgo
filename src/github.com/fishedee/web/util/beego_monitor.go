@@ -37,7 +37,7 @@ func init(){
 func newMonitorManager(config MonitorManagerConfig)(*MonitorManager,error){
 	if config.Driver == ""{
 		return nil,nil
-	}else if config.Driver == "alicloudmonitor"{
+	}else if config.Driver == "aliyuncloudmonitor"{
 		result := &MonitorManager{
 			AliCloudMonitorSdk:AliCloudMonitorSdk{
 				AppId:config.AppId,

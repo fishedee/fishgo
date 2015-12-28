@@ -4,12 +4,17 @@ import (
 	"github.com/astaxie/beego"
 	"github.com/fishedee/language"
 	"net/url"
+	"net/http"
 	"strings"
 	"reflect"
 	"strconv"
 	"time"
 	"sync"
 )
+
+type beegoValidateControllerInterface interface{
+	GetBasic()(*BeegoValidateBasic)
+}
 
 type beegoValidateControllerInfo struct{
 	getBasicFunc int
@@ -33,6 +38,34 @@ func init(){
 type BeegoValidateController struct {
 	beego.Controller
 	*BeegoValidateBasic
+}
+
+func (this *BeegoValidateController)Get(){
+	this.AutoRouteMethod()
+}
+
+func (this *BeegoValidateController)Post(){
+	this.AutoRouteMethod()
+}
+
+func (this *BeegoValidateController)Delete(){
+	this.AutoRouteMethod()
+}
+
+func (this *BeegoValidateController)Put(){
+	this.AutoRouteMethod()
+}
+
+func (this *BeegoValidateController)Head(){
+	this.AutoRouteMethod()
+}
+
+func (this *BeegoValidateController)Patch(){
+	this.AutoRouteMethod()
+}
+
+func (this *BeegoValidateController)Options(){
+	this.AutoRouteMethod()
 }
 
 func (this *BeegoValidateController)Prepare(){
@@ -69,8 +102,8 @@ func (this *BeegoValidateController)AutoRouteMethod(){
 		if this.Monitor != nil{
 			this.Monitor.AscCriticalCount()
 		}
-		this.Ctx.Output.SetStatus(500)
-		this.Ctx.WriteString("server internal error!")
+		this.Ctx.ResponseWriter.WriteHeader(http.StatusInternalServerError)
+ 		this.Ctx.ResponseWriter.Write([]byte("server internal error!"))
 	})
 	//查找路由
 	appController := this.AppController
@@ -292,12 +325,10 @@ func InitBeegoVaildateControllerRoute(namespace string,target beego.ControllerIn
 		beego.Router(
 			namespace+"/"+singleMethodInfo.name,
 			target,
-			"*:AutoRouteMethod",
 		);
 		beego.Router(
 			namespace+"/"+singleMethodInfo.name+"/*.*",
 			target,
-			"*:AutoRouteMethod",
 		);
 		routerControllerMethod[controllerType][singleMethodInfo.name] = *singleMethodInfo
 	}
