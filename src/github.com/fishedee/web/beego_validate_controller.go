@@ -9,35 +9,23 @@ import (
 	"reflect"
 	"strconv"
 	"time"
-	"sync"
 )
 
 type beegoValidateControllerInterface interface{
+	beegoValidateModelInterface
 	GetBasic()(*BeegoValidateBasic)
+	AutoRender(result interface{},view string)
 }
-
-type beegoValidateControllerInfo struct{
-	getBasicFunc int
-}
-
-var beegoValidateControllerInfoMap struct{
-	mutex sync.RWMutex
-	data map[reflect.Type]beegoValidateControllerInfo
-}
-
-var beegoValidateControllerType reflect.Type
 
 var routerControllerMethod map[reflect.Type]map[string]methodInfo
-
 func init(){
-	beegoValidateControllerInfoMap.data = map[reflect.Type]beegoValidateControllerInfo{}
-	beegoValidateControllerType = reflect.TypeOf(BeegoValidateController{})
 	routerControllerMethod = map[reflect.Type]map[string]methodInfo{}
 }
 
 type BeegoValidateController struct {
 	beego.Controller
 	*BeegoValidateBasic
+	appController beegoValidateControllerInterface
 }
 
 func (this *BeegoValidateController)Get(){
@@ -69,17 +57,38 @@ func (this *BeegoValidateController)Options(){
 }
 
 func (this *BeegoValidateController)Prepare(){
+	this.appController = this.AppController.(beegoValidateControllerInterface)
 	this.BeegoValidateBasic = NewBeegoValidateBasic(this.Ctx)
-	PrepareBeegoValidateModel(this.AppController)
+	PrepareBeegoValidateModel(this.appController)
 }
 
 func (this *BeegoValidateController)Finish(){
-	FinishBeegoValidateModel(this.AppController)
 }
 
 func (this *BeegoValidateController)GetBasic()(*BeegoValidateBasic){
 	return this.BeegoValidateBasic
 }
+
+func (this *BeegoValidateController)SetAppController(controller beegoValidateControllerInterface){
+}
+
+func (this *BeegoValidateController)SetAppModel(model beegoValidateModelInterface){
+}
+
+func (this *BeegoValidateController)GetSubModel()([]beegoValidateModelInterface){
+	result := []beegoValidateModelInterface{}
+	modelType := reflect.TypeOf(this.AppController).Elem()
+	modelValue := reflect.ValueOf(this.AppController).Elem()
+	modelTypeFields := getSubModuleFromType(modelType)
+	for _,i := range modelTypeFields{
+		result = append(
+			result,
+			modelValue.Field(i).Addr().Interface().(beegoValidateModelInterface),
+		)
+	}
+	return result
+}
+
 
 func (this *BeegoValidateController)runMethod(method reflect.Value,arguments []reflect.Value)(result []reflect.Value){
 	defer language.Catch(func(exception language.Exception){
@@ -131,8 +140,7 @@ func (this *BeegoValidateController)AutoRouteMethod(){
 	if len(appControllerResult) != 1 {
 		panic("url controller should has return value "+url)
 	}
-	appControllerValueResult := []reflect.Value{appControllerResult[0],reflect.ValueOf(appMethodInfo.viewName)}
-	appControllerValue.MethodByName("AutoRender").Call(appControllerValueResult)
+	this.appController.AutoRender(appControllerResult[0].Interface(),appMethodInfo.viewName)
 }
 
 func (this *BeegoValidateController)AutoRender(result interface{},view string){
@@ -245,37 +253,6 @@ type methodInfo struct{
 	name string
 	viewName string
 	method reflect.Method
-}
-
-func getControllerInfoInner(target reflect.Type)(beegoValidateControllerInfo){
-	result := beegoValidateControllerInfo{
-		-1,
-	}
-	targetType := reflect.TypeOf(target)
-	for i := 0 ; i != targetType.NumMethod() ; i++{
-		singleMethod := target.Method(i)
-		if singleMethod.Name == "GetBasic"{
-			result.getBasicFunc = i
-		}
-	}
-	return result
-}
-
-func getControllerInfo(target reflect.Type)(beegoValidateControllerInfo){
-	beegoValidateControllerInfoMap.mutex.RLock()
-	singleMethodInfo,ok := beegoValidateControllerInfoMap.data[target]
-	beegoValidateControllerInfoMap.mutex.RUnlock()
-
-	if ok{
-		return singleMethodInfo
-	}
-
-	result := getControllerInfoInner(target)
-
-	beegoValidateControllerInfoMap.mutex.Lock()
-	beegoValidateControllerInfoMap.data[target] = result
-	beegoValidateControllerInfoMap.mutex.Unlock()
-	return result
 }
 
 func firstLowerName(name string)(string){

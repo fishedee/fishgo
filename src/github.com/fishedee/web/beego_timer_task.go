@@ -35,8 +35,7 @@ func newTimerController()(*timerController){
 
 func newTimeModel(targetType reflect.Type,controller *timerController)(reflect.Value){
 	model := reflect.New(targetType.Elem())
-	controllerValue := reflect.ValueOf(controller)
-	prepareBeegoValidateModelInner(model,controllerValue)
+	prepareBeegoValidateModelInner(model.Interface().(beegoValidateModelInterface),controller)
 	return model
 }
 
