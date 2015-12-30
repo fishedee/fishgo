@@ -4,7 +4,6 @@ import (
 	"github.com/astaxie/beego"
 	"github.com/fishedee/language"
 	"net/http"
-	"net/url"
 	"reflect"
 	"strconv"
 	"strings"
@@ -166,10 +165,6 @@ func (this *BeegoValidateController) Check(requireStruct interface{}) {
 		result := this.Ctx.Input.Query(filedName)
 		if result == "" {
 			continue
-		}
-		result, err := url.QueryUnescape(result)
-		if err != nil {
-			language.Throw(1, "参数"+singleRequireStructName+"解析失败，其值为：["+result+"]")
 		}
 
 		singleRequireStructValue := requireStructValue.Field(i)
