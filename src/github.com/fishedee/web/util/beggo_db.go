@@ -62,6 +62,7 @@ func newDatabaseManager(config DatabaseManagerConfig) (*DatabaseManager, error) 
 	if config.Debug {
 		tempDb.ShowSQL = true
 	}
+	tempDb.Ping()
 	return &DatabaseManager{
 		Engine: tempDb,
 		config: config,

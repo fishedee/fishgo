@@ -17,6 +17,10 @@ type BeegoValidateBasic struct {
 	logger  *logs.BeeLogger
 	Log     *LogManager
 	Monitor *MonitorManager
+	timer   *TimerManager
+	Timer   *TimerManager
+	queue   *QueueManager
+	Queue   *QueueManager
 }
 
 var globalBasic BeegoValidateBasic
@@ -55,10 +59,20 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+	globalBasic.timer, err = NewTimerManager()
+	if err != nil {
+		panic(err)
+	}
+	globalBasic.queue, err = NewQueueManagerFromConfig("fishqueue")
+	if err != nil {
+		panic(err)
+	}
 }
 func NewBeegoValidateBasic(ctx *context.Context) *BeegoValidateBasic {
 	result := globalBasic
 	result.ctx = ctx
 	result.Log = NewLogManagerWithCtx(ctx, result.logger)
+	result.Timer = NewTimerManagerWithLogAndMonitor(result.Log, result.Monitor, result.timer)
+	result.Queue = NewQueueManagerWithLogAndMonitor(result.Log, result.Monitor, result.queue)
 	return &result
 }
