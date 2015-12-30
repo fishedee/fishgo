@@ -9,7 +9,8 @@ import (
 )
 
 type QueueManagerConfig struct {
-	Driver string `json:driver`
+	BeegoQueueStoreConfig
+	Driver string
 }
 
 type QueueManager struct {
@@ -37,7 +38,7 @@ func newQueueManager(config QueueManagerConfig) (*QueueManager, error) {
 	if config.Driver == "" {
 		return nil, nil
 	} else if config.Driver == "memory" {
-		queue, err := NewMemoryQueue()
+		queue, err := NewMemoryQueue(config.BeegoQueueStoreConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -45,7 +46,15 @@ func newQueueManager(config QueueManagerConfig) (*QueueManager, error) {
 			BeegoQueueStoreInterface: queue,
 		}, nil
 	} else if config.Driver == "memory_async" {
-		queue, err := NewMemoryAsyncQueue()
+		queue, err := NewMemoryAsyncQueue(config.BeegoQueueStoreConfig)
+		if err != nil {
+			return nil, err
+		}
+		return &QueueManager{
+			BeegoQueueStoreInterface: queue,
+		}, nil
+	} else if config.Driver == "redis" {
+		queue, err := NewRedisQueue(config.BeegoQueueStoreConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -67,9 +76,13 @@ func NewQueueManager(config QueueManagerConfig) (*QueueManager, error) {
 
 func newQueueManagerFromConfig(configName string) (*QueueManager, error) {
 	driver := beego.AppConfig.String(configName + "driver")
+	savepath := beego.AppConfig.String(configName + "savepath")
+	saveprefix := beego.AppConfig.String(configName + "saveprefix")
 
 	queueConfig := QueueManagerConfig{}
 	queueConfig.Driver = driver
+	queueConfig.SavePath = savepath
+	queueConfig.SavePrefix = saveprefix
 	return NewQueueManager(queueConfig)
 }
 
@@ -94,7 +107,7 @@ func NewQueueManagerWithLogAndMonitor(log *LogManager, monitor *MonitorManager, 
 }
 
 func (this *QueueManager) WrapListener(listener BeegoQueueListener) BeegoQueueListener {
-	return func(argv interface{}) {
+	return func(data interface{}) {
 		defer CatchCrash(func(exception Exception) {
 			this.Log.Critical("QueueTask Crash Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
 			if this.Monitor != nil {
@@ -107,7 +120,11 @@ func (this *QueueManager) WrapListener(listener BeegoQueueListener) BeegoQueueLi
 				this.Monitor.AscErrorCount()
 			}
 		})
-		listener(argv)
+		argvError, ok := data.(error)
+		if ok {
+			panic(argvError)
+		}
+		listener(data)
 	}
 }
 

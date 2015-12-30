@@ -21,7 +21,7 @@ type MemoryAsyncQueueStore struct {
 	chanSize        int
 }
 
-func NewMemoryAsyncQueue() (*MemoryAsyncQueueStore, error) {
+func NewMemoryAsyncQueue(BeegoQueueStoreConfig) (*MemoryAsyncQueueStore, error) {
 	result := &MemoryAsyncQueueStore{}
 	result.mapPushPopStore = map[string]MemoryAsyncQueuePushPopStore{}
 	result.mapPubSubStore = map[string]MemoryAsyncQueuePubSubStore{}

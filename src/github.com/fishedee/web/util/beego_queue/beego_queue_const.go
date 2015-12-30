@@ -14,3 +14,8 @@ type BeegoQueueStoreInterface interface {
 	Publish(topicId string, data interface{}) error
 	Subscribe(topicId string, listener BeegoQueueListener) error
 }
+
+type BeegoQueueStoreConfig struct {
+	SavePath   string
+	SavePrefix string
+}

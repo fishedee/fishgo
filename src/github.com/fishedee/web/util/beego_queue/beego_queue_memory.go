@@ -19,7 +19,7 @@ type MemoryQueueStore struct {
 	mutex           sync.Mutex
 }
 
-func NewMemoryQueue() (*MemoryQueueStore, error) {
+func NewMemoryQueue(BeegoQueueStoreConfig) (*MemoryQueueStore, error) {
 	result := &MemoryQueueStore{}
 	result.mapPushPopStore = map[string]MemoryQueuePushPopStore{}
 	result.mapPubSubStore = map[string]MemoryQueuePubSubStore{}
