@@ -97,6 +97,9 @@ func (this *RedisQueueStore) consumeData(topicId string, timeout int) (interface
 	c := this.redisPool.Get()
 	defer c.Close()
 	reply, err := redis.Values(c.Do("BRPOP", this.prefix+topicId, timeout))
+	if err == redis.ErrNil {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
