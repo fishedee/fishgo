@@ -24,11 +24,11 @@ func newRedisPool(configSavePath string) (*redis.Pool, error) {
 		savePath = configs[0]
 	}
 	if len(configs) > 1 {
-		poolsize, err := strconv.Atoi(configs[1])
-		if err != nil || poolsize <= 0 {
+		poolsizeInner, err := strconv.Atoi(configs[1])
+		if err != nil || poolsizeInner <= 0 {
 			poolsize = MAX_POOL_SIZE
 		} else {
-			poolsize = poolsize
+			poolsize = poolsizeInner
 		}
 	} else {
 		poolsize = MAX_POOL_SIZE
@@ -67,7 +67,7 @@ func newRedisPool(configSavePath string) (*redis.Pool, error) {
 
 	return poollist, poollist.Get().Err()
 }
-func NewRedisQueue(config BeegoQueueStoreConfig) (*RedisQueueStore, error) {
+func NewRedisQueue(config BeegoQueueStoreConfig) (BeegoQueueStoreInterface, error) {
 	redisPool, err := newRedisPool(config.SavePath)
 	if err != nil {
 		return nil, err
@@ -76,7 +76,7 @@ func NewRedisQueue(config BeegoQueueStoreConfig) (*RedisQueueStore, error) {
 		redisPool: redisPool,
 		prefix:    config.SavePrefix,
 	}
-	return result, nil
+	return NewBasicAsyncQueue(result), nil
 }
 
 func (this *RedisQueueStore) Produce(topicId string, data interface{}) error {
@@ -124,39 +124,6 @@ func (this *RedisQueueStore) Consume(topicId string, listener BeegoQueueListener
 				continue
 			} else {
 				listener(data)
-			}
-		}
-	}()
-	return nil
-}
-
-func (this *RedisQueueStore) Publish(topicId string, data interface{}) error {
-	c := this.redisPool.Get()
-	defer c.Close()
-
-	_, err := c.Do("PUBLISH", this.prefix+topicId, data)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (this *RedisQueueStore) Subscribe(topicId string, listener BeegoQueueListener) error {
-	c := this.redisPool.Get()
-
-	psc := redis.PubSubConn{Conn: c}
-	psc.Subscribe(this.prefix + topicId)
-	go func() {
-		defer c.Close()
-		for {
-			switch n := psc.Receive().(type) {
-			case redis.Message:
-				listener(n.Data)
-			case error:
-				listener(n)
-				return
-			default:
-				break
 			}
 		}
 	}()

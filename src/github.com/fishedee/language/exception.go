@@ -28,10 +28,6 @@ func NewException(code int, message string) *Exception {
 	}
 }
 
-func (this *Exception) Error() string {
-	return this.message
-}
-
 func (this *Exception) GetCode() int {
 	return this.code
 }
@@ -42,6 +38,10 @@ func (this *Exception) GetMessage() string {
 
 func (this *Exception) GetStackTrace() string {
 	return this.stack
+}
+
+func (this Exception) Error() string {
+	return fmt.Sprintf("[Code:%d] [Message:%s] [Stack:%s]", this.code, this.message, this.stack)
 }
 
 func Throw(code int, message string) {

@@ -1,11 +1,14 @@
 package util
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/astaxie/beego"
 	. "github.com/fishedee/language"
 	. "github.com/fishedee/util"
 	. "github.com/fishedee/web/util/beego_queue"
+	"reflect"
 )
 
 type QueueManagerConfig struct {
@@ -14,7 +17,7 @@ type QueueManagerConfig struct {
 }
 
 type QueueManager struct {
-	BeegoQueueStoreInterface
+	store   BeegoQueueStoreInterface
 	Log     *LogManager
 	Monitor *MonitorManager
 }
@@ -43,7 +46,7 @@ func newQueueManager(config QueueManagerConfig) (*QueueManager, error) {
 			return nil, err
 		}
 		return &QueueManager{
-			BeegoQueueStoreInterface: queue,
+			store: queue,
 		}, nil
 	} else if config.Driver == "memory_async" {
 		queue, err := NewMemoryAsyncQueue(config.BeegoQueueStoreConfig)
@@ -51,7 +54,7 @@ func newQueueManager(config QueueManagerConfig) (*QueueManager, error) {
 			return nil, err
 		}
 		return &QueueManager{
-			BeegoQueueStoreInterface: queue,
+			store: queue,
 		}, nil
 	} else if config.Driver == "redis" {
 		queue, err := NewRedisQueue(config.BeegoQueueStoreConfig)
@@ -59,7 +62,7 @@ func newQueueManager(config QueueManagerConfig) (*QueueManager, error) {
 			return nil, err
 		}
 		return &QueueManager{
-			BeegoQueueStoreInterface: queue,
+			store: queue,
 		}, nil
 	} else {
 		return nil, errors.New("invalid memory config " + config.Driver)
@@ -99,39 +102,113 @@ func NewQueueManagerWithLogAndMonitor(log *LogManager, monitor *MonitorManager, 
 		return nil
 	} else {
 		return &QueueManager{
-			BeegoQueueStoreInterface: queue.BeegoQueueStoreInterface,
+			store:   queue.store,
 			Log:     log,
 			Monitor: monitor,
 		}
 	}
 }
 
-func (this *QueueManager) WrapListener(listener BeegoQueueListener) BeegoQueueListener {
-	return func(data interface{}) {
+func (this *QueueManager) EncodeData(data []interface{}) ([]byte, error) {
+	dataByte, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	return dataByte, nil
+}
+
+func (this *QueueManager) DecodeData(dataByte []byte, dataType []reflect.Type) ([]reflect.Value, error) {
+	result := []interface{}{}
+	for _, singleDataType := range dataType {
+		result = append(result, reflect.New(singleDataType).Interface())
+	}
+	err := json.Unmarshal(dataByte, &result)
+	if err != nil {
+		return nil, err
+	}
+	valueResult := []reflect.Value{}
+	for i := 0; i != len(dataType); i++ {
+		if i >= len(result) {
+			panic(fmt.Sprintf("call with %d argument function for %d argument", len(dataType), len(result)))
+		}
+		valueResult = append(valueResult, reflect.ValueOf(result[i]).Elem())
+	}
+	return valueResult, nil
+}
+
+func (this *QueueManager) WrapData(data []interface{}) (interface{}, error) {
+	return this.EncodeData(data)
+}
+
+func (this *QueueManager) WrapListener(listener interface{}) (BeegoQueueListener, error) {
+	listenerType := reflect.TypeOf(listener)
+	listenerValue := reflect.ValueOf(listener)
+	if listenerType.Kind() != reflect.Func {
+		return nil, errors.New("listener type is not a function")
+	}
+	listenerInType := []reflect.Type{}
+	for i := 0; i != listenerType.NumIn(); i++ {
+		listenerInType = append(
+			listenerInType,
+			listenerType.In(i),
+		)
+	}
+	return func(data interface{}) (lastError error) {
 		defer CatchCrash(func(exception Exception) {
 			this.Log.Critical("QueueTask Crash Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
 			if this.Monitor != nil {
 				this.Monitor.AscCriticalCount()
 			}
+			lastError = exception
 		})
 		defer Catch(func(exception Exception) {
 			this.Log.Error("QueueTask Error Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
 			if this.Monitor != nil {
 				this.Monitor.AscErrorCount()
 			}
+			lastError = exception
 		})
 		argvError, ok := data.(error)
 		if ok {
 			panic(argvError)
 		}
-		listener(data)
+		dataResult, err := this.DecodeData(data.([]byte), listenerInType)
+		if err != nil {
+			Throw(1, err.Error())
+		}
+		listenerValue.Call(dataResult)
+		return nil
+	}, nil
+}
+
+func (this *QueueManager) Produce(topicId string, data ...interface{}) error {
+	dataResult, err := this.WrapData(data)
+	if err != nil {
+		return err
 	}
+	return this.store.Produce(topicId, dataResult)
 }
 
-func (this *QueueManager) Consume(topicId string, listener BeegoQueueListener) error {
-	return this.BeegoQueueStoreInterface.Consume(topicId, this.WrapListener(listener))
+func (this *QueueManager) Consume(topicId string, listener interface{}) error {
+	listenerResult, err := this.WrapListener(listener)
+	if err != nil {
+		return err
+	}
+	return this.store.Consume(topicId, listenerResult)
 }
 
-func (this *QueueManager) Subscribe(topicId string, listener BeegoQueueListener) error {
-	return this.BeegoQueueStoreInterface.Subscribe(topicId, this.WrapListener(listener))
+func (this *QueueManager) Publish(topicId string, data ...interface{}) error {
+	dataResult, err := this.WrapData(data)
+	if err != nil {
+		return err
+	}
+	return this.store.Publish(topicId, dataResult)
+}
+
+func (this *QueueManager) Subscribe(topicId string, listener interface{}) error {
+	listenerResult, err := this.WrapListener(listener)
+	if err != nil {
+		return err
+	}
+	return this.store.Subscribe(topicId, listenerResult)
 }
