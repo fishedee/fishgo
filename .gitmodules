@@ -112,3 +112,12 @@
 [submodule "src/github.com/davecheney/profile"]
 	path = src/github.com/davecheney/profile
 	url = git@github.com:davecheney/profile.git
+[submodule "src/github.com/lxn/walk"]
+	path = src/github.com/lxn/walk
+	url = git@github.com:lxn/walk.git
+[submodule "src/github.com/akavel/rsrc"]
+	path = src/github.com/akavel/rsrc
+	url = git@github.com:akavel/rsrc.git
+[submodule "src/github.com/lxn/win"]
+	path = src/github.com/lxn/win
+	url = git@github.com:lxn/win.git
