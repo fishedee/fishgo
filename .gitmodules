@@ -121,3 +121,6 @@
 [submodule "src/github.com/lxn/win"]
 	path = src/github.com/lxn/win
 	url = git@github.com:lxn/win.git
+[submodule "src/github.com/robfig/cron"]
+	path = src/github.com/robfig/cron
+	url = git@github.com:robfig/cron.git
