@@ -7,8 +7,7 @@ import (
 )
 
 type TimerManager struct {
-	Log     *LogManager
-	Monitor *MonitorManager
+	Log *LogManager
 }
 
 type TimerHandler func()
@@ -17,13 +16,12 @@ func NewTimerManager() (*TimerManager, error) {
 	return &TimerManager{}, nil
 }
 
-func NewTimerManagerWithLogAndMonitor(log *LogManager, monitor *MonitorManager, manager *TimerManager) *TimerManager {
+func NewTimerManagerWithLog(log *LogManager, manager *TimerManager) *TimerManager {
 	if manager == nil {
 		return nil
 	} else {
 		return &TimerManager{
-			Log:     log,
-			Monitor: monitor,
+			Log: log,
 		}
 	}
 }
@@ -31,15 +29,9 @@ func NewTimerManagerWithLogAndMonitor(log *LogManager, monitor *MonitorManager, 
 func (this *TimerManager) startSingleTask(handler TimerHandler) {
 	defer CatchCrash(func(exception Exception) {
 		this.Log.Critical("TimerTask Crash Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
-		if this.Monitor != nil {
-			this.Monitor.AscCriticalCount()
-		}
 	})
 	defer Catch(func(exception Exception) {
 		this.Log.Error("TimerTask Error Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
-		if this.Monitor != nil {
-			this.Monitor.AscErrorCount()
-		}
 	})
 	handler()
 }

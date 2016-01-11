@@ -121,13 +121,6 @@ func (this *AliCloudMonitorSdk) Sync() {
 }
 
 func (this *AliCloudMonitorSdk) syncInner() error {
-	//获取IP信息
-	ip138 := &Ip138Sdk{}
-	ip, err := ip138.GetCurrentIP()
-	if err != nil {
-		return err
-	}
-
 	//获取同步数据
 	pushData := this.GetAllAndClear()
 
@@ -142,7 +135,7 @@ func (this *AliCloudMonitorSdk) syncInner() error {
 			"value":      singleData.value,
 			"unit":       "None",
 			"dimensions": map[string]string{
-				"machineIP": ip.String(),
+				"machineIP": "0.0.0.0",
 			},
 			"timestamp": singleData.timestamp.Unix()*1000 + int64(singleData.timestamp.Nanosecond()/1000000),
 		}

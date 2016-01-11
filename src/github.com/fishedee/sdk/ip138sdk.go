@@ -30,7 +30,7 @@ func (this *Ip138Sdk) getCurrentIPInner() (net.IP, error) {
 
 	//获取IP地址
 	err = DefaultAjaxPool.Get(&Ajax{
-		Url:          "http://1111.ip138.com/ic.asp",
+		Url:          "http://1212.ip138.com/ic.asp",
 		ResponseData: &result,
 	})
 	if err != nil {

@@ -12,15 +12,9 @@ type daemonController struct {
 func (this *daemonController) startSingleTask(handler reflect.Value, handlerArgv []reflect.Value) {
 	defer CatchCrash(func(exception Exception) {
 		this.Log.Critical("DaemonTask Crash Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
-		if this.Monitor != nil {
-			this.Monitor.AscCriticalCount()
-		}
 	})
 	defer Catch(func(exception Exception) {
 		this.Log.Error("DaemonTask Error Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
-		if this.Monitor != nil {
-			this.Monitor.AscErrorCount()
-		}
 	})
 	handler.Call(handlerArgv)
 }

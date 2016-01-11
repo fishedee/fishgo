@@ -24,6 +24,7 @@ type LogManagerConfig struct {
 
 type LogManager struct {
 	*logs.BeeLogger
+	monitor   *MonitorManager
 	logPrefix string
 }
 
@@ -61,7 +62,7 @@ func getLevel(in string) int {
 	return logs.LevelDebug
 }
 
-func newLogManager(config LogManagerConfig) (*logs.BeeLogger, error) {
+func newLogManager(config LogManagerConfig) (*LogManager, error) {
 	if config.Driver == "" {
 		return nil, nil
 	}
@@ -75,18 +76,20 @@ func newLogManager(config LogManagerConfig) (*logs.BeeLogger, error) {
 		return nil, err
 	}
 	beego.BeeLogger = Log
-	return Log, nil
+	return &LogManager{
+		BeeLogger: Log,
+	}, nil
 }
 
-func NewLogManager(config LogManagerConfig) (*logs.BeeLogger, error) {
+func NewLogManager(config LogManagerConfig) (*LogManager, error) {
 	result, err := newLogManagerMemory.Call(config)
 	if err != nil {
 		return nil, err
 	}
-	return result.(*logs.BeeLogger), err
+	return result.(*LogManager), err
 }
 
-func newLogManagerFromConfig(configName string) (*logs.BeeLogger, error) {
+func newLogManagerFromConfig(configName string) (*LogManager, error) {
 	fishlogdriver := beego.AppConfig.String(configName + "driver")
 	fishlogfile := beego.AppConfig.String(configName + "file")
 	fishlogmaxline := beego.AppConfig.String(configName + "maxline")
@@ -109,17 +112,20 @@ func newLogManagerFromConfig(configName string) (*logs.BeeLogger, error) {
 	return NewLogManager(logConfig)
 }
 
-func NewLogManagerFromConfig(configName string) (*logs.BeeLogger, error) {
+func NewLogManagerFromConfig(configName string) (*LogManager, error) {
 	result, err := newLogManagerFromConfigMemory.Call(configName)
 	if err != nil {
 		return nil, err
 	}
-	return result.(*logs.BeeLogger), err
+	return result.(*LogManager), err
 }
 
-func NewLogManagerWithCtx(ctx *context.Context, logger *logs.BeeLogger) *LogManager {
-	if logger == nil {
-		logger = beego.BeeLogger
+func NewLogManagerWithCtxAndMonitor(ctx *context.Context, monitor *MonitorManager, logger *LogManager) *LogManager {
+	var beeLogger *logs.BeeLogger
+	if logger != nil {
+		beeLogger = logger.BeeLogger
+	} else {
+		beeLogger = beego.BeeLogger
 	}
 	logPrefix := ""
 	if ctx == nil {
@@ -134,7 +140,8 @@ func NewLogManagerWithCtx(ctx *context.Context, logger *logs.BeeLogger) *LogMana
 		logPrefix = fmt.Sprintf(" %s %s ", ip, url)
 	}
 	return &LogManager{
-		BeeLogger: logger,
+		BeeLogger: beeLogger,
+		monitor:   monitor,
 		logPrefix: logPrefix,
 	}
 }
@@ -148,11 +155,16 @@ func (this *LogManager) Alert(format string, v ...interface{}) {
 }
 
 func (this *LogManager) Critical(format string, v ...interface{}) {
+	if this.monitor != nil {
+		this.monitor.AscCriticalCount()
+	}
 	this.BeeLogger.Critical(this.logPrefix+format, v...)
 }
 
 func (this *LogManager) Error(format string, v ...interface{}) {
-	fmt.Println(this.logPrefix)
+	if this.monitor != nil {
+		this.monitor.AscErrorCount()
+	}
 	this.BeeLogger.Error(this.logPrefix+format, v...)
 }
 

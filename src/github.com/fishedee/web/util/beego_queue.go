@@ -17,9 +17,8 @@ type QueueManagerConfig struct {
 }
 
 type QueueManager struct {
-	store   BeegoQueueStoreInterface
-	Log     *LogManager
-	Monitor *MonitorManager
+	store BeegoQueueStoreInterface
+	Log   *LogManager
 }
 
 var newQueueManagerMemory *MemoryFunc
@@ -97,14 +96,13 @@ func NewQueueManagerFromConfig(configName string) (*QueueManager, error) {
 	return result.(*QueueManager), err
 }
 
-func NewQueueManagerWithLogAndMonitor(log *LogManager, monitor *MonitorManager, queue *QueueManager) *QueueManager {
+func NewQueueManagerWithLog(log *LogManager, queue *QueueManager) *QueueManager {
 	if queue == nil {
 		return nil
 	} else {
 		return &QueueManager{
-			store:   queue.store,
-			Log:     log,
-			Monitor: monitor,
+			store: queue.store,
+			Log:   log,
 		}
 	}
 }
@@ -156,16 +154,10 @@ func (this *QueueManager) WrapListener(listener interface{}) (BeegoQueueListener
 	return func(data interface{}) (lastError error) {
 		defer CatchCrash(func(exception Exception) {
 			this.Log.Critical("QueueTask Crash Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
-			if this.Monitor != nil {
-				this.Monitor.AscCriticalCount()
-			}
 			lastError = exception
 		})
 		defer Catch(func(exception Exception) {
 			this.Log.Error("QueueTask Error Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
-			if this.Monitor != nil {
-				this.Monitor.AscErrorCount()
-			}
 			lastError = exception
 		})
 		argvError, ok := data.(error)

@@ -92,9 +92,6 @@ func (this *BeegoValidateController) GetSubModel() []beegoValidateModelInterface
 func (this *BeegoValidateController) runMethod(method reflect.Value, arguments []reflect.Value) (result []reflect.Value) {
 	defer language.Catch(func(exception language.Exception) {
 		this.Log.Error("Buiness Error Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
-		if this.Monitor != nil {
-			this.Monitor.AscErrorCount()
-		}
 		result = []reflect.Value{reflect.ValueOf(exception)}
 	})
 	result = method.Call(arguments)
@@ -107,9 +104,6 @@ func (this *BeegoValidateController) runMethod(method reflect.Value, arguments [
 func (this *BeegoValidateController) AutoRouteMethod() {
 	defer language.CatchCrash(func(exception language.Exception) {
 		this.Log.Critical("Buiness Crash Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
-		if this.Monitor != nil {
-			this.Monitor.AscCriticalCount()
-		}
 		this.Ctx.ResponseWriter.WriteHeader(http.StatusInternalServerError)
 		this.Ctx.ResponseWriter.Write([]byte("server internal error!"))
 	})

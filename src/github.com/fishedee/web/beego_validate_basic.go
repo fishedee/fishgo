@@ -2,7 +2,6 @@ package web
 
 import (
 	"github.com/astaxie/beego/context"
-	"github.com/astaxie/beego/logs"
 	. "github.com/fishedee/web/util"
 )
 
@@ -14,7 +13,7 @@ type BeegoValidateBasic struct {
 	DB3     *DatabaseManager
 	DB4     *DatabaseManager
 	DB5     *DatabaseManager
-	logger  *logs.BeeLogger
+	logger  *LogManager
 	Log     *LogManager
 	Monitor *MonitorManager
 	timer   *TimerManager
@@ -71,8 +70,8 @@ func init() {
 func NewBeegoValidateBasic(ctx *context.Context) *BeegoValidateBasic {
 	result := globalBasic
 	result.ctx = ctx
-	result.Log = NewLogManagerWithCtx(ctx, result.logger)
-	result.Timer = NewTimerManagerWithLogAndMonitor(result.Log, result.Monitor, result.timer)
-	result.Queue = NewQueueManagerWithLogAndMonitor(result.Log, result.Monitor, result.queue)
+	result.Log = NewLogManagerWithCtxAndMonitor(ctx, result.Monitor, result.logger)
+	result.Timer = NewTimerManagerWithLog(result.Log, result.timer)
+	result.Queue = NewQueueManagerWithLog(result.Log, result.queue)
 	return &result
 }
