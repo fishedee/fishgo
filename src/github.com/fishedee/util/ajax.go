@@ -358,13 +358,13 @@ func (this *Ajax) saveResponseJsonData(respString []byte) error {
 	return nil
 }
 
-func (this *Ajax) saveResponseData(response *http.Response) error {
+func (this *Ajax) saveResponseData(response *http.Response) ([]byte, error) {
 	if this.ResponseData == nil {
-		return nil
+		return []byte{}, nil
 	}
 	respString, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		return err
+		return []byte{}, err
 	}
 
 	dataType := this.ResponseDataType
@@ -372,18 +372,18 @@ func (this *Ajax) saveResponseData(response *http.Response) error {
 		_, ok1 := this.ResponseData.(*string)
 		_, ok2 := this.ResponseData.(*[]byte)
 		if ok1 || ok2 {
-			return this.saveResponsePlainData(respString)
+			return respString, this.saveResponsePlainData(respString)
 		} else {
-			return this.saveResponseJsonData(respString)
+			return respString, this.saveResponseJsonData(respString)
 		}
 	} else if dataType == "plain" {
-		return this.saveResponsePlainData(respString)
+		return respString, this.saveResponsePlainData(respString)
 	} else if dataType == "url" {
-		return this.saveResponseUrlData(respString)
+		return respString, this.saveResponseUrlData(respString)
 	} else if dataType == "json" {
-		return this.saveResponseJsonData(respString)
+		return respString, this.saveResponseJsonData(respString)
 	} else {
-		return errors.New("invalid response data type " + dataType)
+		return respString, errors.New("invalid response data type " + dataType)
 	}
 }
 
@@ -420,8 +420,9 @@ func (this *Ajax) saveResponseCookie(response *http.Response) error {
 
 func (this *Ajax) saveResponse(response *http.Response) error {
 	var err error
+	var data []byte
 
-	err = this.saveResponseData(response)
+	data, err = this.saveResponseData(response)
 	if err != nil {
 		return err
 	}
@@ -436,6 +437,9 @@ func (this *Ajax) saveResponse(response *http.Response) error {
 		return err
 	}
 
+	if response.StatusCode != 200 {
+		return errors.New("返回码不是200，而是" + strconv.Itoa(response.StatusCode) + ",数据为：[" + string(data) + "]")
+	}
 	return nil
 }
 
@@ -452,9 +456,6 @@ func (this *Ajax) Send(client *http.Client) error {
 		return err
 	}
 	defer response.Body.Close()
-	if response.StatusCode != 200 {
-		return errors.New("返回码不是200，而是" + strconv.Itoa(response.StatusCode))
-	}
 
 	//保存请求
 	err = this.saveResponse(response)
