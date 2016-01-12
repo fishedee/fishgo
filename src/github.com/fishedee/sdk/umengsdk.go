@@ -96,7 +96,7 @@ type iOS struct {
 	Policy  iOSPolicy  `json:"policy"`
 }
 
-type umengResult struct {
+type UmengResult struct {
 	Ret  string
 	Data struct {
 		Msg_id        string
@@ -106,7 +106,7 @@ type umengResult struct {
 	}
 }
 
-func (this *UmengSdk) SendAndroidCustom(alias, aliasType, ticker, title, text, afterOpen, extra, productionMode string) (umengResult, error) {
+func (this *UmengSdk) SendAndroidCustom(alias, aliasType, ticker, title, text, afterOpen, extra, productionMode string) (UmengResult, error) {
 	sign := ""
 	method := "POST"
 	url := "http://msg.umeng.com/api/send"
@@ -141,7 +141,7 @@ func (this *UmengSdk) SendAndroidCustom(alias, aliasType, ticker, title, text, a
 
 	body, err := EncodeJson(params)
 	if err != nil {
-		return umengResult{}, err
+		return UmengResult{}, err
 	}
 	sign = this.getSign(method, url, string(body))
 	url = url + "?sign=" + sign
@@ -154,19 +154,19 @@ func (this *UmengSdk) SendAndroidCustom(alias, aliasType, ticker, title, text, a
 	})
 	if err != nil {
 		if _, ok := err.(*AjaxStatusCodeError); !ok {
-			return umengResult{}, err
+			return UmengResult{}, err
 		}
 	}
 
-	var finalResult umengResult
+	var finalResult UmengResult
 	err = DecodeJson(result, &finalResult)
 	if err != nil {
-		return umengResult{}, err
+		return UmengResult{}, err
 	}
 	return finalResult, nil
 }
 
-func (this *UmengSdk) SendIOSCustom(appMsg, alias, aliasType, afterOpen, extra string, badge int, sound, productionMode string) (umengResult, error) {
+func (this *UmengSdk) SendIOSCustom(appMsg, alias, aliasType, afterOpen, extra string, badge int, sound, productionMode string) (UmengResult, error) {
 	sign := ""
 	method := "POST"
 	url := "http://msg.umeng.com/api/send"
@@ -197,7 +197,7 @@ func (this *UmengSdk) SendIOSCustom(appMsg, alias, aliasType, afterOpen, extra s
 
 	body, err := json.Marshal(params)
 	if err != nil {
-		return umengResult{}, err
+		return UmengResult{}, err
 	}
 	sign = this.getSign(method, url, string(body))
 	url = url + "?sign=" + sign
@@ -210,14 +210,14 @@ func (this *UmengSdk) SendIOSCustom(appMsg, alias, aliasType, afterOpen, extra s
 	})
 	if err != nil {
 		if _, ok := err.(*AjaxStatusCodeError); !ok {
-			return umengResult{}, err
+			return UmengResult{}, err
 		}
 	}
 
-	var finalResult umengResult
+	var finalResult UmengResult
 	err = json.Unmarshal(result, &finalResult)
 	if err != nil {
-		return umengResult{}, err
+		return UmengResult{}, err
 	}
 	return finalResult, nil
 }
