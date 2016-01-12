@@ -17,7 +17,7 @@ type UmengSdk struct {
 	SecretKey string
 }
 
-type Common struct {
+type common struct {
 	Appkey          string      `json:"appkey"`
 	Timestamp       string      `json:"timestamp"`
 	Type            string      `json:"type"`
@@ -31,13 +31,13 @@ type Common struct {
 	Thirdparty_id   string      `json:"thirdparty_id"`
 }
 
-type AndroidPayload struct {
+type androidPayload struct {
 	Display_type string             `json:"display_type"`
-	Body         AndroidPayloadBody `json:"body"`
+	Body         androidPayloadBody `json:"body"`
 	Extra        map[string]string  `json:"extra"`
 }
 
-type AndroidPayloadBody struct {
+type androidPayloadBody struct {
 	Ticker       string `json:"ticker"`
 	Title        string `json:"title"`
 	Text         string `json:"text"`
@@ -55,28 +55,28 @@ type AndroidPayloadBody struct {
 	Custom       string `json:"custom"`
 }
 
-type AndroidPolicy struct {
+type androidPolicy struct {
 	Start_time   string `json:"start_time"`
 	Expire_time  string `json:"expire_time"`
 	Max_send_num int    `json:"max_send_num"`
 	Out_biz_no   string `json:"out_biz_no"`
 }
 
-type Android struct {
-	Common
-	Payload AndroidPayload `json:"payload"`
-	Policy  AndroidPolicy  `json:"policy"`
+type android struct {
+	common
+	Payload androidPayload `json:"payload"`
+	Policy  androidPolicy  `json:"policy"`
 }
 
-type IOSPayload struct {
-	Aps        IOSPayloadAps `json:"aps"`
+type iOSPayload struct {
+	Aps        iOSPayloadAps `json:"aps"`
 	After_open string        `json:"after_open"`
 	Url        string        `json:"url"`
 	Activity   string        `json:"activity"`
 	Custom     string        `json:"custom"`
 }
 
-type IOSPayloadAps struct {
+type iOSPayloadAps struct {
 	Alert            string `json:"alert"`
 	Badge            int    `json:"badge"`
 	Sound            string `json:"sound"`
@@ -84,19 +84,19 @@ type IOSPayloadAps struct {
 	Category         string `json:"category"`
 }
 
-type IOSPolicy struct {
+type iOSPolicy struct {
 	Start_time   string `json:"start_time"`
 	Expire_time  string `json:"expire_time"`
 	Max_send_num int    `json:"max_send_num"`
 }
 
-type IOS struct {
-	Common
-	Payload IOSPayload `json:"payload"`
-	Policy  IOSPolicy  `json:"policy"`
+type iOS struct {
+	common
+	Payload iOSPayload `json:"payload"`
+	Policy  iOSPolicy  `json:"policy"`
 }
 
-type Result struct {
+type umengResult struct {
 	Ret  string
 	Data struct {
 		Msg_id        string
@@ -106,12 +106,12 @@ type Result struct {
 	}
 }
 
-func (this *UmengSdk) SendAndroidCustom(alias, aliasType, ticker, title, text, afterOpen, extra, productionMode string) (Result, error) {
+func (this *UmengSdk) SendAndroidCustom(alias, aliasType, ticker, title, text, afterOpen, extra, productionMode string) (umengResult, error) {
 	sign := ""
 	method := "POST"
 	url := "http://msg.umeng.com/api/send"
-	params := Android{
-		Common: Common{
+	params := android{
+		common: common{
 			Appkey:          this.AccessKey,
 			Timestamp:       strconv.FormatInt(time.Now().Unix(), 10),
 			Type:            "customizedcast",
@@ -119,9 +119,9 @@ func (this *UmengSdk) SendAndroidCustom(alias, aliasType, ticker, title, text, a
 			Alias:           alias,
 			Production_mode: productionMode,
 		},
-		Payload: AndroidPayload{
+		Payload: androidPayload{
 			"notification",
-			AndroidPayloadBody{
+			androidPayloadBody{
 				Ticker:     ticker,
 				Title:      title,
 				Text:       text,
@@ -134,14 +134,14 @@ func (this *UmengSdk) SendAndroidCustom(alias, aliasType, ticker, title, text, a
 				"custom":     extra,
 			},
 		},
-		Policy: AndroidPolicy{
+		Policy: androidPolicy{
 			Max_send_num: 100,
 		},
 	}
 
 	body, err := EncodeJson(params)
 	if err != nil {
-		return Result{}, err
+		return umengResult{}, err
 	}
 	sign = this.getSign(method, url, string(body))
 	url = url + "?sign=" + sign
@@ -154,24 +154,24 @@ func (this *UmengSdk) SendAndroidCustom(alias, aliasType, ticker, title, text, a
 	})
 	if err != nil {
 		if _, ok := err.(*AjaxStatusCodeError); !ok {
-			return Result{}, err
+			return umengResult{}, err
 		}
 	}
 
-	var finalResult Result
+	var finalResult umengResult
 	err = DecodeJson(result, &finalResult)
 	if err != nil {
-		return Result{}, err
+		return umengResult{}, err
 	}
 	return finalResult, nil
 }
 
-func (this *UmengSdk) SendIOSCustom(appMsg, alias, aliasType, afterOpen, extra string, badge int, sound, productionMode string) (Result, error) {
+func (this *UmengSdk) SendIOSCustom(appMsg, alias, aliasType, afterOpen, extra string, badge int, sound, productionMode string) (umengResult, error) {
 	sign := ""
 	method := "POST"
 	url := "http://msg.umeng.com/api/send"
-	params := IOS{
-		Common: Common{
+	params := iOS{
+		common: common{
 			Appkey:          this.AccessKey,
 			Timestamp:       strconv.FormatInt(time.Now().Unix(), 10),
 			Type:            "customizedcast",
@@ -179,8 +179,8 @@ func (this *UmengSdk) SendIOSCustom(appMsg, alias, aliasType, afterOpen, extra s
 			Alias:           alias,
 			Production_mode: productionMode,
 		},
-		Payload: IOSPayload{
-			Aps: IOSPayloadAps{
+		Payload: iOSPayload{
+			Aps: iOSPayloadAps{
 				Alert: appMsg,
 				Badge: badge,
 				Sound: sound,
@@ -190,14 +190,14 @@ func (this *UmengSdk) SendIOSCustom(appMsg, alias, aliasType, afterOpen, extra s
 			Activity:   extra,
 			Custom:     extra,
 		},
-		Policy: IOSPolicy{
+		Policy: iOSPolicy{
 			Max_send_num: 100,
 		},
 	}
 
 	body, err := json.Marshal(params)
 	if err != nil {
-		return Result{}, err
+		return umengResult{}, err
 	}
 	sign = this.getSign(method, url, string(body))
 	url = url + "?sign=" + sign
@@ -210,14 +210,14 @@ func (this *UmengSdk) SendIOSCustom(appMsg, alias, aliasType, afterOpen, extra s
 	})
 	if err != nil {
 		if _, ok := err.(*AjaxStatusCodeError); !ok {
-			return Result{}, err
+			return umengResult{}, err
 		}
 	}
 
-	var finalResult Result
+	var finalResult umengResult
 	err = json.Unmarshal(result, &finalResult)
 	if err != nil {
-		return Result{}, err
+		return umengResult{}, err
 	}
 	return finalResult, nil
 }
