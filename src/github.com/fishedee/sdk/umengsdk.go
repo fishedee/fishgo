@@ -153,7 +153,9 @@ func (this *UmengSdk) SendAndroidCustom(alias, aliasType, ticker, title, text, a
 		ResponseData: &result,
 	})
 	if err != nil {
-		return Result{}, err
+		if _, ok := err.(*AjaxStatusCodeError); !ok {
+			return Result{}, err
+		}
 	}
 
 	var finalResult Result
@@ -207,7 +209,9 @@ func (this *UmengSdk) SendIOSCustom(appMsg, alias, aliasType, afterOpen, extra s
 		ResponseData: &result,
 	})
 	if err != nil {
-		return Result{}, err
+		if _, ok := err.(*AjaxStatusCodeError); !ok {
+			return Result{}, err
+		}
 	}
 
 	var finalResult Result

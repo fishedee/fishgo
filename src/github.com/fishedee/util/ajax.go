@@ -26,6 +26,15 @@ type AjaxPool struct {
 	client *http.Client
 }
 
+type AjaxStatusCodeError struct {
+	statusCode int
+	body       []byte
+}
+
+func (this *AjaxStatusCodeError) Error() string {
+	return "返回码不是200，而是" + strconv.Itoa(this.statusCode) + ",数据为：[" + string(this.body) + "]"
+}
+
 type Ajax struct {
 	Method   string
 	Url      string
@@ -438,7 +447,10 @@ func (this *Ajax) saveResponse(response *http.Response) error {
 	}
 
 	if response.StatusCode != 200 {
-		return errors.New("返回码不是200，而是" + strconv.Itoa(response.StatusCode) + ",数据为：[" + string(data) + "]")
+		return &AjaxStatusCodeError{
+			statusCode: response.StatusCode,
+			body:       data,
+		}
 	}
 	return nil
 }
