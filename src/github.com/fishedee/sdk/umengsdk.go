@@ -4,9 +4,7 @@ import (
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"strings"
-	"time"
 
 	. "github.com/fishedee/encoding"
 	. "github.com/fishedee/util"
@@ -17,7 +15,7 @@ type UmengSdk struct {
 	SecretKey string
 }
 
-type common struct {
+type UmengCommon struct {
 	Appkey          string      `json:"appkey"`
 	Timestamp       string      `json:"timestamp"`
 	Type            string      `json:"type"`
@@ -31,13 +29,13 @@ type common struct {
 	Thirdparty_id   string      `json:"thirdparty_id"`
 }
 
-type androidPayload struct {
-	Display_type string             `json:"display_type"`
-	Body         androidPayloadBody `json:"body"`
-	Extra        map[string]string  `json:"extra"`
+type UmengAndroidPayload struct {
+	Display_type string                  `json:"display_type"`
+	Body         UmengAndroidPayloadBody `json:"body"`
+	Extra        map[string]string       `json:"extra"`
 }
 
-type androidPayloadBody struct {
+type UmengAndroidPayloadBody struct {
 	Ticker       string `json:"ticker"`
 	Title        string `json:"title"`
 	Text         string `json:"text"`
@@ -55,28 +53,28 @@ type androidPayloadBody struct {
 	Custom       string `json:"custom"`
 }
 
-type androidPolicy struct {
+type UmengAndroidPolicy struct {
 	Start_time   string `json:"start_time"`
 	Expire_time  string `json:"expire_time"`
 	Max_send_num int    `json:"max_send_num"`
 	Out_biz_no   string `json:"out_biz_no"`
 }
 
-type android struct {
-	common
-	Payload androidPayload `json:"payload"`
-	Policy  androidPolicy  `json:"policy"`
+type UmengAndroid struct {
+	UmengCommon
+	Payload UmengAndroidPayload `json:"payload"`
+	Policy  UmengAndroidPolicy  `json:"policy"`
 }
 
-type iOSPayload struct {
-	Aps        iOSPayloadAps `json:"aps"`
-	After_open string        `json:"after_open"`
-	Url        string        `json:"url"`
-	Activity   string        `json:"activity"`
-	Custom     string        `json:"custom"`
+type UmengIOSPayload struct {
+	Aps        UmengIOSPayloadAps `json:"aps"`
+	After_open string             `json:"after_open"`
+	Url        string             `json:"url"`
+	Activity   string             `json:"activity"`
+	Custom     string             `json:"custom"`
 }
 
-type iOSPayloadAps struct {
+type UmengIOSPayloadAps struct {
 	Alert            string `json:"alert"`
 	Badge            int    `json:"badge"`
 	Sound            string `json:"sound"`
@@ -84,16 +82,16 @@ type iOSPayloadAps struct {
 	Category         string `json:"category"`
 }
 
-type iOSPolicy struct {
+type UmengIOSPolicy struct {
 	Start_time   string `json:"start_time"`
 	Expire_time  string `json:"expire_time"`
 	Max_send_num int    `json:"max_send_num"`
 }
 
-type iOS struct {
-	common
-	Payload iOSPayload `json:"payload"`
-	Policy  iOSPolicy  `json:"policy"`
+type UmengIOS struct {
+	UmengCommon
+	Payload UmengIOSPayload `json:"payload"`
+	Policy  UmengIOSPolicy  `json:"policy"`
 }
 
 type UmengResult struct {
@@ -106,40 +104,12 @@ type UmengResult struct {
 	}
 }
 
-func (this *UmengSdk) SendAndroidCustom(alias, aliasType, ticker, title, text, afterOpen, extra, productionMode string) (UmengResult, error) {
+func (this *UmengSdk) SendAndroidCustom(umengAndroid UmengAndroid) (UmengResult, error) {
 	sign := ""
 	method := "POST"
 	url := "http://msg.umeng.com/api/send"
-	params := android{
-		common: common{
-			Appkey:          this.AccessKey,
-			Timestamp:       strconv.FormatInt(time.Now().Unix(), 10),
-			Type:            "customizedcast",
-			Alias_type:      aliasType,
-			Alias:           alias,
-			Production_mode: productionMode,
-		},
-		Payload: androidPayload{
-			"notification",
-			androidPayloadBody{
-				Ticker:     ticker,
-				Title:      title,
-				Text:       text,
-				After_open: "go_app",
-			},
-			map[string]string{
-				"after_open": afterOpen,
-				"url":        extra,
-				"activity":   extra,
-				"custom":     extra,
-			},
-		},
-		Policy: androidPolicy{
-			Max_send_num: 100,
-		},
-	}
 
-	body, err := EncodeJson(params)
+	body, err := EncodeJson(umengAndroid)
 	if err != nil {
 		return UmengResult{}, err
 	}
@@ -166,36 +136,12 @@ func (this *UmengSdk) SendAndroidCustom(alias, aliasType, ticker, title, text, a
 	return finalResult, nil
 }
 
-func (this *UmengSdk) SendIOSCustom(appMsg, alias, aliasType, afterOpen, extra string, badge int, sound, productionMode string) (UmengResult, error) {
+func (this *UmengSdk) SendIOSCustom(umengIOS UmengIOS) (UmengResult, error) {
 	sign := ""
 	method := "POST"
 	url := "http://msg.umeng.com/api/send"
-	params := iOS{
-		common: common{
-			Appkey:          this.AccessKey,
-			Timestamp:       strconv.FormatInt(time.Now().Unix(), 10),
-			Type:            "customizedcast",
-			Alias_type:      aliasType,
-			Alias:           alias,
-			Production_mode: productionMode,
-		},
-		Payload: iOSPayload{
-			Aps: iOSPayloadAps{
-				Alert: appMsg,
-				Badge: badge,
-				Sound: sound,
-			},
-			After_open: afterOpen,
-			Url:        extra,
-			Activity:   extra,
-			Custom:     extra,
-		},
-		Policy: iOSPolicy{
-			Max_send_num: 100,
-		},
-	}
 
-	body, err := json.Marshal(params)
+	body, err := json.Marshal(umengIOS)
 	if err != nil {
 		return UmengResult{}, err
 	}
