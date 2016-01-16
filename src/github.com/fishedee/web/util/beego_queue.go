@@ -122,7 +122,7 @@ func (this *QueueManager) DecodeData(dataByte []byte, dataType []reflect.Type) (
 	}
 	err := json.Unmarshal(dataByte, &result)
 	if err != nil {
-		return nil, err
+		return nil, errors.New(err.Error() + "," + string(dataByte))
 	}
 	valueResult := []reflect.Value{}
 	for i := 0; i != len(dataType); i++ {
