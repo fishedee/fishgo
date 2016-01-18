@@ -244,6 +244,20 @@ func ArrayMapping(data interface{}) interface{} {
 	return result
 }
 
+func ArrayIn(arrayData interface{}, findData interface{}) int {
+	var findIndex int
+	findIndex = -1
+	arrayDataValue := reflect.ValueOf(arrayData)
+	for i := 0; i != arrayDataValue.Len(); i++ {
+		singleArrayDataValue := arrayDataValue.Index(i).Interface()
+		if singleArrayDataValue == findData {
+			findIndex = i
+			break
+		}
+	}
+	return findIndex
+}
+
 func init() {
 	arrayMappingInfoMap.data = map[reflect.Type]arrayMappingInfo{}
 }

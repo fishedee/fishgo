@@ -49,6 +49,15 @@ func newSessionManager(config SessionManagerConfig) (*SessionManager, error) {
 	if config.Driver == "" {
 		return nil, nil
 	}
+	if config.CookieName == "" {
+		config.CookieName = "beego_session"
+	}
+	if config.CookieLifeTime == 0 {
+		config.CookieLifeTime = 3600
+	}
+	if config.GcLifeTime == 0 {
+		config.GcLifeTime = 3600
+	}
 	result, err := json.Marshal(config)
 	if err != nil {
 		return nil, err

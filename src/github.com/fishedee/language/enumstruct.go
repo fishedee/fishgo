@@ -40,3 +40,35 @@ func InitEnumStruct(this interface{}) {
 func (this *EnumStruct) Names() map[string]string {
 	return this.names
 }
+
+func (this *EnumStruct) Entrys() map[int]string {
+	result := map[int]string{}
+	for key, value := range this.names {
+		singleKey, _ := strconv.Atoi(key)
+		result[singleKey] = value
+	}
+	return result
+}
+
+func (this *EnumStruct) Keys() []int {
+	result := []int{}
+	for key, _ := range this.names {
+		singleResult, _ := strconv.Atoi(key)
+		result = append(
+			result,
+			singleResult,
+		)
+	}
+	return result
+}
+
+func (this *EnumStruct) Values() []string {
+	result := []string{}
+	for _, value := range this.names {
+		result = append(
+			result,
+			value,
+		)
+	}
+	return result
+}
