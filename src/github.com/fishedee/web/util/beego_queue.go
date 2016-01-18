@@ -138,7 +138,14 @@ func (this *QueueManager) WrapData(data []interface{}) (interface{}, error) {
 	return this.EncodeData(data)
 }
 
-func (this *QueueManager) WrapListener(listener interface{}) (BeegoQueueListener, error) {
+func (this *QueueManager) WrapConcurrentListener(listener BeegoQueueListener) BeegoQueueListener {
+	return func(data interface{}) (lastError error) {
+		go listener(data)
+		return nil
+	}
+}
+
+func (this *QueueManager) WrapExceptionListener(listener interface{}) (BeegoQueueListener, error) {
 	listenerType := reflect.TypeOf(listener)
 	listenerValue := reflect.ValueOf(listener)
 	if listenerType.Kind() != reflect.Func {
@@ -182,11 +189,11 @@ func (this *QueueManager) Produce(topicId string, data ...interface{}) error {
 }
 
 func (this *QueueManager) Consume(topicId string, listener interface{}) error {
-	listenerResult, err := this.WrapListener(listener)
+	listenerResult, err := this.WrapExceptionListener(listener)
 	if err != nil {
 		return err
 	}
-	return this.store.Consume(topicId, listenerResult)
+	return this.store.Consume(topicId, this.WrapConcurrentListener(listenerResult))
 }
 
 func (this *QueueManager) Publish(topicId string, data ...interface{}) error {
@@ -198,9 +205,9 @@ func (this *QueueManager) Publish(topicId string, data ...interface{}) error {
 }
 
 func (this *QueueManager) Subscribe(topicId string, listener interface{}) error {
-	listenerResult, err := this.WrapListener(listener)
+	listenerResult, err := this.WrapExceptionListener(listener)
 	if err != nil {
 		return err
 	}
-	return this.store.Subscribe(topicId, listenerResult)
+	return this.store.Subscribe(topicId, this.WrapConcurrentListener(listenerResult))
 }
