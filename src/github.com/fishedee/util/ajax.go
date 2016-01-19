@@ -465,7 +465,7 @@ func (this *Ajax) Send(client *http.Client) error {
 	//执行请求
 	response, err := client.Do(request)
 	if err != nil {
-		return err
+		return errors.New(fmt.Sprintf("%#v", err))
 	}
 	defer response.Body.Close()
 
