@@ -30,8 +30,3 @@ func (this *Ifconfig) GetIP(name string) (*net.IPNet, error) {
 	}
 	return nil, errors.New(name + " has nothing ip")
 }
-
-func init() {
-	mm, err := NewIfconfig().GetIP("eth0")
-	fmt.Println(mm.IP.String(), err)
-}
