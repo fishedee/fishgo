@@ -2,7 +2,6 @@ package util
 
 import (
 	"errors"
-	"fmt"
 	"net"
 )
 
