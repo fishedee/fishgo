@@ -6,6 +6,11 @@ import (
 	"strings"
 )
 
+type EnumData struct {
+	Id   int
+	Name string
+}
+
 type EnumStruct struct {
 	names map[string]string
 }
@@ -46,6 +51,18 @@ func (this *EnumStruct) Entrys() map[int]string {
 	for key, value := range this.names {
 		singleKey, _ := strconv.Atoi(key)
 		result[singleKey] = value
+	}
+	return result
+}
+
+func (this *EnumStruct) Datas() []EnumData {
+	result := []EnumData{}
+	for key, value := range this.names {
+		singleKey, _ := strconv.Atoi(key)
+		result = append(result, EnumData{
+			Id:   singleKey,
+			Name: value,
+		})
 	}
 	return result
 }

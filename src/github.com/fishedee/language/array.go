@@ -133,7 +133,8 @@ func arrayMappingInner(data interface{}) (interface{}, error) {
 			result = resultMap
 		} else if dataType.kind == 3 {
 			resultSlice := []interface{}{}
-			for i := 0; i != dataValue.Len(); i++ {
+			dataLen := dataValue.Len()
+			for i := 0; i != dataLen; i++ {
 				singleDataValue := dataValue.Index(i)
 				singleDataResult, err := arrayMappingInner(singleDataValue.Interface())
 				if err != nil {
@@ -155,7 +156,7 @@ func ArrayReverse(data interface{}) interface{} {
 	dataLen := dataValue.Len()
 	result := reflect.MakeSlice(dataType, dataLen, dataLen)
 
-	for i := 0; i != dataValue.Len(); i++ {
+	for i := 0; i != dataLen; i++ {
 		result.Index(dataLen - i - 1).Set(dataValue.Index(i))
 	}
 	return result.Interface()
@@ -173,7 +174,8 @@ func ArrayIn(arrayData interface{}, findData interface{}) int {
 	var findIndex int
 	findIndex = -1
 	arrayDataValue := reflect.ValueOf(arrayData)
-	for i := 0; i != arrayDataValue.Len(); i++ {
+	arrayDataValueLen := arrayDataValue.Len()
+	for i := 0; i != arrayDataValueLen; i++ {
 		singleArrayDataValue := arrayDataValue.Index(i).Interface()
 		if singleArrayDataValue == findData {
 			findIndex = i

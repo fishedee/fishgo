@@ -160,6 +160,7 @@ func ArrayColumnUnique(data interface{}, firstName string, otherName ...string) 
 	dataValue := reflect.ValueOf(data)
 	dataType := dataValue.Type()
 	dataResult := reflect.MakeSlice(dataType, 0, 0)
+	dataLen := dataValue.Len()
 
 	//去重
 	var lastValue reflect.Value
@@ -167,7 +168,7 @@ func ArrayColumnUnique(data interface{}, firstName string, otherName ...string) 
 		target: dataValue,
 	}
 	arraySlice.initCompare(name)
-	for i := 0; i != dataValue.Len(); i++ {
+	for i := 0; i != dataLen; i++ {
 		singleValue := dataValue.Index(i)
 		if i != 0 && arraySlice.EqualValue(lastValue, singleValue) {
 			continue
@@ -197,7 +198,8 @@ func ArrayColumnKey(data interface{}, name string) interface{} {
 	resultType := reflect.SliceOf(dataElemFieldType.Type)
 	result := reflect.MakeSlice(resultType, 0, 0)
 	dataValue := reflect.ValueOf(data)
-	for i := 0; i != dataValue.Len(); i++ {
+	dataLen := dataValue.Len()
+	for i := 0; i != dataLen; i++ {
 		singleDataValue := dataValue.Index(i)
 		singleDataFieldValue := singleDataValue.FieldByName(name)
 		result = reflect.Append(result, singleDataFieldValue)
@@ -238,7 +240,8 @@ func ArrayColumnMap(data interface{}, firstName string, otherName ...string) int
 
 	//整合map
 	result := reflect.MakeMap(nameInfo[0].MapType)
-	for i := 0; i != dataValue.Len(); i++ {
+	dataLen := dataValue.Len()
+	for i := 0; i != dataLen; i++ {
 		singleValue := dataValue.Index(i)
 		prevValue := result
 		for singleNameIndex, singleNameInfo := range nameInfo {
@@ -268,7 +271,8 @@ func ArrayColumnTable(column interface{}, data interface{}) [][]string {
 	result = append(result, columnValuesReal)
 
 	dataValue := reflect.ValueOf(data)
-	for i := 0; i != dataValue.Len(); i++ {
+	dataLen := dataValue.Len()
+	for i := 0; i != dataLen; i++ {
 		singleDataValue := dataValue.Index(i)
 		singleDataStringValue := ArrayMapping(singleDataValue.Interface())
 		singleDataStringValueData := reflect.ValueOf(singleDataStringValue)

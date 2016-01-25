@@ -72,7 +72,8 @@ func getSubModuleFromType(target reflect.Type) []int {
 
 func getSubModuleFromTypeInner(modelType reflect.Type) []int {
 	result := []int{}
-	for i := 0; i != modelType.NumField(); i++ {
+	numField := modelType.NumField()
+	for i := 0; i != numField; i++ {
 		singleFiled := modelType.Field(i)
 		if singleFiled.Anonymous {
 			continue
@@ -97,7 +98,8 @@ func isFromModelType(target reflect.Type) bool {
 	if target == beegoValidateModelType {
 		return true
 	}
-	for i := 0; i != target.NumField(); i++ {
+	numField := target.NumField()
+	for i := 0; i != numField; i++ {
 		singleFiled := target.Field(i)
 		if singleFiled.Anonymous == false {
 			continue

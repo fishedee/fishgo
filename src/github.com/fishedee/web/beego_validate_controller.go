@@ -144,7 +144,8 @@ func (this *BeegoValidateController) Check(requireStruct interface{}) {
 	//获取require字段
 	requireStructType := reflect.TypeOf(requireStruct).Elem()
 	requireStructValue := reflect.ValueOf(requireStruct).Elem()
-	for i := 0; i != requireStructType.NumField(); i++ {
+	numField := requireStructType.NumField()
+	for i := 0; i != numField; i++ {
 		singleRequireStruct := requireStructType.Field(i)
 		singleRequireStructName := singleRequireStruct.Name
 		if isPublic(singleRequireStructName) == false {
@@ -276,7 +277,8 @@ func InitBeegoVaildateControllerRoute(namespace string, target beego.ControllerI
 	controllerType := reflect.TypeOf(target)
 	routerControllerMethod[controllerType] = map[string]methodInfo{}
 
-	for i := 0; i != controllerType.NumMethod(); i++ {
+	numMethod := controllerType.NumMethod()
+	for i := 0; i != numMethod; i++ {
 		singleMethod := controllerType.Method(i)
 		singleMethodName := singleMethod.Name
 		if isPublic(singleMethodName) == false {
