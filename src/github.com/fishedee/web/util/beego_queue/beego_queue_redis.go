@@ -4,6 +4,7 @@ import (
 	"github.com/garyburd/redigo/redis"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type RedisQueueStore struct {
@@ -46,25 +47,38 @@ func newRedisPool(configSavePath string) (*redis.Pool, error) {
 	} else {
 		dbNum = 0
 	}
-	poollist = redis.NewPool(func() (redis.Conn, error) {
-		c, err := redis.Dial("tcp", savePath)
-		if err != nil {
-			return nil, err
-		}
-		if password != "" {
-			if _, err := c.Do("AUTH", password); err != nil {
+	poollist = &redis.Pool{
+		MaxIdle:     poolsize,
+		IdleTimeout: 240 * time.Second,
+		Dial: func() (redis.Conn, error) {
+			c, err := redis.DialTimeout(
+				"tcp",
+				savePath,
+				time.Second,
+				time.Second*12,
+				time.Second,
+			)
+			if err != nil {
+				return nil, err
+			}
+			if password != "" {
+				if _, err := c.Do("AUTH", password); err != nil {
+					c.Close()
+					return nil, err
+				}
+			}
+			_, err = c.Do("SELECT", dbNum)
+			if err != nil {
 				c.Close()
 				return nil, err
 			}
-		}
-		_, err = c.Do("SELECT", dbNum)
-		if err != nil {
-			c.Close()
-			return nil, err
-		}
-		return c, err
-	}, poolsize)
-
+			return c, err
+		},
+		TestOnBorrow: func(c redis.Conn, t time.Time) error {
+			_, err := c.Do("PING")
+			return err
+		},
+	}
 	return poollist, poollist.Get().Err()
 }
 func NewRedisQueue(config BeegoQueueStoreConfig) (BeegoQueueStoreInterface, error) {
@@ -116,7 +130,7 @@ func (this *RedisQueueStore) consumeData(topicId string, timeout int) (interface
 func (this *RedisQueueStore) Consume(topicId string, listener BeegoQueueListener) error {
 	go func() {
 		for {
-			data, err := this.consumeData(topicId, 30)
+			data, err := this.consumeData(topicId, 10)
 			if err != nil {
 				listener(err)
 			}
