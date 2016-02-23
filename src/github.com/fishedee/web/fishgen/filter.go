@@ -11,40 +11,30 @@ func filterSingleDir(path string, data []os.FileInfo) ([]os.FileInfo, error) {
 		return nil, err
 	}
 
-	dataMap := map[string]os.FileInfo{}
-	for _, singleFileInfo := range data {
-		dataMap[singleFileInfo.Name()] = singleFileInfo
-	}
+	//搜索出生成文件
+	genfile := GetGenerateFileName(path)
 
 	//过滤出需要生成的文件
 	newdata := []os.FileInfo{}
+	var genfiledata os.FileInfo
 	for _, singleFileInfo := range data {
-		if reg.Match([]byte(path+"/"+singleFileInfo.Name())) == false {
+		if singleFileInfo.Name() == genfile {
+			genfiledata = singleFileInfo
 			continue
 		}
-		generateFileName := GetGenerateFileName(singleFileInfo.Name())
-		singleFileInfo2, ok := dataMap[generateFileName]
-		if ok && singleFileInfo2.ModTime().After(singleFileInfo.ModTime()) {
+		if reg.Match([]byte(path+"/"+singleFileInfo.Name())) == false {
 			continue
 		}
 		newdata = append(newdata, singleFileInfo)
 	}
 
-	//删除多余的生成文件
-	for _, singleFileInfo := range data {
-		if IsGenerateFileName(singleFileInfo.Name()) == false {
-			continue
-		}
-		originFileName := GetOriginFileName(singleFileInfo.Name())
-		_, ok := dataMap[originFileName]
-		if ok {
-			err := os.Remove(path + "/" + singleFileInfo.Name())
-			if err != nil {
-				return nil, err
-			}
+	//判断是否需要生成文件
+	for _, singleFileInfo := range newdata {
+		if genfiledata == nil || singleFileInfo.ModTime().After(genfiledata.ModTime()) {
+			return newdata, nil
 		}
 	}
-	return newdata, nil
+	return nil, nil
 }
 
 func FilterDir(data map[string][]os.FileInfo) (map[string][]os.FileInfo, error) {

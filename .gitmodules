@@ -124,3 +124,6 @@
 [submodule "src/github.com/robfig/cron"]
 	path = src/github.com/robfig/cron
 	url = git@github.com:robfig/cron.git
+[submodule "src/golang.org/x/tools"]
+	path = src/golang.org/x/tools
+	url = git@github.com:golang/tools.git

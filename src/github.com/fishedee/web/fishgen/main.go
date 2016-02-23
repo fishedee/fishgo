@@ -22,15 +22,8 @@ func main() {
 		fmt.Println("filter dir error " + err.Error())
 		return
 	}
-	fmt.Println(data)
 
-	parserData, err := Parser(data)
-	if err != nil {
-		fmt.Println("parser dir error " + err.Error())
-		return
-	}
-
-	err = Generator(parserData)
+	err = Generator(data)
 	if err != nil {
 		fmt.Println("generate dir error " + err.Error())
 		return
