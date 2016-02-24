@@ -1,8 +1,11 @@
 package web
 
 import (
+	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/context"
 	. "github.com/fishedee/web/util"
+	"os"
+	"path"
 )
 
 type BeegoValidateBasic struct {
@@ -24,7 +27,41 @@ type BeegoValidateBasic struct {
 
 var globalBasic BeegoValidateBasic
 
+func checkFileExist(path string) bool {
+	_, err := os.Stat(path)
+	if err != nil {
+		return false
+	} else {
+		return true
+	}
+}
+
+func findAppConfPath() string {
+	workingDir, err := os.Getwd()
+	if err != nil {
+		return ""
+	}
+	if checkFileExist(workingDir + "/conf/app.conf") {
+		return ""
+	}
+
+	for i := 0; i != 3; i++ {
+		workingDir = path.Dir(workingDir)
+		appPath := workingDir + "/conf/app.conf"
+		if checkFileExist(appPath) {
+			return workingDir
+		}
+	}
+	return ""
+}
+
 func init() {
+	//确定appPath
+	appPath := findAppConfPath()
+	if appPath != "" {
+		beego.TestBeegoInit(appPath)
+	}
+
 	var err error
 	globalBasic.Session, err = NewSessionManagerFromConfig("fishsession")
 	if err != nil {
