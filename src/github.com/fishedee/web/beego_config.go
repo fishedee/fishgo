@@ -7,6 +7,6 @@ import (
 func init() {
 	accessLogs, err := beego.AppConfig.Bool("AccessLogs")
 	if err == nil {
-		beego.AccessLogs = accessLogs
+		beego.BConfig.Log.AccessLogs = accessLogs
 	}
 }

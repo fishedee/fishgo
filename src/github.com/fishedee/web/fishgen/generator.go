@@ -66,7 +66,7 @@ func generateSingleFunction(fun FunctionInfo) string {
 		return ""
 	}
 	return "func (" + generateSingleField(fun.receiver) + ")" +
-		fun.name + "_WithError" +
+		fun.name + "ForError" +
 		"(" + generateSingleField(fun.params) + ")" +
 		"(" + generateSingleResult(fun.results) + "){\n" +
 		"defer Catch(func(exception Exception) {\n" +

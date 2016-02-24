@@ -132,7 +132,7 @@ func NewLogManagerWithCtxAndMonitor(ctx *context.Context, monitor *MonitorManage
 		logPrefix = " 0.0.0.0 * "
 	} else {
 		ip := ctx.Input.IP()
-		url := ctx.Input.Url()
+		url := ctx.Input.URL()
 		realIP := ctx.Input.Header("X-Real-Ip")
 		if ip == "127.0.0.1" && realIP != "" {
 			ip = realIP

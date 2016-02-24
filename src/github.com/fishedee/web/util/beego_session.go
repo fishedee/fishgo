@@ -109,7 +109,7 @@ func NewSessionManagerFromConfig(configName string) (*SessionManager, error) {
 	return result.(*SessionManager), err
 }
 
-func (manager *SessionManager) SessionStart(w http.ResponseWriter, r *http.Request) (session session.SessionStore, err error) {
+func (manager *SessionManager) SessionStart(w http.ResponseWriter, r *http.Request) (session session.Store, err error) {
 	result, errOrgin := manager.Manager.SessionStart(w, r)
 	if errOrgin != nil {
 		return result, errOrgin

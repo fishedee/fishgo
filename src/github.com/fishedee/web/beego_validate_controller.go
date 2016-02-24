@@ -13,7 +13,9 @@ import (
 type beegoValidateControllerInterface interface {
 	beegoValidateModelInterface
 	GetBasic() *BeegoValidateBasic
+	SetAppControllerInner(controller beegoValidateControllerInterface)
 	AutoRender(result interface{}, view string)
+	Prepare()
 }
 
 var routerControllerMethod map[reflect.Type]map[string]methodInfo
@@ -69,6 +71,10 @@ func (this *BeegoValidateController) GetBasic() *BeegoValidateBasic {
 	return this.BeegoValidateBasic
 }
 
+func (this *BeegoValidateController) SetAppControllerInner(controller beegoValidateControllerInterface) {
+	this.AppController = controller
+}
+
 func (this *BeegoValidateController) SetAppController(controller beegoValidateControllerInterface) {
 }
 
@@ -109,7 +115,7 @@ func (this *BeegoValidateController) AutoRouteMethod() {
 	})
 	//查找路由
 	appController := this.AppController
-	url := this.Ctx.Input.Url()
+	url := this.Ctx.Input.URL()
 	urlArray := strings.Split(url, "/")
 	if len(urlArray) == 0 {
 		panic("unknown url segement" + url)
