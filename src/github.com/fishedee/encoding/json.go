@@ -6,7 +6,7 @@ import (
 )
 
 func EncodeJson(data interface{}) ([]byte, error) {
-	changeValue := ArrayMapping(data)
+	changeValue := ArrayMappingByJsonOrFirstLower(data)
 	return json.Marshal(changeValue)
 }
 

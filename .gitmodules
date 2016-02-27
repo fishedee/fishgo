@@ -127,3 +127,9 @@
 [submodule "src/golang.org/x/tools"]
 	path = src/golang.org/x/tools
 	url = git@github.com:golang/tools.git
+[submodule "src/github.com/russross/blackfriday"]
+	path = src/github.com/russross/blackfriday
+	url = git@github.com:russross/blackfriday.git
+[submodule "src/github.com/shurcooL/sanitized_anchor_name"]
+	path = src/github.com/shurcooL/sanitized_anchor_name
+	url = git@github.com:shurcooL/sanitized_anchor_name.git

@@ -45,6 +45,7 @@ func combileMap(result map[string]interface{}, singleResultMap interface{}) erro
 
 type arrayMappingStructInfo struct {
 	name      string
+	omitempty bool
 	num       int
 	anonymous bool
 }
@@ -72,8 +73,24 @@ func getArrayMappingInfoInner(dataType reflect.Type) arrayMappingInfo {
 				if singleDataType.PkgPath != "" && singleDataType.Anonymous == false {
 					continue
 				}
+				var singleName string
+				var omitempty bool
+				if singleDataType.Tag.Get("json") != "" {
+					jsonTag := singleDataType.Tag.Get("json")
+					jsonTagList := strings.Split(jsonTag, ",")
+					if jsonTagList[0] == "-" {
+						continue
+					}
+					if len(jsonTagList) >= 2 && jsonTagList[1] == "omitempty" {
+						omitempty = true
+					}
+					singleName = singleDataType.Tag.Get("json")
+				} else {
+					singleName = nameMapper(singleDataType.Name)
+				}
 				single := arrayMappingStructInfo{}
-				single.name = nameMapper(singleDataType.Name)
+				single.name = singleName
+				single.omitempty = omitempty
 				single.num = i
 				single.anonymous = singleDataType.Anonymous
 				result.field = append(result.field, single)
@@ -85,6 +102,24 @@ func getArrayMappingInfoInner(dataType reflect.Type) arrayMappingInfo {
 		result.kind = 4
 	}
 	return result
+}
+
+func isEmptyValue(v reflect.Value) bool {
+	switch v.Kind() {
+	case reflect.Array, reflect.Map, reflect.Slice, reflect.String:
+		return v.Len() == 0
+	case reflect.Bool:
+		return !v.Bool()
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return v.Int() == 0
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return v.Uint() == 0
+	case reflect.Float32, reflect.Float64:
+		return v.Float() == 0
+	case reflect.Interface, reflect.Ptr:
+		return v.IsNil()
+	}
+	return false
 }
 
 func getArrayMappingInfo(target reflect.Type) arrayMappingInfo {
@@ -122,6 +157,9 @@ func arrayMappingInner(data interface{}) (interface{}, error) {
 					return result, err
 				}
 				if singleType.anonymous == false {
+					if singleType.omitempty == true && isEmptyValue(reflect.ValueOf(singleResultMap)) {
+						continue
+					}
 					resultMap[singleType.name] = singleResultMap
 				} else {
 					err := combileMap(resultMap, singleResultMap)
@@ -162,7 +200,7 @@ func ArrayReverse(data interface{}) interface{} {
 	return result.Interface()
 }
 
-func ArrayMapping(data interface{}) interface{} {
+func ArrayMappingByJsonOrFirstLower(data interface{}) interface{} {
 	result, err := arrayMappingInner(data)
 	if err != nil {
 		panic(err)
