@@ -2,6 +2,7 @@ package util
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -20,8 +21,9 @@ import (
 )
 
 type AjaxPoolOption struct {
-	Timeout      time.Duration
-	HasCookieJar bool
+	Timeout         time.Duration
+	HasCookieJar    bool
+	TLSClientConfig *tls.Config
 }
 
 type AjaxPool struct {
@@ -60,8 +62,9 @@ func init() {
 func NewAjaxPool(option *AjaxPoolOption) *AjaxPool {
 	if option == nil {
 		option = &AjaxPoolOption{
-			Timeout:      30 * time.Second,
-			HasCookieJar: false,
+			Timeout:         30 * time.Second,
+			HasCookieJar:    false,
+			TLSClientConfig: nil,
 		}
 	}
 	client := &http.Client{}
@@ -72,6 +75,11 @@ func NewAjaxPool(option *AjaxPoolOption) *AjaxPool {
 			panic(err)
 		}
 		client.Jar = jar
+	}
+	if option.TLSClientConfig != nil {
+		client.Transport = &http.Transport{
+			TLSClientConfig: option.TLSClientConfig,
+		}
 	}
 	return &AjaxPool{
 		client: client,

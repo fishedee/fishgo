@@ -2,6 +2,7 @@ package web
 
 import (
 	"fmt"
+	"math/rand"
 	"reflect"
 	"runtime"
 	"strings"
@@ -41,6 +42,27 @@ func (this *BeegoValidateTest) AssertEqual(left interface{}, right interface{}) 
 
 func (this *BeegoValidateTest) SetTesting(t *testing.T) {
 	this.t = t
+}
+
+func (this *BeegoValidateTest) RandomInt() int {
+	return rand.Int()
+}
+
+func (this *BeegoValidateTest) RandomString(length int) string {
+	result := []rune{}
+	for i := 0; i != length; i++ {
+		var single rune
+		randInt := rand.Int() % (10 + 27 + 27)
+		if randInt < 10 {
+			single = rune('0' + randInt)
+		} else if randInt < 10+27 {
+			single = rune('A' + (randInt - 10))
+		} else {
+			single = rune('a' + (randInt - 10 - 27))
+		}
+		result = append(result, single)
+	}
+	return string(result)
 }
 
 func InitBeegoVaildateTest(t *testing.T, test BeegoValidateTestInterface) {
