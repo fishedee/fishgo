@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 )
 
 type BeegoValidateTestInterface interface {
@@ -52,13 +53,13 @@ func (this *BeegoValidateTest) RandomString(length int) string {
 	result := []rune{}
 	for i := 0; i != length; i++ {
 		var single rune
-		randInt := rand.Int() % (10 + 27 + 27)
+		randInt := rand.Int() % (10 + 26 + 26)
 		if randInt < 10 {
 			single = rune('0' + randInt)
-		} else if randInt < 10+27 {
+		} else if randInt < 10+26 {
 			single = rune('A' + (randInt - 10))
 		} else {
-			single = rune('a' + (randInt - 10 - 27))
+			single = rune('a' + (randInt - 10 - 26))
 		}
 		result = append(result, single)
 	}
@@ -83,4 +84,8 @@ func InitBeegoVaildateTest(t *testing.T, test BeegoValidateTestInterface) {
 		//执行测试
 		singleValueMethodType.Func.Call([]reflect.Value{testValue})
 	}
+}
+
+func init() {
+	rand.Seed(time.Now().Unix())
 }

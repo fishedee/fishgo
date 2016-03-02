@@ -84,7 +84,7 @@ func getArrayMappingInfoInner(dataType reflect.Type) arrayMappingInfo {
 					if len(jsonTagList) >= 2 && jsonTagList[1] == "omitempty" {
 						omitempty = true
 					}
-					singleName = singleDataType.Tag.Get("json")
+					singleName = jsonTagList[0]
 				} else {
 					singleName = nameMapper(singleDataType.Name)
 				}
