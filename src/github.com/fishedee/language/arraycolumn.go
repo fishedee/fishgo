@@ -274,7 +274,7 @@ func ArrayColumnTable(column interface{}, data interface{}) [][]string {
 	dataLen := dataValue.Len()
 	for i := 0; i != dataLen; i++ {
 		singleDataValue := dataValue.Index(i)
-		singleDataStringValue := ArrayMappingByJsonOrFirstLower(singleDataValue.Interface())
+		singleDataStringValue := ArrayToMap(singleDataValue.Interface(), "json")
 		singleDataStringValueData := reflect.ValueOf(singleDataStringValue)
 		singleResult := []string{}
 		for _, singleColumn := range columnKeysReal {
