@@ -44,6 +44,8 @@ var arrayMappingInfoMap struct {
 	data  map[string]map[reflect.Type]arrayMappingInfo
 }
 
+var interfaceType reflect.Type
+
 func getDataTagInfoInner(dataType reflect.Type, tag string) arrayMappingInfo {
 	dataTypeKind := GetTypeKind(dataType)
 	result := arrayMappingInfo{}
@@ -115,48 +117,63 @@ func getDataTagInfo(target reflect.Type, tag string) arrayMappingInfo {
 	return result
 }
 
-func arrayToMapInner(data interface{}, tag string) interface{} {
-	var result interface{}
-	if data == nil {
-		result = nil
-	} else {
-		dataType := getDataTagInfo(reflect.TypeOf(data), tag)
-		dataValue := reflect.ValueOf(data)
+func arrayToMapInner(dataValue reflect.Value, tag string) reflect.Value {
+	if dataValue.IsValid() == false{
+		return dataValue
+	}else{
+		var result reflect.Value
+		dataType := getDataTagInfo(dataValue.Type(), tag)
 		if dataType.kind == TypeKind.STRUCT && dataType.isTimeType == true {
-			timeValue := data.(time.Time)
-			result = timeValue.Format("2006-01-02 15:04:05")
+			timeValue := dataValue.Interface().(time.Time)
+			result = reflect.ValueOf(timeValue.Format("2006-01-02 15:04:05"))
 		} else if dataType.kind == TypeKind.STRUCT && dataType.isTimeType == false {
 			resultMap := map[string]interface{}{}
 			for _, singleType := range dataType.field {
-				singleResultMap := arrayToMapInner(dataValue.Field(singleType.num).Interface(), tag)
+				singleResultMap := arrayToMapInner(dataValue.Field(singleType.num), tag)
 				if singleType.anonymous == false {
-					if singleType.omitempty == true && IsEmptyValue(reflect.ValueOf(singleResultMap)) {
+					if singleType.omitempty == true && IsEmptyValue(singleResultMap) {
 						continue
 					}
-					resultMap[singleType.name] = singleResultMap
+					resultMap[singleType.name] = singleResultMap.Interface()
 				} else {
 					combileMap(resultMap, singleResultMap)
 				}
 			}
-			result = resultMap
+			result = reflect.ValueOf(resultMap)
 		} else if dataType.kind == TypeKind.ARRAY {
 			resultSlice := []interface{}{}
 			dataLen := dataValue.Len()
 			for i := 0; i != dataLen; i++ {
 				singleDataValue := dataValue.Index(i)
-				singleDataResult := arrayToMapInner(singleDataValue.Interface(), tag)
-				resultSlice = append(resultSlice, singleDataResult)
+				singleDataResult := arrayToMapInner(singleDataValue, tag)
+				resultSlice = append(resultSlice, singleDataResult.Interface())
 			}
-			result = resultSlice
+			result = reflect.ValueOf(resultSlice)
+		} else if dataType.kind == TypeKind.MAP{
+			dataKeyType := dataValue.Type().Key()
+			resultMapType := reflect.MapOf(dataKeyType,interfaceType)
+			resultMap := reflect.MakeMap(resultMapType)
+			dataKeys := dataValue.MapKeys()
+			for _,singleDataKey := range dataKeys{
+				singleDataValue := dataValue.MapIndex(singleDataKey)
+				singleDataResult := arrayToMapInner(singleDataValue, tag)
+				resultMap.SetMapIndex(singleDataKey,singleDataResult)
+			}
+			result = resultMap
 		} else {
-			result = data
+			result = dataValue
 		}
+		return result
 	}
-	return result
 }
 
 func ArrayToMap(data interface{}, tag string) interface{} {
-	return arrayToMapInner(data, tag)
+	dataValue := arrayToMapInner(reflect.ValueOf(data), tag)
+	if dataValue.IsValid() == false{
+		return nil
+	}else{
+		return dataValue.Interface()
+	}
 }
 
 func mapToBool(dataValue reflect.Value, target reflect.Value) error {
@@ -245,17 +262,15 @@ func mapToArray(dataValue reflect.Value, target reflect.Value, tag string) error
 	}
 	dataLen := dataValue.Len()
 	targetType := target.Type()
-	targetElemType := targetType.Elem()
 	if targetType.Kind() == reflect.Slice {
-		newTarget := reflect.MakeSlice(targetElemType, dataLen, dataLen)
+		newTarget := reflect.MakeSlice(targetType, dataLen, dataLen)
 		for i := 0; i != dataLen; i++ {
 			singleData := dataValue.Index(i)
-			singleDataTarget := reflect.New(targetElemType)
+			singleDataTarget := newTarget.Index(i)
 			err := mapToArrayInner(singleData, singleDataTarget, tag)
 			if err != nil {
 				return err
 			}
-			newTarget.Index(i).Set(singleDataTarget)
 		}
 		target.Set(newTarget)
 	} else {
@@ -265,24 +280,22 @@ func mapToArray(dataValue reflect.Value, target reflect.Value, tag string) error
 				continue
 			}
 			singleData := dataValue.Index(i)
-			singleDataTarget := reflect.New(targetElemType)
+			singleDataTarget := newTarget.Index(i)
 			err := mapToArrayInner(singleData, singleDataTarget, tag)
 			if err != nil {
 				return err
 			}
-			newTarget.Index(i).Set(singleDataTarget)
 		}
 		target.Set(newTarget)
 	}
 	return nil
 }
 
-func mapToMap(data reflect.Value, target reflect.Value, tag string) error {
-	dataValue := reflect.ValueOf(data)
+func mapToMap(dataValue reflect.Value, target reflect.Value, tag string) error {
 	dataType := dataValue.Type()
 	dataKind := GetTypeKind(dataType)
 	if dataKind != TypeKind.MAP {
-		return errors.New(fmt.Sprintf("can't parse %s to map", reflect.TypeOf(data).String()))
+		return errors.New(fmt.Sprintf("can't parse %s to map", dataType.String()))
 	}
 	dataKeys := dataValue.MapKeys()
 	targetType := target.Type()
@@ -302,7 +315,7 @@ func mapToMap(data reflect.Value, target reflect.Value, tag string) error {
 		if err != nil {
 			return err
 		}
-		newTarget.SetMapIndex(singleDataTargetKey, singleDataTargetValue)
+		newTarget.SetMapIndex(singleDataTargetKey.Elem(), singleDataTargetValue.Elem())
 	}
 	target.Set(newTarget)
 	return nil
@@ -335,11 +348,11 @@ func mapToStruct(dataValue reflect.Value, target reflect.Value, targetType array
 	for _, singleStructInfo := range targetType.field {
 		singleDataKey := reflect.ValueOf(singleStructInfo.name)
 		singleDataValue := target.FieldByIndex(singleStructInfo.index)
-		dataValue := dataValue.MapIndex(singleDataKey)
+		singleDataResult := dataValue.MapIndex(singleDataKey)
 		if dataValue.IsValid() == false {
 			continue
 		}
-		err := mapToArrayInner(singleDataValue, dataValue, tag)
+		err := mapToArrayInner(singleDataResult, singleDataValue, tag)
 		if err != nil {
 			return err
 		}
@@ -415,9 +428,16 @@ func MapToArray(data interface{}, target interface{}, tag string) error {
 	if targetValue.IsValid() == false {
 		return errors.New("target is nil")
 	}
+	if targetValue.Kind() != reflect.Ptr{
+		return errors.New("invalid target is not ptr")
+	}
 	return mapToArrayInner(dataValue, targetValue, tag)
 }
 
 func init() {
 	arrayMappingInfoMap.data = map[string]map[reflect.Type]arrayMappingInfo{}
+	var mm struct{
+		Test interface{}
+	}
+	interfaceType = reflect.TypeOf(mm).Field(0).Type
 }
