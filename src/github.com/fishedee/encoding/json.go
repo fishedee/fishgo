@@ -6,10 +6,15 @@ import (
 )
 
 func EncodeJson(data interface{}) ([]byte, error) {
-	changeValue := ArrayMappingByJsonOrFirstLower(data)
+	changeValue := ArrayToMap(data, "json")
 	return json.Marshal(changeValue)
 }
 
 func DecodeJson(data []byte, value interface{}) error {
-	return json.Unmarshal(data, value)
+	var valueDynamic interface{}
+	err := json.Unmarshal(data, &valueDynamic)
+	if err != nil {
+		return err
+	}
+	return MapToArray(valueDynamic, value, "json")
 }

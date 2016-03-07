@@ -2,12 +2,12 @@ package web
 
 import (
 	"github.com/astaxie/beego"
+	"github.com/fishedee/encoding"
 	"github.com/fishedee/language"
+	"mime"
 	"net/http"
 	"reflect"
-	"strconv"
 	"strings"
-	"time"
 )
 
 type beegoValidateControllerInterface interface {
@@ -27,6 +27,7 @@ func init() {
 type BeegoValidateController struct {
 	beego.Controller
 	*BeegoValidateBasic
+	inputData     interface{}
 	appController beegoValidateControllerInterface
 }
 
@@ -59,6 +60,7 @@ func (this *BeegoValidateController) Options() {
 }
 
 func (this *BeegoValidateController) Prepare() {
+	this.parseInput()
 	this.appController = this.AppController.(beegoValidateControllerInterface)
 	this.BeegoValidateBasic = NewBeegoValidateBasic(this.Ctx)
 	PrepareBeegoValidateModel(this.appController)
@@ -146,49 +148,39 @@ func (this *BeegoValidateController) AutoRender(result interface{}, view string)
 
 }
 
+func (this *BeegoValidateController) parseInput() {
+	if this.Ctx == nil {
+		return
+	}
+	//取出get数据
+	request := this.Ctx.Request
+	queryInput := request.URL.RawQuery
+
+	//取出post数据
+	postInput := ""
+	ct := request.Header.Get("Content-Type")
+	if ct == "" {
+		ct = "application/octet-stream"
+	}
+	ct, _, err := mime.ParseMediaType(ct)
+	if ct == "application/x-www-form-urlencoded" {
+		byteArray := this.Ctx.Input.RequestBody
+		postInput = string(byteArray)
+	}
+
+	//解析数据
+	input := queryInput + "&" + postInput
+	err = encoding.DecodeUrlQuery([]byte(input), &this.inputData)
+	if err != nil {
+		language.Throw(1, err.Error())
+	}
+}
+
 func (this *BeegoValidateController) Check(requireStruct interface{}) {
-	//获取require字段
-	requireStructType := reflect.TypeOf(requireStruct).Elem()
-	requireStructValue := reflect.ValueOf(requireStruct).Elem()
-	numField := requireStructType.NumField()
-	for i := 0; i != numField; i++ {
-		singleRequireStruct := requireStructType.Field(i)
-		singleRequireStructName := singleRequireStruct.Name
-		if isPublic(singleRequireStructName) == false {
-			continue
-		}
-
-		filedName := singleRequireStruct.Tag.Get("validate")
-		if filedName == "" {
-			filedName = firstLowerName(singleRequireStructName)
-		}
-
-		result := this.Ctx.Input.Query(filedName)
-		if result == "" {
-			continue
-		}
-
-		singleRequireStructValue := requireStructValue.Field(i)
-		singleRequireStructValueType := singleRequireStructValue.Type()
-		if singleRequireStructValueType == reflect.TypeOf("") {
-			singleRequireStructValue.SetString(result)
-		} else if singleRequireStructValueType == reflect.TypeOf(1) {
-			var resultInt int
-			resultInt, err := strconv.Atoi(result)
-			if err != nil {
-				language.Throw(1, "参数"+singleRequireStructName+"不是合法的整数，其值为：["+result+"]")
-			}
-			singleRequireStructValue.SetInt(int64(resultInt))
-		} else if singleRequireStructValueType == reflect.TypeOf(time.Time{}) {
-			var resultTime time.Time
-			resultTime, err := time.ParseInLocation("2006-01-02 15:04:05", result, time.Now().Local().Location())
-			if err != nil {
-				language.Throw(1, "参数"+singleRequireStructName+"不是合法的时间，其值为：["+result+"]")
-			}
-			singleRequireStructValue.Set(reflect.ValueOf(resultTime))
-		} else {
-			language.Throw(1, "不合法的参数类型： "+singleRequireStructValueType.String())
-		}
+	//导出到struct
+	err := language.MapToArray(this.inputData, requireStruct, "url")
+	if err != nil {
+		language.Throw(1, err.Error())
 	}
 }
 

@@ -118,9 +118,9 @@ func getDataTagInfo(target reflect.Type, tag string) arrayMappingInfo {
 }
 
 func arrayToMapInner(dataValue reflect.Value, tag string) reflect.Value {
-	if dataValue.IsValid() == false{
+	if dataValue.IsValid() == false {
 		return dataValue
-	}else{
+	} else {
 		var result reflect.Value
 		dataType := getDataTagInfo(dataValue.Type(), tag)
 		if dataType.kind == TypeKind.STRUCT && dataType.isTimeType == true {
@@ -132,6 +132,9 @@ func arrayToMapInner(dataValue reflect.Value, tag string) reflect.Value {
 				singleResultMap := arrayToMapInner(dataValue.Field(singleType.num), tag)
 				if singleType.anonymous == false {
 					if singleType.omitempty == true && IsEmptyValue(singleResultMap) {
+						continue
+					}
+					if singleResultMap.IsValid() == false {
 						continue
 					}
 					resultMap[singleType.name] = singleResultMap.Interface()
@@ -149,17 +152,20 @@ func arrayToMapInner(dataValue reflect.Value, tag string) reflect.Value {
 				resultSlice = append(resultSlice, singleDataResult.Interface())
 			}
 			result = reflect.ValueOf(resultSlice)
-		} else if dataType.kind == TypeKind.MAP{
+		} else if dataType.kind == TypeKind.MAP {
 			dataKeyType := dataValue.Type().Key()
-			resultMapType := reflect.MapOf(dataKeyType,interfaceType)
+			resultMapType := reflect.MapOf(dataKeyType, interfaceType)
 			resultMap := reflect.MakeMap(resultMapType)
 			dataKeys := dataValue.MapKeys()
-			for _,singleDataKey := range dataKeys{
+			for _, singleDataKey := range dataKeys {
 				singleDataValue := dataValue.MapIndex(singleDataKey)
 				singleDataResult := arrayToMapInner(singleDataValue, tag)
-				resultMap.SetMapIndex(singleDataKey,singleDataResult)
+				resultMap.SetMapIndex(singleDataKey, singleDataResult)
 			}
 			result = resultMap
+		} else if dataType.kind == TypeKind.INTERFACE ||
+			dataType.kind == TypeKind.PTR {
+			result = arrayToMapInner(dataValue.Elem(), tag)
 		} else {
 			result = dataValue
 		}
@@ -169,9 +175,9 @@ func arrayToMapInner(dataValue reflect.Value, tag string) reflect.Value {
 
 func ArrayToMap(data interface{}, tag string) interface{} {
 	dataValue := arrayToMapInner(reflect.ValueOf(data), tag)
-	if dataValue.IsValid() == false{
+	if dataValue.IsValid() == false {
 		return nil
-	}else{
+	} else {
 		return dataValue.Interface()
 	}
 }
@@ -185,12 +191,12 @@ func mapToBool(dataValue reflect.Value, target reflect.Value) error {
 	} else if dataKind == TypeKind.STRING {
 		dataBool, err := strconv.ParseBool(dataValue.String())
 		if err != nil {
-			return err
+			return errors.New(fmt.Sprintf("不是布尔值，其值为[%s]", dataValue.String()))
 		}
 		target.SetBool(dataBool)
 		return nil
 	} else {
-		return errors.New(fmt.Sprintf("can't parse %s to bool", dataValue.Type().String()))
+		return errors.New(fmt.Sprintf("不是布尔值，其类型为[%s]", dataValue.Type().String()))
 	}
 }
 
@@ -203,12 +209,12 @@ func mapToUint(dataValue reflect.Value, target reflect.Value) error {
 	} else if dataKind == TypeKind.STRING {
 		dataUint, err := strconv.ParseUint(dataValue.String(), 10, 64)
 		if err != nil {
-			return err
+			return errors.New(fmt.Sprintf("不是无符号整数，其值为[%s]", dataValue.String()))
 		}
 		target.SetUint(dataUint)
 		return nil
 	} else {
-		return errors.New(fmt.Sprintf("can't parse %s to uint", dataValue.Type().String()))
+		return errors.New(fmt.Sprintf("不是无符号整数，其类型为[%s]", dataValue.Type().String()))
 	}
 }
 
@@ -221,12 +227,12 @@ func mapToInt(dataValue reflect.Value, target reflect.Value) error {
 	} else if dataKind == TypeKind.STRING {
 		dataInt, err := strconv.ParseInt(dataValue.String(), 10, 64)
 		if err != nil {
-			return err
+			return errors.New(fmt.Sprintf("不是整数，其值为[%s]", dataValue.String()))
 		}
 		target.SetInt(dataInt)
 		return nil
 	} else {
-		return errors.New(fmt.Sprintf("can't parse %s to int", dataValue.Type().String()))
+		return errors.New(fmt.Sprintf("不是整数，其类型为[%s]", dataValue.Type().String()))
 	}
 }
 
@@ -239,12 +245,12 @@ func mapToFloat(dataValue reflect.Value, target reflect.Value) error {
 	} else if dataKind == TypeKind.STRING {
 		dataFloat, err := strconv.ParseFloat(dataValue.String(), 64)
 		if err != nil {
-			return err
+			return errors.New(fmt.Sprintf("不是浮点数，其值为[%s]", dataValue.String()))
 		}
 		target.SetFloat(dataFloat)
 		return nil
 	} else {
-		return errors.New(fmt.Sprintf("can't parse %s to float", dataValue.Type().String()))
+		return errors.New(fmt.Sprintf("不是浮点数，其类型为[%s]", dataValue.Type().String()))
 	}
 }
 
@@ -258,7 +264,7 @@ func mapToArray(dataValue reflect.Value, target reflect.Value, tag string) error
 	dataType := dataValue.Type()
 	dataKind := GetTypeKind(dataType)
 	if dataKind != TypeKind.ARRAY {
-		return errors.New(fmt.Sprintf("can't parse %s to array", dataValue.Type().String()))
+		return errors.New(fmt.Sprintf("不是数组，其类型为[%s]", dataValue.Type().String()))
 	}
 	dataLen := dataValue.Len()
 	targetType := target.Type()
@@ -295,7 +301,7 @@ func mapToMap(dataValue reflect.Value, target reflect.Value, tag string) error {
 	dataType := dataValue.Type()
 	dataKind := GetTypeKind(dataType)
 	if dataKind != TypeKind.MAP {
-		return errors.New(fmt.Sprintf("can't parse %s to map", dataType.String()))
+		return errors.New(fmt.Sprintf("不是映射，其类型为[%s]", dataValue.Type().String()))
 	}
 	dataKeys := dataValue.MapKeys()
 	targetType := target.Type()
@@ -313,7 +319,7 @@ func mapToMap(dataValue reflect.Value, target reflect.Value, tag string) error {
 		}
 		err = mapToArrayInner(singleDataValue, singleDataTargetValue, tag)
 		if err != nil {
-			return err
+			return errors.New(fmt.Sprintf("参数%s%s", singleDataKey, err.Error()))
 		}
 		newTarget.SetMapIndex(singleDataTargetKey.Elem(), singleDataTargetValue.Elem())
 	}
@@ -328,33 +334,37 @@ func mapToTime(dataValue reflect.Value, target reflect.Value) error {
 	} else if dataType.Kind() == reflect.String {
 		timeValue, err := time.ParseInLocation("2006-01-02 15:04:05", dataValue.String(), time.Now().Local().Location())
 		if err != nil {
-			return err
+			return errors.New(fmt.Sprintf("不是时间，其值为[%s]", dataValue.String()))
 		}
 		target.Set(reflect.ValueOf(timeValue))
 		return nil
 	}
-	return errors.New(fmt.Sprintf("can't parse %s to time.time", dataValue.Type().String()))
+	return errors.New(fmt.Sprintf("不是时间，其类型为[%s]", dataValue.Type().String()))
 }
 
 func mapToStruct(dataValue reflect.Value, target reflect.Value, targetType arrayMappingInfo, tag string) error {
 	dataType := dataValue.Type()
 	dataKind := GetTypeKind(dataType)
 	if dataKind != TypeKind.MAP {
-		return errors.New(fmt.Sprintf("can't parse %s to struct", dataType.String()))
+		return errors.New(fmt.Sprintf("不是映射，其类型为[%s]", dataValue.Type().String()))
 	}
-	if dataType.Key().Kind() != reflect.String {
-		return errors.New(fmt.Sprintf("can't parse %s to string", dataType.Key().String()))
-	}
+	dataTypeKey := dataType.Key()
 	for _, singleStructInfo := range targetType.field {
+		singleMapKey := reflect.New(dataTypeKey)
 		singleDataKey := reflect.ValueOf(singleStructInfo.name)
-		singleDataValue := target.FieldByIndex(singleStructInfo.index)
-		singleDataResult := dataValue.MapIndex(singleDataKey)
-		if dataValue.IsValid() == false {
-			continue
-		}
-		err := mapToArrayInner(singleDataResult, singleDataValue, tag)
+		err := mapToArrayInner(singleDataKey, singleMapKey, tag)
 		if err != nil {
 			return err
+		}
+
+		singleDataValue := target.FieldByIndex(singleStructInfo.index)
+		singleMapResult := dataValue.MapIndex(singleMapKey.Elem())
+		if singleMapResult.IsValid() == false {
+			continue
+		}
+		err = mapToArrayInner(singleMapResult, singleDataValue, tag)
+		if err != nil {
+			return errors.New(fmt.Sprintf("参数%s%s", singleDataKey, err.Error()))
 		}
 	}
 	return nil
@@ -363,7 +373,7 @@ func mapToStruct(dataValue reflect.Value, target reflect.Value, targetType array
 func mapToPtr(dataValue reflect.Value, target reflect.Value, tag string) error {
 	targetElem := target.Elem()
 	if targetElem.IsValid() == false {
-		targetElem = reflect.New(targetElem.Type())
+		targetElem = reflect.New(target.Type().Elem())
 		target.Set(targetElem)
 	}
 	return mapToArrayInner(dataValue, targetElem, tag)
@@ -428,7 +438,7 @@ func MapToArray(data interface{}, target interface{}, tag string) error {
 	if targetValue.IsValid() == false {
 		return errors.New("target is nil")
 	}
-	if targetValue.Kind() != reflect.Ptr{
+	if targetValue.Kind() != reflect.Ptr {
 		return errors.New("invalid target is not ptr")
 	}
 	return mapToArrayInner(dataValue, targetValue, tag)
@@ -436,7 +446,7 @@ func MapToArray(data interface{}, target interface{}, tag string) error {
 
 func init() {
 	arrayMappingInfoMap.data = map[string]map[reflect.Type]arrayMappingInfo{}
-	var mm struct{
+	var mm struct {
 		Test interface{}
 	}
 	interfaceType = reflect.TypeOf(mm).Field(0).Type

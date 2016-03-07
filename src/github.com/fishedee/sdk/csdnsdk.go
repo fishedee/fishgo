@@ -66,31 +66,31 @@ type CsdnSdkArticleList struct {
 }
 
 type CsdnSdkGetArticleListRequest struct {
-	AccessToken string `json:"access_token"`
-	Status      string `json:"status,omitempty"`
-	Page        int    `json:"page,omitempty"`
-	Size        int    `json:"size,omitempty"`
+	AccessToken string `url:"access_token"`
+	Status      string `url:"status,omitempty"`
+	Page        int    `url:"page,omitempty"`
+	Size        int    `url:"size,omitempty"`
 }
 
 type CsdnSdkGetArticleRequest struct {
-	AccessToken string `json:"access_token"`
-	Id          int    `json:"id"`
+	AccessToken string `url:"access_token"`
+	Id          int    `url:"id"`
 }
 
 type CsdnSdkGetCategoryListRequest struct {
-	AccessToken string `json:"access_token"`
+	AccessToken string `url:"access_token"`
 }
 
 type CsdnSdkSaveArticleRequest struct {
-	AccessToken string `json:"access_token"`
-	Id          int    `json:"id,omitempty"`
-	Title       string `json:"title"`
-	Type        string `json:"type,omitempty"`
-	Description string `json:"description,omitempty"`
-	Content     string `json:"content"`
-	Categories  string `json:"categories,omitempty"`
-	Tags        string `json:"tags,omitempty"`
-	Ip          string `json:"ip,omitempty"`
+	AccessToken string `url:"access_token"`
+	Id          int    `url:"id,omitempty"`
+	Title       string `url:"title"`
+	Type        string `url:"type,omitempty"`
+	Description string `url:"description,omitempty"`
+	Content     string `url:"content"`
+	Categories  string `url:"categories,omitempty"`
+	Tags        string `url:"tags,omitempty"`
+	Ip          string `url:"ip,omitempty"`
 }
 
 func (this *CsdnSdk) GetAuthUrl(redirectUrl string) (string, error) {

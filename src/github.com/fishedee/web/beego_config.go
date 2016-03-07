@@ -9,4 +9,5 @@ func init() {
 	if err == nil {
 		beego.BConfig.Log.AccessLogs = accessLogs
 	}
+	beego.BConfig.CopyRequestBody = true
 }

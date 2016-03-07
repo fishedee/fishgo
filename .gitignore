@@ -7,3 +7,4 @@ src/*
 !src/golang.org
 !src/gopkg.in
 !src/qiniupkg.com
+.DS_Store

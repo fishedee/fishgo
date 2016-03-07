@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	. "github.com/fishedee/language"
+	. "github.com/fishedee/encoding"
 	"io"
 	"io/ioutil"
 	"mime/multipart"
@@ -14,7 +14,6 @@ import (
 	"net/http/cookiejar"
 	"net/url"
 	"os"
-	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -147,25 +146,20 @@ func (this *Ajax) createRequestPlainData() (string, []byte, error) {
 }
 
 func (this *Ajax) createRequestUrlData() (string, []byte, error) {
+	var result []byte
+	var err error
 	urlValues := url.Values{}
 	dataUrlValues, ok1 := this.Data.(url.Values)
 	if ok1 {
 		urlValues = dataUrlValues
+		result = []byte(urlValues.Encode())
 	} else {
-		dataMap := ArrayMappingByJsonOrFirstLower(this.Data)
-		dataMapValue := reflect.ValueOf(dataMap)
-		dataMapType := dataMapValue.Type()
-		if dataMapType.Kind() == reflect.Map {
-			dataMapValueKeys := dataMapValue.MapKeys()
-			for _, singleKey := range dataMapValueKeys {
-				singleValue := dataMapValue.MapIndex(singleKey)
-				urlValues[singleKey.String()] = []string{fmt.Sprintf("%v", singleValue.Interface())}
-			}
-		} else {
-			return "", nil, errors.New("invalid url data type " + fmt.Sprintf("%v", this.Data))
+		result, err = EncodeUrlQuery(this.Data)
+		if err != nil {
+			return "", nil, err
 		}
 	}
-	return "application/x-www-form-urlencoded; charset=UTF-8", []byte(urlValues.Encode()), nil
+	return "application/x-www-form-urlencoded; charset=UTF-8", result, nil
 }
 
 func (this *Ajax) createRequestJsonData() (string, []byte, error) {
