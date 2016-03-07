@@ -2,12 +2,14 @@ package util
 
 import (
 	"fmt"
+	"reflect"
+	"strconv"
+	"strings"
+
 	"github.com/astaxie/beego"
 	. "github.com/fishedee/util"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/go-xorm/xorm"
-	"strconv"
-	"strings"
 )
 
 type DatabaseManagerConfig struct {
@@ -23,6 +25,132 @@ type DatabaseManagerConfig struct {
 type DatabaseManager struct {
 	*xorm.Engine
 	config DatabaseManagerConfig
+}
+
+func (this *DatabaseManager) UpdateBatch(data interface{}, indexCol string) (int64, error) {
+	tableName := ""
+	updateBatchSqlMap := map[string][]string{}
+
+	//判断输入参数类型
+	dataType := reflect.TypeOf(data)
+	if dataType.Kind() != reflect.Slice {
+		panic("update batch should be a slice")
+	}
+	dataElemType := dataType.Elem()
+	if dataElemType.Kind() != reflect.Struct {
+		panic("update btach element should be a struct")
+	}
+	sf, ok := dataElemType.FieldByName(indexCol)
+	if !ok {
+		panic("dataElemFieldType has not filed " + indexCol)
+	}
+	indexType := ""
+	if sf.Type.Kind() == reflect.Int {
+		indexType = "int"
+	} else if sf.Type.Kind() == reflect.String {
+		indexType = "string"
+	} else {
+		panic("非法类型数据!")
+	}
+
+	//遍历结构体--取出各字段的值
+	dataValue := reflect.ValueOf(data)
+	fmt.Printf("%+v", dataValue)
+	dataLen := dataValue.Len()
+	for i := 0; i != dataLen; i++ {
+		singleDataValue := dataValue.Index(i)
+		fmt.Printf("%+v", singleDataValue.Type())
+		tableInfo := this.TableInfo(singleDataValue.Interface())
+		if tableName == "" {
+			tableName = tableInfo.Name
+		}
+		fmt.Printf("tableInfo:%+v, tableName:%+v", tableInfo, tableName)
+		singleDataValueLen := singleDataValue.NumField()
+		for j := 0; j != singleDataValueLen; j++ {
+			colName := dataElemType.Field(j).Name
+			singleDataField := singleDataValue.Field(j)
+			singleDataFieldType := singleDataField.Kind()
+			colVal := ""
+			if singleDataFieldType == reflect.String {
+				colVal = singleDataField.String()
+			} else if singleDataFieldType == reflect.Int {
+				colVal = strconv.Itoa(int(singleDataField.Int()))
+			} else {
+				panic("结构体中含有非法类型数据！")
+			}
+			fmt.Printf("%+v, %+v", colName, colVal)
+			if strings.ToLower(colName) != strings.ToLower(tableInfo.AutoIncrement) {
+				updateBatchSqlMap[colName] = append(updateBatchSqlMap[colName], colVal)
+			}
+		}
+	}
+	fmt.Printf("%+v", updateBatchSqlMap)
+
+	//拼接sql语句
+	updateBatchSql := " update " + tableName + " set "
+	sum := 0
+	for k, v := range updateBatchSqlMap {
+		if k != indexCol {
+			otherColType := ""
+			sf, ok = dataElemType.FieldByName(k)
+			if !ok {
+				panic("dataElemFieldType has not filed " + k)
+			}
+			if sf.Type.Kind() == reflect.Int {
+				otherColType = "int"
+			} else if sf.Type.Kind() == reflect.String {
+				otherColType = "string"
+			} else {
+				panic("非法类型数据!")
+			}
+			sum++
+			updateBatchSql += " " + k + " = case " + indexCol
+			for n := 0; n < len(v); n++ {
+				//根据数据类型判断是否添加单引号
+				whenSql := ""
+				if indexType == "int" {
+					whenSql = " when " + updateBatchSqlMap[indexCol][n] + " "
+				} else if indexType == "string" {
+					whenSql = " when '" + updateBatchSqlMap[indexCol][n] + "' "
+				} else {
+					panic("非法类型数据!")
+				}
+				thenSql := ""
+				if otherColType == "int" {
+					thenSql = " then " + v[n] + " "
+				} else if otherColType == "string" {
+					thenSql = " then '" + v[n] + "' "
+				} else {
+					panic("非法类型数据!")
+				}
+				updateBatchSql += whenSql + thenSql
+			}
+			updateBatchSql += " end "
+			if sum < len(updateBatchSqlMap)-1 {
+				updateBatchSql += ", "
+			}
+		}
+	}
+	updateBatchSql += " where " + indexCol + " in ("
+	for singleKey, singleValue := range updateBatchSqlMap[indexCol] {
+		if indexType == "int" {
+			updateBatchSql += singleValue
+		} else if indexType == "string" {
+			updateBatchSql += " '" + singleValue + "' "
+		}
+		if singleKey < len(updateBatchSqlMap[indexCol])-1 {
+			updateBatchSql += ","
+		}
+	}
+	updateBatchSql += ")"
+	fmt.Printf("%+v", updateBatchSql)
+
+	//执行sql
+	res, err := this.Exec(updateBatchSql)
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
 }
 
 var newDatabaseManagerMemory *MemoryFunc
