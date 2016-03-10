@@ -17,6 +17,8 @@ type UmengSdk struct {
 	SecretKey string
 }
 
+type AnaymonusMap map[string]string
+
 const (
 	sendUrl   = "http://msg.umeng.com/api/send"
 	statusUrl = "http://msg.umeng.com/api/status"
@@ -24,48 +26,48 @@ const (
 )
 
 type UmengCommon struct {
-	Appkey          string      `json:"appkey"`
-	Timestamp       string      `json:"timestamp"`
-	Type            string      `json:"type"`
-	Device_tokens   string      `json:"device_tokens"`
-	Alias_type      string      `json:"alias_type"`
-	Alias           string      `json:"alias"`
-	File_id         string      `json:"file_id"`
-	Filter          interface{} `json:"filter"`
-	Production_mode string      `json:"production_mode"`
-	Description     string      `json:"description"`
-	Thirdparty_id   string      `json:"thirdparty_id"`
+	Appkey         string      `json:"appkey"`
+	Timestamp      string      `json:"timestamp"`
+	Type           string      `json:"type"`
+	DeviceTokens   string      `json:"device_tokens"`
+	AliasType      string      `json:"alias_type"`
+	Alias          string      `json:"alias"`
+	FileId         string      `json:"file_id"`
+	Filter         interface{} `json:"filter"`
+	ProductionMode string      `json:"production_mode"`
+	Description    string      `json:"description"`
+	ThirdpartyId   string      `json:"thirdparty_id"`
 }
 
 type UmengAndroidPayload struct {
-	Display_type string                  `json:"display_type"`
-	Body         UmengAndroidPayloadBody `json:"body"`
-	Extra        map[string]string       `json:"extra"`
+	DisplayType string                  `json:"display_type"`
+	Body        UmengAndroidPayloadBody `json:"body"`
+	Extra       map[string]string       `json:"extra"`
 }
 
 type UmengAndroidPayloadBody struct {
-	Ticker       string `json:"ticker"`
-	Title        string `json:"title"`
-	Text         string `json:"text"`
-	Icon         string `json:"icon"`
-	LargeIcon    string `json:"largeIcon"`
-	Img          string `json:"img"`
-	Sound        string `json:"sound"`
-	Builder_id   string `json:"builder_id"`
-	Play_vibrate bool   `json:"play_vibrate"`
-	Play_lights  bool   `json:"play_lights"`
-	Play_sound   bool   `json:"play_sound"`
-	After_open   string `json:"after_open"`
-	Url          string `json:"url"`
-	Activity     string `json:"activity"`
-	Custom       string `json:"custom"`
+	Ticker      string `json:"ticker"`
+	Title       string `json:"title"`
+	Text        string `json:"text"`
+	Icon        string `json:"icon"`
+	LargeIcon   string `json:"largeIcon"`
+	Img         string `json:"img"`
+	Sound       string `json:"sound"`
+	BuilderId   string `json:"builder_id"`
+	PlayVibrate bool   `json:"play_vibrate"`
+	PlayLights  bool   `json:"play_lights"`
+	PlaySound   bool   `json:"play_sound"`
+	AfterOpen   string `json:"after_open"`
+	Url         string `json:"url"`
+	Activity    string `json:"activity"`
+	Custom      string `json:"custom"`
 }
 
 type UmengAndroidPolicy struct {
-	Start_time  string `json:"start_time"`
-	Expire_time string `json:"expire_time"`
+	StartTime  string `json:"start_time"`
+	ExpireTime string `json:"expire_time"`
 	//Max_send_num int    `json:"max_send_num"`
-	Out_biz_no string `json:"out_biz_no"`
+	OutBizNo string `json:"out_biz_no"`
 }
 
 type UmengAndroid struct {
@@ -75,12 +77,8 @@ type UmengAndroid struct {
 }
 
 type UmengIOSPayload struct {
-	Aps           UmengIOSPayloadAps `json:"aps"`
-	After_open    string             `json:"after_open"`
-	Url           string             `json:"url"`
-	Activity      string             `json:"activity"`
-	Custom        string             `json:"custom"`
-	Thirdparty_id string             `json:"thirdparty_id"`
+	Aps UmengIOSPayloadAps `json:"aps"`
+	AnaymonusMap
 }
 
 type UmengIOSPayloadAps struct {
@@ -92,8 +90,8 @@ type UmengIOSPayloadAps struct {
 }
 
 type UmengIOSPolicy struct {
-	Start_time  string `json:"start_time"`
-	Expire_time string `json:"expire_time"`
+	StartTime  string `json:"start_time"`
+	ExpireTime string `json:"expire_time"`
 	//Max_send_num int    `json:"max_send_num"`
 }
 
@@ -104,34 +102,34 @@ type UmengIOS struct {
 }
 
 type UmengResult struct {
-	Ret  string
+	Ret  string `json:"ret"`
 	Data struct {
-		Msg_id        string
-		Task_id       string
-		Error_code    string
-		Thirdparty_id string
+		MsgId        string `json:"msg_id"`
+		TaskId       string `json:"task_id"`
+		ErrorCode    string `json:"error_code"`
+		ThirdpartyId string `json:"thirdparty_id"`
 	}
 }
 
 type UmengStatus struct {
 	Appkey    string `json:"appkey"`
 	Timestamp string `json:"timestamp"`
-	Task_id   string `json:"task_id"`
+	TaskId    string `json:"task_id"`
 }
 
 type UmengStatusResult struct {
-	Ret  string
+	Ret  string `json:"ret"`
 	Data struct {
-		Task_id string
-		Status  int // 消息状态: 0-排队中, 1-发送中，2-发送完成，3-发送失败，4-消息被撤销，
+		TaskId string `json:"task_id"`
+		Status int    `json:"status"` // 消息状态: 0-排队中, 1-发送中，2-发送完成，3-发送失败，4-消息被撤销，
 		// 5-消息过期, 6-筛选结果为空，7-定时任务尚未开始处理
-		Total_count   int // 消息总数
-		Accept_count  int // 消息受理数
-		Sent_count    int // 消息实际发送数
-		Open_count    int //打开数
-		Dismiss_count int //忽略数
+		TotalCount   int `json:"total_count"`   // 消息总数
+		AcceptCount  int `json:"accept_count"`  // 消息受理数
+		SentCount    int `json:"sent_count"`    // 消息实际发送数
+		OpenCount    int `json:"open_count"`    //打开数
+		DismissCount int `json:"dismiss_count"` //忽略数
 
-		Error_code string
+		ErrorCode string `json:"error_code"`
 	}
 }
 
@@ -142,9 +140,9 @@ type UmengFile struct {
 }
 
 type UmengFileResult struct {
-	Ret  string
+	Ret  string `json:"ret"`
 	Data struct {
-		File_id string
+		FileId string `json:"file_id"`
 	}
 }
 
@@ -183,7 +181,7 @@ func (this *UmengSdk) SendIOS(umengIOS UmengIOS) (UmengResult, error) {
 	sign := ""
 	method := "POST"
 
-	body, err := json.Marshal(umengIOS)
+	body, err := EncodeJson(umengIOS)
 	if err != nil {
 		return UmengResult{}, err
 	}
@@ -250,7 +248,7 @@ func (this *UmengSdk) GetStatus(taskId string) (UmengStatusResult, error) {
 	body, err := json.Marshal(UmengStatus{
 		Appkey:    this.AccessKey,
 		Timestamp: strconv.FormatInt(time.Now().Unix(), 10),
-		Task_id:   taskId,
+		TaskId:    taskId,
 	})
 	if err != nil {
 		return UmengStatusResult{}, err
