@@ -402,13 +402,19 @@ func mapToArrayInner(data reflect.Value, target reflect.Value, tag string) error
 	} else if dataKind == reflect.Ptr {
 		return mapToArrayInner(data.Elem(), target, tag)
 	}
-	//根据target类型的不同来设置
+	//根据target是多层嵌套的问题
 	targetType := getDataTagInfo(target.Type(), tag)
 	if targetType.kind == TypeKind.PTR {
 		return mapToPtr(data, target, tag)
 	} else if targetType.kind == TypeKind.INTERFACE {
 		return mapToInterface(data, target, tag)
-	} else if targetType.kind == TypeKind.BOOL {
+	}
+	//处理data是个空字符串
+	if dataKind == reflect.String && data.String() == "" {
+		target.Set(reflect.Zero(target.Type()))
+		return nil
+	}
+	if targetType.kind == TypeKind.BOOL {
 		return mapToBool(data, target)
 	} else if targetType.kind == TypeKind.INT {
 		return mapToInt(data, target)

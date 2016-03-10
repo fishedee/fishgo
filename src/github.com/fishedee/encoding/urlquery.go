@@ -204,8 +204,7 @@ func decodeQueryInner(data string) (interface{}, error) {
 			singleKey = singleTemp[0]
 			singleValue = singleTemp[1]
 		}
-		if singleKey == "" ||
-			singleValue == "" {
+		if singleKey == "" {
 			continue
 		}
 		singleKey, err = DecodeUrl(singleKey)

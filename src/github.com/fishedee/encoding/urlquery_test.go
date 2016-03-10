@@ -75,8 +75,12 @@ func TestQueryDecodeBasic(t *testing.T) {
 		{"&a=32&", map[string]int{
 			"a": 32,
 		}},
+		{"&a=32&=", map[string]int{
+			"a": 32,
+		}},
 		{"a=3&b=", map[string]int{
 			"a": 3,
+			"b": 0,
 		}},
 		{"a=3&=b", map[string]int{
 			"a": 3,
@@ -121,8 +125,8 @@ func TestQueryDecodeBasic(t *testing.T) {
 	for _, singleTestCase := range testCase {
 		targetType := reflect.TypeOf(singleTestCase.target)
 		singleResult := reflect.New(targetType)
-
 		err := DecodeUrlQuery([]byte(singleTestCase.origin), singleResult.Interface())
+
 		AssertEqual(t, err, nil)
 		AssertEqual(t, singleTestCase.target, singleResult.Elem().Interface())
 
