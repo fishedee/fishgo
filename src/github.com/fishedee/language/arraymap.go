@@ -139,7 +139,7 @@ func arrayToMapInner(dataValue reflect.Value, tag string) reflect.Value {
 					}
 					resultMap[singleType.name] = singleResultMap.Interface()
 				} else {
-					combileMap(resultMap, singleResultMap)
+					combileMap(resultMap, singleResultMap.Interface())
 				}
 			}
 			result = reflect.ValueOf(resultMap)
