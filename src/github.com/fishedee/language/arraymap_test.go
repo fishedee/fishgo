@@ -45,6 +45,8 @@ type anaymonusStruct struct {
 	Second string
 }
 
+type anaymonusMap map[int]string
+
 func TestArrayToMapStruct(t *testing.T) {
 	testCase := []struct {
 		origin interface{}
@@ -83,6 +85,14 @@ func TestArrayToMapStruct(t *testing.T) {
 			"first":  "1",
 			"second": "2",
 			"third":  "3",
+		}},
+		{struct {
+			anaymonusMap
+			Third string
+		}{anaymonusMap{23: "1", 79: "2"}, "3"}, map[string]interface{}{
+			"23":    "1",
+			"79":    "2",
+			"third": "3",
 		}},
 	}
 	for _, singleTestCase := range testCase {

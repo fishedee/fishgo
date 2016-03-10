@@ -14,13 +14,14 @@ func nameMapper(name string) string {
 	return strings.ToLower(name[0:1]) + name[1:]
 }
 
-func combileMap(result map[string]interface{}, singleResultMap interface{}) {
-	singleResultMapMap, ok := singleResultMap.(map[string]interface{})
-	if !ok {
+func combileMap(result map[string]interface{}, singleResultMap reflect.Value) {
+	singleResultMapType := singleResultMap.Type()
+	if singleResultMapType.Kind() != reflect.Map {
 		return
 	}
-	for key, value := range singleResultMapMap {
-		result[key] = value
+	singleResultMapKeys := singleResultMap.MapKeys()
+	for _, singleKey := range singleResultMapKeys {
+		result[fmt.Sprintf("%v", singleKey)] = singleResultMap.MapIndex(singleKey).Interface()
 	}
 }
 
@@ -139,7 +140,7 @@ func arrayToMapInner(dataValue reflect.Value, tag string) reflect.Value {
 					}
 					resultMap[singleType.name] = singleResultMap.Interface()
 				} else {
-					combileMap(resultMap, singleResultMap.Interface())
+					combileMap(resultMap, singleResultMap)
 				}
 			}
 			result = reflect.ValueOf(resultMap)
