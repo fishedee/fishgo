@@ -23,7 +23,7 @@ func EncodeZipFile(inputFileName string, outputFileName string) error {
 	//zip压缩数据
 	zipWriter := zip.NewWriter(outputFile)
 	defer zipWriter.Close()
-	zipFileWriter, err := zipWriter.Create("data")
+	zipFileWriter, err := zipWriter.Create(inputFileName)
 	if err != nil {
 		return err
 	}
