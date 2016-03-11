@@ -265,9 +265,14 @@ func ArrayColumnMap(data interface{}, firstName string, otherName ...string) int
 func ArrayColumnTable(column interface{}, data interface{}) [][]string {
 	result := [][]string{}
 
-	columnKeys, columnValues := ArrayKeyAndValue(column)
+	columnMap := column.(map[string]string)
+	columnKeys, _ := ArrayKeyAndValue(column)
 	columnKeysReal := columnKeys.([]string)
-	columnValuesReal := columnValues.([]string)
+	columnValuesReal := []string{}
+	sort.Sort(sort.StringSlice(columnKeysReal))
+	for _, singleKey := range columnKeysReal {
+		columnValuesReal = append(columnValuesReal, columnMap[singleKey])
+	}
 	result = append(result, columnValuesReal)
 
 	dataValue := reflect.ValueOf(data)

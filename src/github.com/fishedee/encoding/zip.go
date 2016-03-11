@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"path"
 )
 
 func EncodeZipFile(inputFileName string, outputFileName string) error {
@@ -23,7 +24,7 @@ func EncodeZipFile(inputFileName string, outputFileName string) error {
 	//zip压缩数据
 	zipWriter := zip.NewWriter(outputFile)
 	defer zipWriter.Close()
-	zipFileWriter, err := zipWriter.Create(inputFileName)
+	zipFileWriter, err := zipWriter.Create(path.Base(inputFileName))
 	if err != nil {
 		return err
 	}
