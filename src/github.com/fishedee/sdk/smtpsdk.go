@@ -59,7 +59,7 @@ func (this *SmtpSdk) Send(mailAuth SmtpSdkMailAuth, mail SmtpSdkMail) error {
 	}
 
 	//body
-	_, err = msg.WriteString(middleBoundary + "\r\n" + "Content-Type:text/plain; charset=UTF-8\r\n\r\n")
+	_, err = msg.WriteString(middleBoundary + "\r\n" + "Content-Type:text/html; charset=UTF-8\r\n\r\n")
 	if err != nil {
 		return err
 	}

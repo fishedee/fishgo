@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"net/url"
+
 	. "qiniupkg.com/api.v7/kodo"
 )
 
@@ -53,6 +54,20 @@ func (this *QiniuSdk) UploadFile(bucketName string, fileAddr string) (string, er
 	}
 
 	return putRet.Hash, nil
+}
+
+func (this *QiniuSdk) MoveFile(bucketName string, keySrc, keyDest string) error {
+	cfg := &Config{
+		AccessKey: this.AccessKey,
+		SecretKey: this.SecretKey,
+	}
+	client := New(0, cfg)
+	bucket := client.Bucket(bucketName)
+	return bucket.Move(nil, keySrc, keyDest)
+}
+
+func (this *QiniuSdk) MakeBaseUrl(domain, key string) string {
+	return MakeBaseUrl(domain, key)
 }
 
 func (this *QiniuSdk) GetUploadToken(bucketName string) (string, error) {
