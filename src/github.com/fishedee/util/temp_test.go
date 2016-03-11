@@ -23,7 +23,7 @@ func TestTemp(t *testing.T) {
 			return
 		}
 		if singleTestCase.dir != "" {
-			if strings.HasPrefix(tempFile, os.TempDir()+singleTestCase.dir) == false {
+			if strings.HasPrefix(tempFile, strings.TrimRight(os.TempDir(), "/")+"/"+singleTestCase.dir) == false {
 				t.Errorf("tempFile has no dir %s", singleTestCase.dir)
 				return
 			}

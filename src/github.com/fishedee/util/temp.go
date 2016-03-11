@@ -20,7 +20,7 @@ func randFileName() (string, error) {
 func createTempDir(dir string) (string, error) {
 	var tempDir string
 	if dir != "" {
-		tempDir = os.TempDir() + dir
+		tempDir = strings.TrimRight(os.TempDir(), "/") + "/" + dir
 		tempDirInfo, err := os.Lstat(tempDir)
 		if tempDirInfo != nil && err == nil {
 			if tempDirInfo.IsDir() == false {
@@ -34,7 +34,7 @@ func createTempDir(dir string) (string, error) {
 		}
 		tempDir += "/"
 	} else {
-		tempDir = os.TempDir()
+		tempDir = strings.TrimRight(os.TempDir(), "/") + "/"
 	}
 	return tempDir, nil
 }
@@ -42,6 +42,7 @@ func createTempDir(dir string) (string, error) {
 func CreateTempFile(dir string, suffix string) (string, error) {
 	var err error
 	dir = strings.Trim(dir, " ")
+	dir = strings.Trim(dir, "/")
 	suffix = strings.Trim(suffix, " ")
 	//创建文件夹
 	dir, err = createTempDir(dir)
