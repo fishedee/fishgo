@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	maxSize = 16 * 1024 * 1024
+	maxSize = 128 * 1024 * 1024
 )
 
 type QiniuSdk struct {
