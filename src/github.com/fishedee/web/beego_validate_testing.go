@@ -32,13 +32,18 @@ func (this *BeegoValidateTest) getBackTrace() string {
 	return stack
 }
 
-func (this *BeegoValidateTest) AssertEqual(left interface{}, right interface{}) {
+func (this *BeegoValidateTest) AssertEqual(left interface{}, right interface{}, testCase ...interface{}) {
 	isEqual := reflect.DeepEqual(left, right)
 	if isEqual {
 		return
 	}
 	backtrace := this.getBackTrace()
-	this.t.Errorf("assertEqual Fail! %v != %v\n%s", left, right, backtrace)
+	if len(testCase) == 0 {
+		this.t.Errorf("assertEqual Fail! %v != %v\n%s", left, right, backtrace)
+	} else {
+		this.t.Errorf("assertEqual Fail! %v != %v\ntestCase: %#v\n%s", left, right, testCase, backtrace)
+	}
+
 }
 
 func (this *BeegoValidateTest) SetTesting(t *testing.T) {
