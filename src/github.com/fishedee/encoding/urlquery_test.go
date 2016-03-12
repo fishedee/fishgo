@@ -94,13 +94,14 @@ func TestQueryDecodeBasic(t *testing.T) {
 			"b": 4,
 		}},
 		//struct
-		{"a=3&b[0][m1]=4&b[0][m2]=5&b[1][m1]=6&b[1][m2]=7", struct {
+		{"a=3&b[0][m1]=4&b[0][m2]=5&b[1][m1]=6&b[1][m2]=7&_c=mc", struct {
 			AA string `url:"a"`
 			B  []struct {
 				M1 int
 				M2 string
 			}
-			C []int
+			C string `url:"_c"`
+			D []int
 		}{
 			"3",
 			[]struct {
@@ -110,6 +111,7 @@ func TestQueryDecodeBasic(t *testing.T) {
 				{4, "5"},
 				{6, "7"},
 			},
+			"mc",
 			nil,
 		}},
 		//中文
