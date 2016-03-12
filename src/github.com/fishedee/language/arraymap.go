@@ -3,6 +3,7 @@ package language
 import (
 	"errors"
 	"fmt"
+	"math"
 	"reflect"
 	"strconv"
 	"strings"
@@ -207,6 +208,12 @@ func mapToUint(dataValue reflect.Value, target reflect.Value) error {
 	if dataKind == TypeKind.UINT {
 		target.SetUint(dataValue.Uint())
 		return nil
+	} else if dataKind == TypeKind.INT {
+		target.SetUint(uint64(dataValue.Int()))
+		return nil
+	} else if dataKind == TypeKind.FLOAT {
+		target.SetUint(uint64(math.Floor(dataValue.Float() + 0.5)))
+		return nil
 	} else if dataKind == TypeKind.STRING {
 		dataUint, err := strconv.ParseUint(dataValue.String(), 10, 64)
 		if err != nil {
@@ -225,6 +232,12 @@ func mapToInt(dataValue reflect.Value, target reflect.Value) error {
 	if dataKind == TypeKind.INT {
 		target.SetInt(dataValue.Int())
 		return nil
+	} else if dataKind == TypeKind.UINT {
+		target.SetInt(int64(dataValue.Uint()))
+		return nil
+	} else if dataKind == TypeKind.FLOAT {
+		target.SetInt(int64(math.Floor(dataValue.Float() + 0.5)))
+		return nil
 	} else if dataKind == TypeKind.STRING {
 		dataInt, err := strconv.ParseInt(dataValue.String(), 10, 64)
 		if err != nil {
@@ -242,6 +255,12 @@ func mapToFloat(dataValue reflect.Value, target reflect.Value) error {
 	dataKind := GetTypeKind(dataType)
 	if dataKind == TypeKind.FLOAT {
 		target.SetFloat(dataValue.Float())
+		return nil
+	} else if dataKind == TypeKind.INT {
+		target.SetFloat(float64(dataValue.Int()))
+		return nil
+	} else if dataKind == TypeKind.UINT {
+		target.SetFloat(float64(dataValue.Uint()))
 		return nil
 	} else if dataKind == TypeKind.STRING {
 		dataFloat, err := strconv.ParseFloat(dataValue.String(), 64)
