@@ -1,4 +1,4 @@
-package encoding
+package compress
 
 import (
 	"archive/zip"
@@ -8,7 +8,7 @@ import (
 	"path"
 )
 
-func EncodeZipFile(inputFileName string, outputFileName string) error {
+func CompressZipFile(inputFileName string, outputFileName string) error {
 	//建立读取文件
 	inputFile, err := os.Open(inputFileName)
 	if err != nil {
@@ -35,7 +35,7 @@ func EncodeZipFile(inputFileName string, outputFileName string) error {
 	return nil
 }
 
-func DecodeZipFile(inputFileName string, outputFileName string) error {
+func DecompressZipFile(inputFileName string, outputFileName string) error {
 	//建立写入文件
 	outputFile, err := os.Create(outputFileName)
 	if err != nil {

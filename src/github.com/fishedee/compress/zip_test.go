@@ -1,4 +1,4 @@
-package encoding
+package compress
 
 import (
 	"io/ioutil"
@@ -31,12 +31,12 @@ func TestZipNormal(t *testing.T) {
 			panic(err)
 		}
 		//压缩
-		err = EncodeZipFile(txtFile, zipFile)
+		err = CompressZipFile(txtFile, zipFile)
 		if err != nil {
 			t.Error("err is not nil! " + err.Error())
 			return
 		}
-		err = DecodeZipFile(zipFile, txtFile2)
+		err = DecompressZipFile(zipFile, txtFile2)
 		if err != nil {
 			t.Error("err is not nil! " + err.Error())
 			return

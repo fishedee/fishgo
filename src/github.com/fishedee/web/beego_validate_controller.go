@@ -2,6 +2,7 @@ package web
 
 import (
 	"github.com/astaxie/beego"
+	"github.com/astaxie/beego/context"
 	"github.com/fishedee/encoding"
 	"github.com/fishedee/language"
 	"mime"
@@ -14,6 +15,7 @@ type beegoValidateControllerInterface interface {
 	beegoValidateModelInterface
 	GetBasic() *BeegoValidateBasic
 	SetAppControllerInner(controller beegoValidateControllerInterface)
+	SetAppContextInner(*context.Context)
 	AutoRender(result interface{}, view string)
 	Prepare()
 }
@@ -75,6 +77,10 @@ func (this *BeegoValidateController) GetBasic() *BeegoValidateBasic {
 
 func (this *BeegoValidateController) SetAppControllerInner(controller beegoValidateControllerInterface) {
 	this.AppController = controller
+}
+
+func (this *BeegoValidateController) SetAppContextInner(ctx *context.Context) {
+	this.Ctx = ctx
 }
 
 func (this *BeegoValidateController) SetAppController(controller beegoValidateControllerInterface) {

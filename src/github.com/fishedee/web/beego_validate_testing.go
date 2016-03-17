@@ -1,8 +1,11 @@
 package web
 
 import (
+	"bytes"
 	"fmt"
+	"github.com/astaxie/beego/context"
 	"math/rand"
+	"net/http"
 	"reflect"
 	"runtime"
 	"strings"
@@ -71,10 +74,21 @@ func (this *BeegoValidateTest) RandomString(length int) string {
 	return string(result)
 }
 
+func createTestContext() *context.Context {
+	ctx := context.NewContext()
+	request, err := http.NewRequest("get", "/", bytes.NewReader([]byte("")))
+	if err != nil {
+		panic(err)
+	}
+	ctx.Reset(nil, request)
+	return ctx
+}
+
 func InitBeegoVaildateTest(t *testing.T, test BeegoValidateTestInterface) {
 	//初始化test
 	test.SetTesting(t)
 	test.SetAppControllerInner(test)
+	test.SetAppContextInner(createTestContext())
 	test.Prepare()
 
 	//遍历test，执行测试
