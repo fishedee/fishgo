@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"io"
 	"os"
 	"strings"
 )
@@ -37,6 +38,24 @@ func createTempDir(dir string) (string, error) {
 		tempDir = strings.TrimRight(os.TempDir(), "/") + "/"
 	}
 	return tempDir, nil
+}
+
+func WriteFile(filename string, data []byte, perm os.FileMode) error {
+	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, perm)
+	if err != nil {
+		return err
+	}
+	n, err := f.Write(data)
+	if err == nil && n < len(data) {
+		err = io.ErrShortWrite
+	}
+	if err2 := f.Sync(); err == nil {
+		err = err2
+	}
+	if err1 := f.Close(); err == nil {
+		err = err1
+	}
+	return err
 }
 
 func CreateTempFile(dir string, suffix string) (string, error) {

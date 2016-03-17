@@ -6,9 +6,11 @@ import (
 	"github.com/astaxie/beego/context"
 	"math/rand"
 	"net/http"
+	"os"
 	"reflect"
 	"runtime"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -16,9 +18,11 @@ import (
 type BeegoValidateTestInterface interface {
 	beegoValidateControllerInterface
 	SetTesting(*testing.T)
+	SetTestingMethod(method string)
 }
 
 type BeegoValidateTest struct {
+	testingMethod string
 	BeegoValidateController
 	t *testing.T
 }
@@ -35,6 +39,49 @@ func (this *BeegoValidateTest) getBackTrace() string {
 	return stack
 }
 
+func (this *BeegoValidateTest) Benchmark(number int, concurrency int, handler func(), testCase ...interface{}) {
+	if number <= 0 {
+		panic("benchmark numer is invalid")
+	}
+	if concurrency <= 0 {
+		panic("benchmark concurrency is invalid")
+	}
+	singleConcurrency := number / concurrency
+	if singleConcurrency <= 0 ||
+		number%concurrency != 0 {
+		panic("benchmark numer/concurrency is invalid")
+	}
+	beginTime := time.Now().UnixNano()
+	var wg sync.WaitGroup
+	for i := 0; i < concurrency; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := 0; i < singleConcurrency; i++ {
+				handler()
+			}
+		}()
+	}
+	wg.Wait()
+	endTime := time.Now().UnixNano()
+
+	totalTime := endTime - beginTime
+	singleTime := totalTime / int64(number)
+	singleReq := float64(number) / (float64(totalTime) / 1e9)
+	if len(testCase) == 0 {
+		testCase = []interface{}{""}
+	}
+	fmt.Printf(
+		"%v:%v %v number %v concurrency %v / req, %.2freq / s\n",
+		this.testingMethod,
+		testCase[0],
+		number,
+		concurrency,
+		time.Duration(singleTime).String(),
+		singleReq,
+	)
+}
+
 func (this *BeegoValidateTest) AssertEqual(left interface{}, right interface{}, testCase ...interface{}) {
 	isEqual := reflect.DeepEqual(left, right)
 	if isEqual {
@@ -44,13 +91,16 @@ func (this *BeegoValidateTest) AssertEqual(left interface{}, right interface{}, 
 	if len(testCase) == 0 {
 		this.t.Errorf("assertEqual Fail! %v != %v\n%s", left, right, backtrace)
 	} else {
-		this.t.Errorf("assertEqual Fail! %v != %v\ntestCase: %#v\n%s", left, right, testCase, backtrace)
+		this.t.Errorf("assertEqual Fail! %v != %v\ntestCase: %+v\n%s", left, right, testCase, backtrace)
 	}
 
 }
 
 func (this *BeegoValidateTest) SetTesting(t *testing.T) {
 	this.t = t
+}
+func (this *BeegoValidateTest) SetTestingMethod(method string) {
+	this.testingMethod = method
 }
 
 func (this *BeegoValidateTest) RandomInt() int {
@@ -91,15 +141,29 @@ func InitBeegoVaildateTest(t *testing.T, test BeegoValidateTestInterface) {
 	test.SetAppContextInner(createTestContext())
 	test.Prepare()
 
+	isBenchTest := false
+	for _, singleArgv := range os.Args {
+		if strings.Index(singleArgv, "bench") != -1 {
+			isBenchTest = true
+		}
+	}
 	//遍历test，执行测试
 	testType := reflect.TypeOf(test)
 	testValue := reflect.ValueOf(test)
 	testMethodNum := testType.NumMethod()
 	for i := 0; i != testMethodNum; i++ {
 		singleValueMethodType := testType.Method(i)
-		if strings.HasPrefix(singleValueMethodType.Name, "Test") == false {
-			continue
+		if isBenchTest == false {
+			if strings.HasPrefix(singleValueMethodType.Name, "Test") == false {
+				continue
+			}
+		} else {
+			if strings.HasPrefix(singleValueMethodType.Name, "Benchmark") == false ||
+				singleValueMethodType.Name == "Benchmark" {
+				continue
+			}
 		}
+		test.SetTestingMethod(singleValueMethodType.Name)
 		//执行测试
 		singleValueMethodType.Func.Call([]reflect.Value{testValue})
 	}
