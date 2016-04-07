@@ -9,15 +9,25 @@ type OpenSearchSdk struct {
 	AppKey string
 }
 
+type OpenSearchCommon struct {
+	Version          string `json:"Version"`
+	AccessKeyId      string `json:"AccessKeyId"`
+	Signature        string `json:"Signature"`
+	SignatureMethod  string `json:"SignatureMethod"`
+	Timestamp        string `json:"Timestamp"`
+	SignatureVersion string `json:"SignatureVersion"`
+	SignatureNonce   string `json:"SignatureNonce"`
+}
+
 type OpenSearchOption struct {
-	Query              OpenSearchQuery   `json:"query"`
-	Index_name         []string          `json:"index_name"`
-	Fetch_fields       []string          `json:"fetch_fields"`
-	Qp                 []string          `json:"qp"`
-	Disable            string            `json:"disable"`
-	First_formula_name string            `json:"first_formula_name"`
-	Formula_name       string            `json:"formula_name"`
-	Summary            OpenSearchSummary `json:"summary"`
+	Query            OpenSearchQuery   `json:"query"`
+	IndexName        []string          `json:"index_name"`
+	FetchFields      []string          `json:"fetch_fields"`
+	Qp               []string          `json:"qp"`
+	Disable          string            `json:"disable"`
+	FirstFormulaName string            `json:"first_formula_name"`
+	FormulaName      string            `json:"formula_name"`
+	Summary          OpenSearchSummary `json:"summary"`
 }
 
 type OpenSearchQuery struct {
@@ -31,38 +41,38 @@ type OpenSearchQuery struct {
 }
 
 type OpenSearchConfig struct {
-	Start       int    `json:"start"`
-	Hit         int    `json:"hit"`
-	Format      string `json:"format"`
-	Rerank_size int    `json:"rerank_size"`
+	Start      int    `json:"start"`
+	Hit        int    `json:"hit"`
+	Format     string `json:"format"`
+	RerankSize int    `json:"rerank_size"`
 }
 
 type OpenSearchDistinct struct {
-	Dist_key         string  `json:"dist_key"`
-	Dist_times       int     `json:"dist_times"`
-	Dist_count       int     `json:"dist_count"`
-	Reserved         bool    `json:"reserved"`
-	Update_total_hit bool    `json:"update_total_hit"`
-	Dist_filter      string  `json:"dist_filter"`
-	Grade            float64 `json:"grade"`
+	DistKey        string  `json:"dist_key"`
+	DistTimes      int     `json:"dist_times"`
+	DistCount      int     `json:"dist_count"`
+	Reserved       bool    `json:"reserved"`
+	UpdateTotalHit bool    `json:"update_total_hit"`
+	DistFilter     string  `json:"dist_filter"`
+	Grade          float64 `json:"grade"`
 }
 
 type OpenSearchSummary struct {
-	Summary_field           string `json:"summary_field"`
-	Summary_element         string `json:"summary_element"`
-	Summary_ellipsis        string `json:"summary_ellipsis"`
-	Summary_snipped         int    `json:"summary_snipped"`
-	Summary_len             string `json:"summary_len"`
-	Summary_element_prefix  string `json:"summary_element_prefix"`
-	Summary_element_postfix string `json:"summary_element_postfix"`
+	SummaryField          string `json:"summary_field"`
+	SummaryElement        string `json:"summary_element"`
+	SummaryEllipsis       string `json:"summary_ellipsis"`
+	SummarySnipped        int    `json:"summary_snipped"`
+	SummaryLen            string `json:"summary_len"`
+	SummaryElementPrefix  string `json:"summary_element_prefix"`
+	SummaryElementPostfix string `json:"summary_element_postfix"`
 }
 
 type OpenSearchResult struct {
-	Status     string                `json:"status"`
-	Request_id string                `json:"request_id"`
-	Result     OpenSearchInnerResult `json:"result"`
-	Errors     []OpenSearchError     `json:"errors"`
-	Tracer     string                `json:"tracer"`
+	Status    string                `json:"status"`
+	RequestId string                `json:"request_id"`
+	Result    OpenSearchInnerResult `json:"result"`
+	Errors    []OpenSearchError     `json:"errors"`
+	Tracer    string                `json:"tracer"`
 }
 
 type OpenSearchInnerResult struct {
@@ -80,13 +90,13 @@ type OpenSearchItem struct {
 }
 
 type OpenSearchField struct {
-	Id               string `json:"id"`
-	Type             string `json:"type"`
-	Title            string `json:"title"`
-	Body             string `json:"body"`
-	Url              string `json:"url"`
-	Create_timestamp string `json:"create_timestamp"`
-	Index_name       string `json:"index_name"`
+	Id              string `json:"id"`
+	Type            string `json:"type"`
+	Title           string `json:"title"`
+	Body            string `json:"body"`
+	Url             string `json:"url"`
+	CreateTimestamp string `json:"create_timestamp"`
+	IndexName       string `json:"index_name"`
 }
 
 type OpenSearchError struct {
@@ -94,7 +104,27 @@ type OpenSearchError struct {
 	Message string `json:"message"`
 }
 
-func (this *OpenSearchSdk) Search(option OpenSearchOption) (OpenSearchResult, error) {
+/*
+* 签名
+ */
+func (this *OpenSearchSdk) getSignature(url string) string {
+	//参数排序
+	//url = this.sortParams(url)
+
+	//名称和值分别url编码
+
+	//连接
+
+	//hmac & base64
+
+	//url+signature
+	return ""
+}
+
+/**
+* 搜索
+ */
+func (this *OpenSearchSdk) GetByKeyword(option OpenSearchOption) (OpenSearchResult, error) {
 	//参数
 	url := ""
 	body := ""
