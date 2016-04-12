@@ -9,20 +9,21 @@ import (
 )
 
 type BeegoValidateBasic struct {
-	ctx     *context.Context
-	Session *SessionManager
-	DB      *DatabaseManager
-	DB2     *DatabaseManager
-	DB3     *DatabaseManager
-	DB4     *DatabaseManager
-	DB5     *DatabaseManager
-	logger  *LogManager
-	Log     *LogManager
-	Monitor *MonitorManager
-	timer   *TimerManager
-	Timer   *TimerManager
-	queue   *QueueManager
-	Queue   *QueueManager
+	ctx      *context.Context
+	Security *SecurityManager
+	Session  *SessionManager
+	DB       *DatabaseManager
+	DB2      *DatabaseManager
+	DB3      *DatabaseManager
+	DB4      *DatabaseManager
+	DB5      *DatabaseManager
+	logger   *LogManager
+	Log      *LogManager
+	Monitor  *MonitorManager
+	timer    *TimerManager
+	Timer    *TimerManager
+	queue    *QueueManager
+	Queue    *QueueManager
 }
 
 var globalBasic BeegoValidateBasic
@@ -63,6 +64,10 @@ func init() {
 	}
 
 	var err error
+	globalBasic.Security, err = NewSecurityManagerFromConfig("fishsecurity")
+	if err != nil {
+		panic(err)
+	}
 	globalBasic.Session, err = NewSessionManagerFromConfig("fishsession")
 	if err != nil {
 		panic(err)
