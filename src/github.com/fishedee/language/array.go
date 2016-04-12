@@ -50,3 +50,118 @@ func ArrayIn(arrayData interface{}, findData interface{}) int {
 	}
 	return findIndex
 }
+
+func ArrayUnique(arrayData interface{}) interface{} {
+	arrayValue := reflect.ValueOf(arrayData)
+	arrayType := arrayValue.Type()
+	arrayLen := arrayValue.Len()
+
+	result := reflect.MakeSlice(arrayType, 0, 0)
+	resultTemp := map[interface{}]bool{}
+
+	for i := 0; i != arrayLen; i++ {
+		singleArrayDataValue := arrayValue.Index(i)
+		singleArrayDataValueInterface := singleArrayDataValue.Interface()
+		_, isExist := resultTemp[singleArrayDataValueInterface]
+		if isExist == true {
+			continue
+		}
+		resultTemp[singleArrayDataValueInterface] = true
+		result = reflect.Append(result, singleArrayDataValue)
+	}
+	return result.Interface()
+}
+
+func sliceToMap(arrayData []interface{}) map[interface{}]bool {
+	result := map[interface{}]bool{}
+
+	for _, singleArray := range arrayData {
+		arrayValue := reflect.ValueOf(singleArray)
+		arrayLen := arrayValue.Len()
+
+		for i := 0; i != arrayLen; i++ {
+			result[arrayValue.Index(i).Interface()] = true
+		}
+	}
+
+	return result
+}
+
+func ArrayDiff(arrayData interface{}, arrayData2 interface{}, arrayOther ...interface{}) interface{} {
+	arrayOther = append([]interface{}{arrayData2}, arrayOther...)
+	arrayOtherMap := sliceToMap(arrayOther)
+
+	arrayValue := reflect.ValueOf(arrayData)
+	arrayType := arrayValue.Type()
+	arrayLen := arrayValue.Len()
+	result := reflect.MakeSlice(arrayType, 0, 0)
+
+	for i := 0; i != arrayLen; i++ {
+		singleArrayDataValue := arrayValue.Index(i)
+		singleArrayDataValueInterface := singleArrayDataValue.Interface()
+
+		_, isExist := arrayOtherMap[singleArrayDataValueInterface]
+		if isExist == true {
+			continue
+		}
+		result = reflect.Append(result, singleArrayDataValue)
+		arrayOtherMap[singleArrayDataValueInterface] = true
+	}
+
+	return result.Interface()
+}
+
+func ArrayIntersect(arrayData interface{}, arrayData2 interface{}, arrayOther ...interface{}) interface{} {
+	arrayOther = append([]interface{}{arrayData2}, arrayOther...)
+	arrayOtherMap := sliceToMap(arrayOther)
+
+	arrayValue := reflect.ValueOf(arrayData)
+	arrayType := arrayValue.Type()
+	arrayLen := arrayValue.Len()
+	result := reflect.MakeSlice(arrayType, 0, 0)
+
+	for i := 0; i != arrayLen; i++ {
+		singleArrayDataValue := arrayValue.Index(i)
+		singleArrayDataValueInterface := singleArrayDataValue.Interface()
+
+		isFirst, isExist := arrayOtherMap[singleArrayDataValueInterface]
+		if isExist == false || isFirst == false {
+			continue
+		}
+		result = reflect.Append(result, singleArrayDataValue)
+		arrayOtherMap[singleArrayDataValueInterface] = false
+	}
+
+	return result.Interface()
+}
+
+func ArrayMerge(arrayData interface{}, arrayData2 interface{}, arrayOther ...interface{}) interface{} {
+	arrayOther = append([]interface{}{arrayData2}, arrayOther...)
+	arrayOtherMap := sliceToMap(arrayOther)
+
+	arrayValue := reflect.ValueOf(arrayData)
+	arrayType := arrayValue.Type()
+	arrayLen := arrayValue.Len()
+	result := reflect.MakeSlice(arrayType, 0, 0)
+
+	for i := 0; i != arrayLen; i++ {
+		singleArrayDataValue := arrayValue.Index(i)
+		singleArrayDataValueInterface := singleArrayDataValue.Interface()
+
+		isFirst, isExist := arrayOtherMap[singleArrayDataValueInterface]
+		if isExist == true && isFirst == false {
+			continue
+		}
+		result = reflect.Append(result, singleArrayDataValue)
+		arrayOtherMap[singleArrayDataValueInterface] = false
+	}
+
+	for single, isFirst := range arrayOtherMap {
+		if isFirst == false {
+			continue
+		}
+		result = reflect.Append(result, reflect.ValueOf(single))
+	}
+
+	return result.Interface()
+}
