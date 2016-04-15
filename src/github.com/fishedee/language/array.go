@@ -1,7 +1,9 @@
 package language
 
 import (
+	"fmt"
 	"reflect"
+	"sort"
 )
 
 func ArrayKeyAndValue(data interface{}) (interface{}, interface{}) {
@@ -164,4 +166,30 @@ func ArrayMerge(arrayData interface{}, arrayData2 interface{}, arrayOther ...int
 	}
 
 	return result.Interface()
+}
+
+func ArraySort(data interface{}) interface{} {
+	//建立一份拷贝数据
+	dataValue := reflect.ValueOf(data)
+	dataType := dataValue.Type()
+	dataValueLen := dataValue.Len()
+
+	dataResult := reflect.MakeSlice(dataType, dataValueLen, dataValueLen)
+	reflect.Copy(dataResult, dataValue)
+
+	//排序
+	dataElemType := dataType.Elem()
+	var result interface{}
+	if dataElemType.Kind() == reflect.Int {
+		intArray := dataResult.Interface().([]int)
+		sort.Sort(sort.IntSlice(intArray))
+		result = intArray
+	} else if dataElemType.Kind() == reflect.String {
+		stringArray := dataResult.Interface().([]string)
+		sort.Sort(sort.StringSlice(stringArray))
+		result = stringArray
+	} else {
+		panic("invalid sort type " + fmt.Sprintf("%v", dataElemType))
+	}
+	return result
 }

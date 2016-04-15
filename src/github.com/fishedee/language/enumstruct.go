@@ -89,3 +89,76 @@ func (this *EnumStruct) Values() []string {
 	}
 	return result
 }
+
+type EnumDataString struct {
+	Id   string
+	Name string
+}
+
+type EnumStructString struct {
+	names map[string]string
+}
+
+func InitEnumStructString(this interface{}) {
+	enumInfo := reflect.TypeOf(this).Elem()
+	enumValue := reflect.ValueOf(this)
+	result := enumValue.Elem().FieldByName("EnumStructString").Addr().Interface().(*EnumStructString)
+	result.names = map[string]string{}
+
+	for i := 0; i != enumInfo.NumField(); i++ {
+		singleField := enumInfo.Field(i)
+
+		singleFieldTag := singleField.Tag.Get("enum")
+		singleFieldTagArray := strings.Split(singleFieldTag, ",")
+		if len(singleFieldTagArray) != 2 {
+			continue
+		}
+
+		singleFieldTagValue := singleFieldTagArray[0]
+		singleFieldTagSeeName := singleFieldTagArray[1]
+
+		result.names[singleFieldTagValue] = singleFieldTagSeeName
+		enumValue.Elem().Field(i).SetString(singleFieldTagValue)
+	}
+}
+
+func (this *EnumStructString) Names() map[string]string {
+	return this.names
+}
+
+func (this *EnumStructString) Entrys() map[string]string {
+	return this.names
+}
+
+func (this *EnumStructString) Datas() []EnumDataString {
+	result := []EnumDataString{}
+	for key, value := range this.names {
+		result = append(result, EnumDataString{
+			Id:   key,
+			Name: value,
+		})
+	}
+	return result
+}
+
+func (this *EnumStructString) Keys() []string {
+	result := []string{}
+	for key, _ := range this.names {
+		result = append(
+			result,
+			key,
+		)
+	}
+	return result
+}
+
+func (this *EnumStructString) Values() []string {
+	result := []string{}
+	for _, value := range this.names {
+		result = append(
+			result,
+			value,
+		)
+	}
+	return result
+}

@@ -87,13 +87,26 @@ func (this *arrayColumnSlice) initSingleCompare(targetType reflect.Type, name st
 				return 0
 			}
 		}
-	} else if fieldType.Kind() == reflect.Float32 {
+	} else if fieldType.Kind() == reflect.Float32 ||
+		fieldType.Kind() == reflect.Float64 {
 		return func(left reflect.Value, right reflect.Value) int {
 			leftFloat := left.FieldByIndex(fieldIndex).Float()
 			rightFloat := right.FieldByIndex(fieldIndex).Float()
 			if leftFloat < rightFloat {
 				return -1
 			} else if leftFloat > rightFloat {
+				return 1
+			} else {
+				return 0
+			}
+		}
+	} else if fieldType.Kind() == reflect.String {
+		return func(left reflect.Value, right reflect.Value) int {
+			leftString := left.FieldByIndex(fieldIndex).String()
+			rightString := right.FieldByIndex(fieldIndex).String()
+			if leftString < rightString {
+				return -1
+			} else if leftString > rightString {
 				return 1
 			} else {
 				return 0
