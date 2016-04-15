@@ -13,6 +13,7 @@ type EnumData struct {
 
 type EnumStruct struct {
 	names map[string]string
+	datas []EnumData
 }
 
 func InitEnumStruct(this interface{}) {
@@ -20,6 +21,7 @@ func InitEnumStruct(this interface{}) {
 	enumValue := reflect.ValueOf(this)
 	result := enumValue.Elem().FieldByName("EnumStruct").Addr().Interface().(*EnumStruct)
 	result.names = map[string]string{}
+	result.datas = []EnumData{}
 
 	for i := 0; i != enumInfo.NumField(); i++ {
 		singleField := enumInfo.Field(i)
@@ -38,6 +40,10 @@ func InitEnumStruct(this interface{}) {
 		singleFieldTagSeeName := singleFieldTagArray[1]
 
 		result.names[singleFieldTagArray[0]] = singleFieldTagSeeName
+		result.datas = append(result.datas, EnumData{
+			Id:   singleFieldTagValue,
+			Name: singleFieldTagSeeName,
+		})
 		enumValue.Elem().Field(i).SetInt(int64(singleFieldTagValue))
 	}
 }
@@ -56,24 +62,15 @@ func (this *EnumStruct) Entrys() map[int]string {
 }
 
 func (this *EnumStruct) Datas() []EnumData {
-	result := []EnumData{}
-	for key, value := range this.names {
-		singleKey, _ := strconv.Atoi(key)
-		result = append(result, EnumData{
-			Id:   singleKey,
-			Name: value,
-		})
-	}
-	return result
+	return this.datas
 }
 
 func (this *EnumStruct) Keys() []int {
 	result := []int{}
-	for key, _ := range this.names {
-		singleResult, _ := strconv.Atoi(key)
+	for _, singleEnum := range this.datas {
 		result = append(
 			result,
-			singleResult,
+			singleEnum.Id,
 		)
 	}
 	return result
@@ -81,10 +78,10 @@ func (this *EnumStruct) Keys() []int {
 
 func (this *EnumStruct) Values() []string {
 	result := []string{}
-	for _, value := range this.names {
+	for _, singleEnum := range this.datas {
 		result = append(
 			result,
-			value,
+			singleEnum.Name,
 		)
 	}
 	return result
@@ -97,6 +94,7 @@ type EnumDataString struct {
 
 type EnumStructString struct {
 	names map[string]string
+	datas []EnumDataString
 }
 
 func InitEnumStructString(this interface{}) {
@@ -104,6 +102,7 @@ func InitEnumStructString(this interface{}) {
 	enumValue := reflect.ValueOf(this)
 	result := enumValue.Elem().FieldByName("EnumStructString").Addr().Interface().(*EnumStructString)
 	result.names = map[string]string{}
+	result.datas = []EnumDataString{}
 
 	for i := 0; i != enumInfo.NumField(); i++ {
 		singleField := enumInfo.Field(i)
@@ -118,6 +117,11 @@ func InitEnumStructString(this interface{}) {
 		singleFieldTagSeeName := singleFieldTagArray[1]
 
 		result.names[singleFieldTagValue] = singleFieldTagSeeName
+		result.datas = append(result.datas, EnumDataString{
+			Id:   singleFieldTagValue,
+			Name: singleFieldTagSeeName,
+		})
+
 		enumValue.Elem().Field(i).SetString(singleFieldTagValue)
 	}
 }
@@ -131,22 +135,15 @@ func (this *EnumStructString) Entrys() map[string]string {
 }
 
 func (this *EnumStructString) Datas() []EnumDataString {
-	result := []EnumDataString{}
-	for key, value := range this.names {
-		result = append(result, EnumDataString{
-			Id:   key,
-			Name: value,
-		})
-	}
-	return result
+	return this.datas
 }
 
 func (this *EnumStructString) Keys() []string {
 	result := []string{}
-	for key, _ := range this.names {
+	for _, singleEnum := range this.datas {
 		result = append(
 			result,
-			key,
+			singleEnum.Id,
 		)
 	}
 	return result
@@ -154,10 +151,10 @@ func (this *EnumStructString) Keys() []string {
 
 func (this *EnumStructString) Values() []string {
 	result := []string{}
-	for _, value := range this.names {
+	for _, singleEnum := range this.datas {
 		result = append(
 			result,
-			value,
+			singleEnum.Name,
 		)
 	}
 	return result
