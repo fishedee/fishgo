@@ -281,7 +281,8 @@ func getQueryCompares(dataType reflect.Type, sortTypeStr string) []queryCompare 
 }
 
 func getSingleQueryCompare(fieldType reflect.Type) queryCompare {
-	if fieldType.Kind() == reflect.Bool {
+	typeKind := GetTypeKind(fieldType)
+	if typeKind == TypeKind.BOOL {
 		return func(left reflect.Value, right reflect.Value) int {
 			leftBool := left.Bool()
 			rightBool := right.Bool()
@@ -293,7 +294,7 @@ func getSingleQueryCompare(fieldType reflect.Type) queryCompare {
 				return 1
 			}
 		}
-	} else if fieldType.Kind() == reflect.Int {
+	} else if typeKind == TypeKind.INT {
 		return func(left reflect.Value, right reflect.Value) int {
 			leftInt := left.Int()
 			rightInt := right.Int()
@@ -305,7 +306,19 @@ func getSingleQueryCompare(fieldType reflect.Type) queryCompare {
 				return 0
 			}
 		}
-	} else if fieldType.Kind() == reflect.Float32 {
+	} else if typeKind == TypeKind.UINT {
+		return func(left reflect.Value, right reflect.Value) int {
+			leftUint := left.Uint()
+			rightUint := right.Uint()
+			if leftUint < rightUint {
+				return -1
+			} else if leftUint > rightUint {
+				return 1
+			} else {
+				return 0
+			}
+		}
+	} else if typeKind == TypeKind.FLOAT {
 		return func(left reflect.Value, right reflect.Value) int {
 			leftFloat := left.Float()
 			rightFloat := right.Float()
@@ -317,7 +330,19 @@ func getSingleQueryCompare(fieldType reflect.Type) queryCompare {
 				return 0
 			}
 		}
-	} else if fieldType.Kind() == reflect.Struct && fieldType == reflect.TypeOf(time.Time{}) {
+	} else if typeKind == TypeKind.STRING {
+		return func(left reflect.Value, right reflect.Value) int {
+			leftString := left.String()
+			rightString := right.String()
+			if leftString < rightString {
+				return -1
+			} else if leftString > rightString {
+				return 1
+			} else {
+				return 0
+			}
+		}
+	} else if typeKind == TypeKind.STRUCT && fieldType == reflect.TypeOf(time.Time{}) {
 		return func(left reflect.Value, right reflect.Value) int {
 			leftTime := left.Interface().(time.Time)
 			rightTime := right.Interface().(time.Time)
@@ -418,6 +443,43 @@ func QueryReverse(data interface{}) interface{} {
 
 	for i := 0; i != dataLen; i++ {
 		result.Index(dataLen - i - 1).Set(dataValue.Index(i))
+	}
+	return result.Interface()
+}
+
+func QueryDistinct(data interface{}, columnNames string) interface{} {
+	//提取信息
+	name := Explode(columnNames, ",")
+	nameInfo := []arrayColumnMapInfo{}
+	dataValue := reflect.ValueOf(data)
+	dataType := dataValue.Type().Elem()
+	for _, singleName := range name {
+		singleField, ok := dataType.FieldByName(singleName)
+		if !ok {
+			panic(dataType.Name() + " struct has not field " + singleName)
+		}
+		nameInfo = append(nameInfo, arrayColumnMapInfo{
+			Index: singleField.Index,
+			Type:  singleField.Type,
+		})
+	}
+
+	//整合map
+	existsMap := map[interface{}]bool{}
+	result := reflect.MakeSlice(dataValue.Type(), 0, 0)
+	dataLen := dataValue.Len()
+	for i := 0; i != dataLen; i++ {
+		singleValue := dataValue.Index(i)
+		newData := reflect.New(dataType).Elem()
+		for _, singleNameInfo := range nameInfo {
+			singleField := singleValue.FieldByIndex(singleNameInfo.Index)
+			newData.FieldByIndex(singleNameInfo.Index).Set(singleField)
+		}
+		_, isExist := existsMap[newData]
+		if isExist {
+			continue
+		}
+		result = reflect.Append(result, singleValue)
 	}
 	return result.Interface()
 }

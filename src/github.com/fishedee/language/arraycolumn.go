@@ -4,220 +4,14 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
-	"time"
 )
 
-type arrayColumnCompare func(reflect.Value, reflect.Value) int
-type arrayColumnSlice struct {
-	target         reflect.Value
-	targetElemType reflect.Type
-	targetCompare  []arrayColumnCompare
+func ArrayColumnSort(data interface{}, columnNames string) interface{} {
+	return QuerySort(data, columnNames)
 }
 
-func (this *arrayColumnSlice) Len() int {
-	return this.target.Len()
-}
-
-func (this *arrayColumnSlice) Less(i, j int) bool {
-	left := this.target.Index(i)
-	right := this.target.Index(j)
-	return this.LessValue(left, right)
-}
-func (this *arrayColumnSlice) LessValue(left, right reflect.Value) bool {
-	for _, singleCompare := range this.targetCompare {
-		if singleCompare(left, right) < 0 {
-			return true
-		}
-	}
-	return false
-}
-
-func (this *arrayColumnSlice) Equal(i, j int) bool {
-	left := this.target.Index(i)
-	right := this.target.Index(j)
-	return this.EqualValue(left, right)
-}
-
-func (this *arrayColumnSlice) EqualValue(left, right reflect.Value) bool {
-	for _, singleCompare := range this.targetCompare {
-		if singleCompare(left, right) != 0 {
-			return false
-		}
-	}
-	return true
-}
-
-func (this *arrayColumnSlice) Swap(i, j int) {
-	temp := reflect.New(this.targetElemType).Elem()
-	left := this.target.Index(i)
-	right := this.target.Index(j)
-	temp.Set(left)
-	left.Set(right)
-	right.Set(temp)
-}
-
-func (this *arrayColumnSlice) initSingleCompare(targetType reflect.Type, name string) arrayColumnCompare {
-	field, ok := targetType.FieldByName(name)
-	if !ok {
-		panic(targetType.Name() + " has not name " + name)
-	}
-	fieldIndex := field.Index
-	fieldType := field.Type
-	if fieldType.Kind() == reflect.Bool {
-		return func(left reflect.Value, right reflect.Value) int {
-			leftBool := left.FieldByIndex(fieldIndex).Bool()
-			rightBool := right.FieldByIndex(fieldIndex).Bool()
-			if leftBool == rightBool {
-				return 0
-			} else if leftBool == false {
-				return -1
-			} else {
-				return 1
-			}
-		}
-	} else if fieldType.Kind() == reflect.Int {
-		return func(left reflect.Value, right reflect.Value) int {
-			leftInt := left.FieldByIndex(fieldIndex).Int()
-			rightInt := right.FieldByIndex(fieldIndex).Int()
-			if leftInt < rightInt {
-				return -1
-			} else if leftInt > rightInt {
-				return 1
-			} else {
-				return 0
-			}
-		}
-	} else if fieldType.Kind() == reflect.Float32 ||
-		fieldType.Kind() == reflect.Float64 {
-		return func(left reflect.Value, right reflect.Value) int {
-			leftFloat := left.FieldByIndex(fieldIndex).Float()
-			rightFloat := right.FieldByIndex(fieldIndex).Float()
-			if leftFloat < rightFloat {
-				return -1
-			} else if leftFloat > rightFloat {
-				return 1
-			} else {
-				return 0
-			}
-		}
-	} else if fieldType.Kind() == reflect.String {
-		return func(left reflect.Value, right reflect.Value) int {
-			leftString := left.FieldByIndex(fieldIndex).String()
-			rightString := right.FieldByIndex(fieldIndex).String()
-			if leftString < rightString {
-				return -1
-			} else if leftString > rightString {
-				return 1
-			} else {
-				return 0
-			}
-		}
-	} else if fieldType.Kind() == reflect.Struct && fieldType == reflect.TypeOf(time.Time{}) {
-		return func(left reflect.Value, right reflect.Value) int {
-			leftTime := left.FieldByIndex(fieldIndex).Interface().(time.Time)
-			rightTime := right.FieldByIndex(fieldIndex).Interface().(time.Time)
-			if leftTime.Before(rightTime) {
-				return -1
-			} else if leftTime.After(rightTime) {
-				return 1
-			} else {
-				return 0
-			}
-		}
-	} else {
-		panic(fieldType.Name() + " can not compare")
-	}
-}
-
-func (this *arrayColumnSlice) initCompare(name []string) {
-	result := []arrayColumnCompare{}
-	targetElemType := this.target.Type().Elem()
-	for _, singleName := range name {
-		result = append(result, this.initSingleCompare(targetElemType, singleName))
-	}
-	this.targetCompare = result
-	this.targetElemType = targetElemType
-}
-
-func combineName(firstName string, names []string) []string {
-	result := []string{}
-	result = append(result, firstName)
-	for _, singleName := range names {
-		result = append(result, singleName)
-	}
-	return result
-}
-
-func ArrayColumnSort(data interface{}, firstName string, otherName ...string) interface{} {
-	//建立一份拷贝数据
-	name := combineName(firstName, otherName)
-	dataValue := reflect.ValueOf(data)
-	dataType := dataValue.Type()
-	dataValueLen := dataValue.Len()
-
-	dataResult := reflect.MakeSlice(dataType, dataValueLen, dataValueLen)
-	reflect.Copy(dataResult, dataValue)
-
-	//排序
-	arraySlice := arrayColumnSlice{
-		target: dataResult,
-	}
-	arraySlice.initCompare(name)
-	sort.Sort(&arraySlice)
-	return dataResult.Interface()
-}
-
-func ArrayColumnUnique(data interface{}, firstName string, otherName ...string) interface{} {
-	//建立一份数据
-	name := combineName(firstName, otherName)
-	dataValue := reflect.ValueOf(data)
-	dataType := dataValue.Type()
-	dataResult := reflect.MakeSlice(dataType, 0, 0)
-	dataLen := dataValue.Len()
-
-	//去重
-	var lastValue reflect.Value
-	arraySlice := arrayColumnSlice{
-		target: dataValue,
-	}
-	arraySlice.initCompare(name)
-	for i := 0; i != dataLen; i++ {
-		singleValue := dataValue.Index(i)
-		if i != 0 && arraySlice.EqualValue(lastValue, singleValue) {
-			continue
-		}
-		lastValue = singleValue
-		dataResult = reflect.Append(dataResult, singleValue)
-	}
-	return dataResult.Interface()
-}
-
-func ArrayColumnKey(data interface{}, name string) interface{} {
-	//提取信息
-	dataType := reflect.TypeOf(data)
-	if dataType.Kind() != reflect.Slice {
-		panic("array column should be a slice")
-	}
-	dataElemType := dataType.Elem()
-	if dataElemType.Kind() != reflect.Struct {
-		panic("array column element should be a struct")
-	}
-	dataElemFieldType, ok := dataElemType.FieldByName(name)
-	if !ok {
-		panic("dataElemFieldType has not filed " + name)
-	}
-
-	//整合slice
-	resultType := reflect.SliceOf(dataElemFieldType.Type)
-	result := reflect.MakeSlice(resultType, 0, 0)
-	dataValue := reflect.ValueOf(data)
-	dataLen := dataValue.Len()
-	for i := 0; i != dataLen; i++ {
-		singleDataValue := dataValue.Index(i)
-		singleDataFieldValue := singleDataValue.FieldByName(name)
-		result = reflect.Append(result, singleDataFieldValue)
-	}
-	return result.Interface()
+func ArrayColumnUnique(data interface{}, columnNames string) interface{} {
+	return QueryDistinct(data, columnNames)
 }
 
 type arrayColumnMapInfo struct {
@@ -226,9 +20,13 @@ type arrayColumnMapInfo struct {
 	MapType reflect.Type
 }
 
-func ArrayColumnMap(data interface{}, firstName string, otherName ...string) interface{} {
+func ArrayColumnKey(data interface{}, columnName string) interface{} {
+	return QueryColumn(data, columnName)
+}
+
+func ArrayColumnMap(data interface{}, columnNames string) interface{} {
 	//提取信息
-	name := combineName(firstName, otherName)
+	name := Explode(columnNames, ",")
 	nameInfo := []arrayColumnMapInfo{}
 	dataValue := reflect.ValueOf(data)
 	dataType := dataValue.Type().Elem()
