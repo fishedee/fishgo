@@ -310,7 +310,9 @@ func (this *Ajax) createRequest() (*http.Request, error) {
 
 	var dataReader io.Reader
 	if method == "GET" || method == "DEL" {
-		url = url + "?" + string(data)
+		if len(data) != 0 {
+			url = url + "?" + string(data)
+		}
 		dataReader = nil
 	} else {
 		dataReader = bytes.NewReader(data)
