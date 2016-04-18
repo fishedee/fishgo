@@ -40,12 +40,12 @@ func TestArrayToMapBasic(t *testing.T) {
 	}
 }
 
-type anaymonusStruct struct {
+type AnaymonusStruct struct {
 	First  string
 	Second string
 }
 
-type anaymonusMap map[int]string
+type AnaymonusMap map[int]string
 
 func TestArrayToMapStruct(t *testing.T) {
 	testCase := []struct {
@@ -79,17 +79,17 @@ func TestArrayToMapStruct(t *testing.T) {
 			"Forth":  "4",
 		}},
 		{struct {
-			anaymonusStruct
+			AnaymonusStruct
 			Third string
-		}{anaymonusStruct{"1", "2"}, "3"}, map[string]interface{}{
+		}{AnaymonusStruct{"1", "2"}, "3"}, map[string]interface{}{
 			"first":  "1",
 			"second": "2",
 			"third":  "3",
 		}},
 		{struct {
-			anaymonusMap
+			AnaymonusMap
 			Third string
-		}{anaymonusMap{23: "1", 79: "2"}, "3"}, map[string]interface{}{
+		}{AnaymonusMap{23: "1", 79: "2"}, "3"}, map[string]interface{}{
 			"23":    "1",
 			"79":    "2",
 			"third": "3",

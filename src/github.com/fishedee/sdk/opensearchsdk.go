@@ -1,159 +1,200 @@
 package sdk
 
 import (
+	"crypto/hmac"
+	"crypto/sha1"
+	"encoding/base64"
+	"fmt"
+	. "github.com/fishedee/crypto"
+	. "github.com/fishedee/encoding"
+	. "github.com/fishedee/language"
 	. "github.com/fishedee/util"
+	"strings"
+	"time"
 )
 
 type OpenSearchSdk struct {
+	Host   string
 	AppId  string
 	AppKey string
 }
 
-type OpenSearchCommon struct {
-	Version          string `json:"Version"`
-	AccessKeyId      string `json:"AccessKeyId"`
-	Signature        string `json:"Signature"`
-	SignatureMethod  string `json:"SignatureMethod"`
-	Timestamp        string `json:"Timestamp"`
-	SignatureVersion string `json:"SignatureVersion"`
-	SignatureNonce   string `json:"SignatureNonce"`
-}
-
-type OpenSearchOption struct {
-	Query            OpenSearchQuery   `json:"query"`
-	IndexName        []string          `json:"index_name"`
-	FetchFields      []string          `json:"fetch_fields"`
-	Qp               []string          `json:"qp"`
-	Disable          string            `json:"disable"`
-	FirstFormulaName string            `json:"first_formula_name"`
-	FormulaName      string            `json:"formula_name"`
-	Summary          OpenSearchSummary `json:"summary"`
-}
-
 type OpenSearchQuery struct {
-	Config    OpenSearchConfig   `json:"config"`
-	Query     map[string]string  `json:"query"`
-	Sort      []string           `json:"sort"`
-	Filter    map[string]string  `json:"filter"`
-	Aggregate map[string]string  `json:"aggregate"`
-	Distinct  OpenSearchDistinct `json:"distinct"`
-	Kvpairs   map[string]string  `json:"kvpairs"`
+	Config    string `query:"config,omitempty"`
+	Query     string `query:"query,omitempty"`
+	Sort      string `query:"sort,omitempty"`
+	Filter    string `query:"filter,omitempty"`
+	Aggregate string `query:"aggregate,omitempty"`
+	Distinct  string `query:"distinct,omitempty"`
+	Kvpairs   string `query:"kvpairs,omitempty"`
 }
 
-type OpenSearchConfig struct {
-	Start      int    `json:"start"`
-	Hit        int    `json:"hit"`
-	Format     string `json:"format"`
-	RerankSize int    `json:"rerank_size"`
-}
-
-type OpenSearchDistinct struct {
-	DistKey        string  `json:"dist_key"`
-	DistTimes      int     `json:"dist_times"`
-	DistCount      int     `json:"dist_count"`
-	Reserved       bool    `json:"reserved"`
-	UpdateTotalHit bool    `json:"update_total_hit"`
-	DistFilter     string  `json:"dist_filter"`
-	Grade          float64 `json:"grade"`
-}
-
-type OpenSearchSummary struct {
-	SummaryField          string `json:"summary_field"`
-	SummaryElement        string `json:"summary_element"`
-	SummaryEllipsis       string `json:"summary_ellipsis"`
-	SummarySnipped        int    `json:"summary_snipped"`
-	SummaryLen            string `json:"summary_len"`
-	SummaryElementPrefix  string `json:"summary_element_prefix"`
-	SummaryElementPostfix string `json:"summary_element_postfix"`
-}
-
-type OpenSearchResult struct {
-	Status    string                `json:"status"`
-	RequestId string                `json:"request_id"`
-	Result    OpenSearchInnerResult `json:"result"`
-	Errors    []OpenSearchError     `json:"errors"`
-	Tracer    string                `json:"tracer"`
-}
-
-type OpenSearchInnerResult struct {
-	Searchtime float64          `json:"searchtime"`
-	Total      int              `json:"total"`
-	Num        int              `json:"num"`
-	Viewtotal  int              `json:"viewtotal"`
-	Items      []OpenSearchItem `json:"items"`
-	Facet      []interface{}    `json:"facet"`
-}
-
-type OpenSearchItem struct {
-	Fields        OpenSearchField `json:"fields"`
-	VariableValue interface{}     `json:"variableValue"`
-}
-
-type OpenSearchField struct {
-	Id              string `json:"id"`
-	Type            string `json:"type"`
-	Title           string `json:"title"`
-	Body            string `json:"body"`
-	Url             string `json:"url"`
-	CreateTimestamp string `json:"create_timestamp"`
-	IndexName       string `json:"index_name"`
-}
-
-type OpenSearchError struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
+type OpenSearchSearchRequest struct {
+	Query            OpenSearchQuery `query:"query"`
+	IndexName        string          `query:"index_name"`
+	FetchFields      string          `query:"fetch_fields,omitempty"`
+	Qp               string          `query:"qp,omitempty"`
+	Disable          string          `query:"disable,omitempty"`
+	FirstFormulaName string          `query:"first_formula_name,omitempty"`
+	FormulaName      string          `query:"formula_name,omitempty"`
 }
 
 /*
-* 签名
- */
-func (this *OpenSearchSdk) getSignature(url string) string {
-	//参数排序
-	//url = this.sortParams(url)
+type OpenSearchSearchResponseItem struct {
+	Fields        map[string]interface{} `json:"fields"`
+	VariableValue `json:"variableValue"`
+}
+*/
 
-	//名称和值分别url编码
-
-	//连接
-
-	//hmac & base64
-
-	//url+signature
-	return ""
+type OpenSearchSearchResponse struct {
+	SearchTime float64                  `json:"searchtime"`
+	Total      int                      `json:"total"`
+	Num        int                      `json:"num"`
+	ViewTotal  int                      `json:"viewtotal"`
+	Items      []map[string]interface{} `json:"items"`
 }
 
-/**
-* 搜索
- */
-func (this *OpenSearchSdk) GetByKeyword(option OpenSearchOption) (OpenSearchResult, error) {
-	//参数
-	url := ""
-	body := ""
+type OpenSearchError struct {
+	Code    int
+	Message string
+}
 
-	//请求
-	var result []byte
-	err := DefaultAjaxPool.Get(&Ajax{
-		Url:          url,
-		Data:         body,
-		DataType:     "json",
-		ResponseData: &result,
-	})
+func (this *OpenSearchError) GetCode() int {
+	return this.Code
+}
+
+func (this *OpenSearchError) GetMsg() string {
+	return this.Message
+}
+
+func (this *OpenSearchError) Error() string {
+	return fmt.Sprintf("错误码为：%v，错误描述为：%v", this.Code, this.Message)
+}
+
+func (this *OpenSearchSdk) getSignature(method string, query map[string]string) (map[string]string, error) {
+	//参数格式化
+	newQuery := map[string]string{}
+	for key, value := range query {
+		newQuery[key] = value
+	}
+	newQuery["AccessKeyId"] = this.AppId
+	queryKeyInterface, _ := ArrayKeyAndValue(newQuery)
+	queryKey := ArraySort(queryKeyInterface).([]string)
+	stringToSignArray := []string{}
+	for _, singleQueryKey := range queryKey {
+		singleQueryValue := newQuery[singleQueryKey]
+		singleQueryKeyEncode, err := EncodeUrl(singleQueryKey)
+		if err != nil {
+			return nil, err
+		}
+		singleQueryValueEncode, err := EncodeUrl(singleQueryValue)
+		if err != nil {
+			return nil, err
+		}
+		stringToSignArray = append(stringToSignArray, singleQueryKeyEncode+"="+singleQueryValueEncode)
+	}
+	stringToSign := strings.Join(stringToSignArray, "&")
+
+	//字符串签名
+	stringToSignEncode, err := EncodeUrl(stringToSign)
 	if err != nil {
-		return OpenSearchResult{}, err
+		return nil, err
+	}
+	stringToSign = method + "&%2F&" + stringToSignEncode
+
+	//hmac与base64编码
+	hmacKey := this.AppKey + "&"
+	mac := hmac.New(sha1.New, []byte(hmacKey))
+	mac.Write([]byte(stringToSign))
+	signHmac := mac.Sum(nil)
+	signBase64 := base64.StdEncoding.EncodeToString(signHmac)
+	newQuery["Signature"] = string(signBase64)
+	return newQuery, nil
+}
+
+func (this *OpenSearchSdk) api(method string, url string, query map[string]string, bodyResult interface{}) error {
+	//初始化基础参数
+	newQuery := map[string]string{}
+	for key, value := range query {
+		newQuery[key] = value
+	}
+	now := time.Now().In(time.UTC)
+	nowStr := now.Format("2006-01-02T15:04:05Z")
+	newQuery["Version"] = "v2"
+	newQuery["Timestamp"] = nowStr
+	newQuery["SignatureMethod"] = "HMAC-SHA1"
+	newQuery["SignatureVersion"] = "1.0"
+	newQuery["SignatureNonce"] = CryptoRand(17)
+
+	//生成签名
+	newQuery, err := this.getSignature(method, newQuery)
+	if err != nil {
+		return err
 	}
 
-	//结果
-	return OpenSearchResult{}, nil
+	//调用
+	var result struct {
+		Status    string      `json:"status"`
+		RequestId string      `json:"request_id"`
+		Result    interface{} `json:"result"`
+		Errors    []struct {
+			Code    int    `json:"code"`
+			Message string `json:"message"`
+		} `json:"errors"`
+	}
+	result.Result = bodyResult
+	ajax := Ajax{
+		Url:              this.Host + url,
+		Data:             newQuery,
+		DataType:         "url",
+		ResponseData:     &result,
+		ResponseDataType: "json",
+	}
+	if method == "GET" {
+		err = DefaultAjaxPool.Get(&ajax)
+	} else {
+		err = DefaultAjaxPool.Post(&ajax)
+	}
+	if err != nil {
+		return err
+	}
+	if result.Status != "OK" {
+		return &OpenSearchError{result.Errors[0].Code, result.Errors[0].Message}
+	}
+	return nil
 }
 
-func (this *OpenSearchSdk) getRequestUrl(option OpenSearchOption) string {
-	example := `
-http://$host/search?
-index_name=bbs&
-query=config=start:0,hit:10,format=fulljson&&query=default:'的'&&filter=create_timestamp>1423000000&&sort=+type;-RANK&
-fetch_fields=id;title;body;url;type;create_timestamp&
-first_formula_name=first_bbs&
-formula_name=second_bbs&
-summary=summary_snipped:1,summary_field:title,summary_element:high,summary_len:32,summary_ellipsis:...;summary_snipped:2,summary_field:body,summary_element:high,summary_len:60,summary_ellipsis:...
-`
-	return example
+func (this *OpenSearchSdk) combineQuery(request interface{}) map[string]string {
+	data := ArrayToMap(request, "query")
+	dataMap := data.(map[string]interface{})
+	result := map[string]string{}
+	for singleKey, singleValue := range dataMap {
+		var singleResult string
+		singleMapValue, isOk := singleValue.(map[string]interface{})
+		if isOk {
+			singleMapValueArray := []string{}
+			for key, value := range singleMapValue {
+				singleMapValueArray = append(singleMapValueArray, key+"="+fmt.Sprintf("%v", value))
+			}
+			singleResult = strings.Join(singleMapValueArray, "&&")
+		} else {
+			singleResult = fmt.Sprintf("%v", singleValue)
+		}
+		result[singleKey] = singleResult
+	}
+	return result
+}
+
+func (this *OpenSearchSdk) Search(request OpenSearchSearchRequest) (OpenSearchSearchResponse, error) {
+	var response OpenSearchSearchResponse
+	requestQuery := this.combineQuery(request)
+	err := this.api("GET", "/search", requestQuery, &response)
+	if err != nil {
+		return OpenSearchSearchResponse{}, err
+	}
+	return response, nil
+}
+
+func (this *OpenSearchSdk) Doc() {
+
 }

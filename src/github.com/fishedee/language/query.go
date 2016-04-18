@@ -51,7 +51,13 @@ func QueryReduce(data interface{}, reduceFuctor interface{}, resultReduce interf
 	dataLen := dataValue.Len()
 
 	reduceFuctorValue := reflect.ValueOf(reduceFuctor)
-	resultReduceValue := reflect.ValueOf(resultReduce)
+	resultReduceType := reduceFuctorValue.Type().In(0)
+	resultReduceValue := reflect.New(resultReduceType)
+	err := MapToArray(resultReduce, resultReduceValue.Interface(), "json")
+	if err != nil {
+		panic(err)
+	}
+	resultReduceValue = resultReduceValue.Elem()
 
 	for i := 0; i != dataLen; i++ {
 		singleDataValue := dataValue.Index(i)
@@ -147,7 +153,10 @@ func QueryJoin(leftData interface{}, rightData interface{}, joinPlace string, jo
 	resultValue := reflect.MakeSlice(reflect.SliceOf(joinFuctorType.Out(0)), 0, 0)
 
 	rightHaveJoin := make([]bool, rightDataValueLen, rightDataValueLen)
-	joinPlace = strings.ToLower(joinPlace)
+	joinPlace = strings.Trim(strings.ToLower(joinPlace), " ")
+	if ArrayIn([]string{"left", "right", "inner", "outer"}, joinPlace) == -1 {
+		panic("invalid joinPlace [" + joinPlace + "] ")
+	}
 
 	//开始join
 	for i := 0; i != leftDataValueLen; i++ {
@@ -204,7 +213,14 @@ func QueryGroup(data interface{}, groupType string, groupFuctor interface{}) int
 
 	groupFuctorValue := reflect.ValueOf(groupFuctor)
 	groupFuctorType := groupFuctorValue.Type()
-	resultValue := reflect.MakeSlice(groupFuctorType.Out(0), 0, 0)
+
+	var resultValue reflect.Value
+	resultType := groupFuctorType.Out(0)
+	if resultType.Kind() == reflect.Slice {
+		resultValue = reflect.MakeSlice(resultType, 0, 0)
+	} else {
+		resultValue = reflect.MakeSlice(reflect.SliceOf(resultType), 0, 0)
+	}
 
 	//开始group
 	for i := 0; i != dataValueLen; {
@@ -224,7 +240,11 @@ func QueryGroup(data interface{}, groupType string, groupFuctor interface{}) int
 			}
 		}
 		singleResult := groupFuctorValue.Call([]reflect.Value{dataValue.Slice(j, i)})[0]
-		resultValue = reflect.AppendSlice(resultValue, singleResult)
+		if singleResult.Kind() == reflect.Slice {
+			resultValue = reflect.AppendSlice(resultValue, singleResult)
+		} else {
+			resultValue = reflect.Append(resultValue, singleResult)
+		}
 	}
 	return resultValue.Interface()
 }
@@ -390,29 +410,84 @@ func QueryOuterJoin(leftData interface{}, rightData interface{}, joinType string
 }
 
 func QuerySum(data interface{}) interface{} {
-	return QueryReduce(data, func(sum int, single int) int {
-		return sum + single
-	}, 0)
+	dataType := reflect.TypeOf(data).Elem()
+	if dataType.Kind() == reflect.Int {
+		return QueryReduce(data, func(sum int, single int) int {
+			return sum + single
+		}, 0)
+	} else if dataType.Kind() == reflect.Float32 {
+		return QueryReduce(data, func(sum float32, single float32) float32 {
+			return sum + single
+		}, (float32)(0.0))
+	} else if dataType.Kind() == reflect.Float64 {
+		return QueryReduce(data, func(sum float64, single float64) float64 {
+			return sum + single
+		}, 0.0)
+	} else {
+		panic("invalid type " + dataType.String())
+	}
 }
 
 func QueryMax(data interface{}) interface{} {
-	return QueryReduce(data, func(max int, single int) int {
-		if single > max {
-			return single
-		} else {
-			return max
-		}
-	}, math.MinInt32)
+	dataType := reflect.TypeOf(data).Elem()
+	if dataType.Kind() == reflect.Int {
+		return QueryReduce(data, func(max int, single int) int {
+			if single > max {
+				return single
+			} else {
+				return max
+			}
+		}, math.MinInt32)
+	} else if dataType.Kind() == reflect.Float32 {
+		return QueryReduce(data, func(max float32, single float32) float32 {
+			if single > max {
+				return single
+			} else {
+				return max
+			}
+		}, math.SmallestNonzeroFloat32)
+	} else if dataType.Kind() == reflect.Float64 {
+		return QueryReduce(data, func(max float64, single float64) float64 {
+			if single > max {
+				return single
+			} else {
+				return max
+			}
+		}, math.SmallestNonzeroFloat64)
+	} else {
+		panic("invalid type " + dataType.String())
+	}
 }
 
 func QueryMin(data interface{}) interface{} {
-	return QueryReduce(data, func(min int, single int) int {
-		if single < min {
-			return single
-		} else {
-			return min
-		}
-	}, math.MaxInt32)
+	dataType := reflect.TypeOf(data).Elem()
+	if dataType.Kind() == reflect.Int {
+		return QueryReduce(data, func(min int, single int) int {
+			if single < min {
+				return single
+			} else {
+				return min
+			}
+		}, math.MaxInt32)
+	} else if dataType.Kind() == reflect.Float32 {
+		return QueryReduce(data, func(min float32, single float32) float32 {
+			if single < min {
+				return single
+			} else {
+				return min
+			}
+		}, math.MaxFloat32)
+	} else if dataType.Kind() == reflect.Float64 {
+		return QueryReduce(data, func(min float64, single float64) float64 {
+			if single < min {
+				return single
+			} else {
+				return min
+			}
+		}, math.MaxFloat64)
+	} else {
+		panic("invalid type " + dataType.String())
+	}
 }
 
 func QueryColumn(data interface{}, column string) interface{} {

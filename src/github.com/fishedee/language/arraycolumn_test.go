@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func assertEqual(t *testing.T, left interface{}, right interface{}, index int) {
+func assertArrayColumnEqual(t *testing.T, left interface{}, right interface{}, index int) {
 	if reflect.DeepEqual(left, right) == false {
 		t.Errorf("case :%v ,%+v != %+v", index, left, right)
 	}
@@ -151,7 +151,7 @@ func TestArrayColumnSort(t *testing.T) {
 	for singleTestCaseIndex, singleTestCase := range testCase {
 
 		result := ArrayColumnSort(singleTestCase.origin, singleTestCase.sortName)
-		assertEqual(t, result, singleTestCase.target, singleTestCaseIndex)
+		assertArrayColumnEqual(t, result, singleTestCase.target, singleTestCaseIndex)
 
 	}
 
@@ -289,7 +289,7 @@ func TestArrayColumnUnique(t *testing.T) {
 				contentType{"5", 10, true, -1.1, -1.1, oldTime},
 			},
 		},
-		//多指传递
+		//多值传递
 		{
 			"  Age  ,  Money",
 			[]contentType{
@@ -330,7 +330,7 @@ func TestArrayColumnUnique(t *testing.T) {
 	for singleTestCaseIndex, singleTestCase := range testCase {
 
 		result := ArrayColumnUnique(singleTestCase.origin, singleTestCase.uniqueName)
-		assertEqual(t, result, singleTestCase.target, singleTestCaseIndex)
+		assertArrayColumnEqual(t, result, singleTestCase.target, singleTestCaseIndex)
 
 	}
 
@@ -435,7 +435,7 @@ func TestArrayColumnKey(t *testing.T) {
 	for singleTestCaseIndex, singleTestCase := range testCase {
 
 		result := ArrayColumnKey(singleTestCase.origin, singleTestCase.keyName)
-		assertEqual(t, result, singleTestCase.target, singleTestCaseIndex)
+		assertArrayColumnEqual(t, result, singleTestCase.target, singleTestCaseIndex)
 
 	}
 
@@ -579,7 +579,7 @@ func TestArrayColumnMap(t *testing.T) {
 	for singleTestCaseIndex, singleTestCase := range testCase {
 
 		result := ArrayColumnMap(singleTestCase.origin, singleTestCase.mapName)
-		assertEqual(t, result, singleTestCase.target, singleTestCaseIndex)
+		assertArrayColumnEqual(t, result, singleTestCase.target, singleTestCaseIndex)
 
 	}
 
