@@ -419,6 +419,7 @@ func QueryColumn(data interface{}, column string) interface{} {
 	dataValue := reflect.ValueOf(data)
 	dataType := dataValue.Type().Elem()
 	dataLen := dataValue.Len()
+	column = strings.Trim(column, " ")
 	dataFieldIndexStruct, ok := dataType.FieldByName(column)
 	if !ok {
 		panic(dataType.Name() + " has no field " + column)
@@ -475,11 +476,13 @@ func QueryDistinct(data interface{}, columnNames string) interface{} {
 			singleField := singleValue.FieldByIndex(singleNameInfo.Index)
 			newData.FieldByIndex(singleNameInfo.Index).Set(singleField)
 		}
-		_, isExist := existsMap[newData]
+		newDataValue := newData.Interface()
+		_, isExist := existsMap[newDataValue]
 		if isExist {
 			continue
 		}
 		result = reflect.Append(result, singleValue)
+		existsMap[newDataValue] = true
 	}
 	return result.Interface()
 }

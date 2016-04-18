@@ -17,7 +17,7 @@ type MemoryQueueStore struct {
 func NewMemoryQueue(BeegoQueueStoreConfig) (BeegoQueueStoreInterface, error) {
 	result := &MemoryQueueStore{}
 	result.mapPushPopStore = map[string]MemoryQueuePushPopStore{}
-	return NewBasicAsyncQueue(result), nil
+	return NewBasicQueue(result), nil
 }
 
 func (this *MemoryQueueStore) Produce(topicId string, data interface{}) error {

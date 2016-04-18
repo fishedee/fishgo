@@ -90,7 +90,7 @@ func NewRedisQueue(config BeegoQueueStoreConfig) (BeegoQueueStoreInterface, erro
 		redisPool: redisPool,
 		prefix:    config.SavePrefix,
 	}
-	return NewBasicAsyncQueue(result), nil
+	return NewBasicQueue(result), nil
 }
 
 func (this *RedisQueueStore) Produce(topicId string, data interface{}) error {

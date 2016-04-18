@@ -10,24 +10,24 @@ type BasicAsyncQueuePubSubStore struct {
 	mutex    sync.RWMutex
 }
 
-type BasicAsyncQueueStore struct {
+type BasicQueueStore struct {
 	BeegoQueueStoreBasicInterface
 	mapPubSubStore map[string]*BasicAsyncQueuePubSubStore
 	mutex          sync.Mutex
 }
 
-func NewBasicAsyncQueue(target BeegoQueueStoreBasicInterface) *BasicAsyncQueueStore {
-	return &BasicAsyncQueueStore{
+func NewBasicQueue(target BeegoQueueStoreBasicInterface) *BasicQueueStore {
+	return &BasicQueueStore{
 		BeegoQueueStoreBasicInterface: target,
 		mapPubSubStore:                map[string]*BasicAsyncQueuePubSubStore{},
 	}
 }
 
-func (this *BasicAsyncQueueStore) Publish(topicId string, data interface{}) error {
+func (this *BasicQueueStore) Publish(topicId string, data interface{}) error {
 	return this.Produce(topicId, data)
 }
 
-func (this *BasicAsyncQueueStore) subscribeInner(topicId string, single *BasicAsyncQueuePubSubStore) error {
+func (this *BasicQueueStore) subscribeInner(topicId string, single *BasicAsyncQueuePubSubStore) error {
 	return this.Consume(topicId, func(argv interface{}) error {
 		var lastError error
 		single.mutex.RLock()
@@ -48,7 +48,7 @@ func (this *BasicAsyncQueueStore) subscribeInner(topicId string, single *BasicAs
 	})
 }
 
-func (this *BasicAsyncQueueStore) Subscribe(topicId string, listener BeegoQueueListener) error {
+func (this *BasicQueueStore) Subscribe(topicId string, listener BeegoQueueListener) error {
 	this.mutex.Lock()
 	result, ok := this.mapPubSubStore[topicId]
 	if !ok {

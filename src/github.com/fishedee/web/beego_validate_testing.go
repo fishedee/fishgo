@@ -19,12 +19,13 @@ type BeegoValidateTestInterface interface {
 	beegoValidateControllerInterface
 	SetTesting(*testing.T)
 	SetTestingMethod(method string)
+	RequestReset()
 }
 
 type BeegoValidateTest struct {
-	testingMethod string
 	BeegoValidateController
-	t *testing.T
+	testingMethod string
+	t             *testing.T
 }
 
 func (this *BeegoValidateTest) getBackTrace() string {
@@ -39,7 +40,7 @@ func (this *BeegoValidateTest) getBackTrace() string {
 	return stack
 }
 
-func (this *BeegoValidateTest) Benchmark(number int, concurrency int, handler func(), testCase ...interface{}) {
+func (this *BeegoValidateTest) Concurrent(number int, concurrency int, handler func()) {
 	if number <= 0 {
 		panic("benchmark numer is invalid")
 	}
@@ -51,7 +52,7 @@ func (this *BeegoValidateTest) Benchmark(number int, concurrency int, handler fu
 		number%concurrency != 0 {
 		panic("benchmark numer/concurrency is invalid")
 	}
-	beginTime := time.Now().UnixNano()
+
 	var wg sync.WaitGroup
 	for i := 0; i < concurrency; i++ {
 		wg.Add(1)
@@ -63,6 +64,11 @@ func (this *BeegoValidateTest) Benchmark(number int, concurrency int, handler fu
 		}()
 	}
 	wg.Wait()
+}
+
+func (this *BeegoValidateTest) Benchmark(number int, concurrency int, handler func(), testCase ...interface{}) {
+	beginTime := time.Now().UnixNano()
+	this.Concurrent(number, concurrency, handler)
 	endTime := time.Now().UnixNano()
 
 	totalTime := endTime - beginTime
@@ -89,9 +95,9 @@ func (this *BeegoValidateTest) AssertEqual(left interface{}, right interface{}, 
 	}
 	backtrace := this.getBackTrace()
 	if len(testCase) == 0 {
-		this.t.Errorf("assertEqual Fail! %v != %v\n%s", left, right, backtrace)
+		this.t.Errorf("%v : assertEqual Fail! %v != %v\n%s", this.testingMethod, left, right, backtrace)
 	} else {
-		this.t.Errorf("assertEqual Fail! %v != %v\ntestCase: %+v\n%s", left, right, testCase, backtrace)
+		this.t.Errorf("%v : assertEqual Fail! %v != %v\ntestCase: %+v\n%s", this.testingMethod, left, right, testCase, backtrace)
 	}
 
 }
@@ -124,21 +130,30 @@ func (this *BeegoValidateTest) RandomString(length int) string {
 	return string(result)
 }
 
-func createTestContext() *context.Context {
+func (this *BeegoValidateTest) RequestReset() {
 	ctx := context.NewContext()
 	request, err := http.NewRequest("get", "/", bytes.NewReader([]byte("")))
 	if err != nil {
 		panic(err)
 	}
 	ctx.Reset(nil, request)
+	this.SetAppContextInner(ctx)
 	return ctx
+}
+
+func (this *BeegoValidateTest) RequestSetCookie() {
+
+}
+
+func (this *BeegoValidateTest) RequestGetCookie() {
+
 }
 
 func InitBeegoVaildateTest(t *testing.T, test BeegoValidateTestInterface) {
 	//初始化test
 	test.SetTesting(t)
 	test.SetAppControllerInner(test)
-	test.SetAppContextInner(createTestContext())
+	this.RequestReset()
 	test.Prepare()
 
 	isBenchTest := false

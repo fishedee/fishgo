@@ -9,16 +9,19 @@ import (
 	. "github.com/fishedee/util"
 	. "github.com/fishedee/web/util/beego_queue"
 	"reflect"
+	"strconv"
 )
 
 type QueueManagerConfig struct {
 	BeegoQueueStoreConfig
-	Driver string
+	Driver   string
+	PoolSize int
 }
 
 type QueueManager struct {
-	store BeegoQueueStoreInterface
-	Log   *LogManager
+	store    BeegoQueueStoreInterface
+	Log      *LogManager
+	poolSize int
 }
 
 var newQueueManagerMemory *MemoryFunc
@@ -45,15 +48,8 @@ func newQueueManager(config QueueManagerConfig) (*QueueManager, error) {
 			return nil, err
 		}
 		return &QueueManager{
-			store: queue,
-		}, nil
-	} else if config.Driver == "memory_async" {
-		queue, err := NewMemoryAsyncQueue(config.BeegoQueueStoreConfig)
-		if err != nil {
-			return nil, err
-		}
-		return &QueueManager{
-			store: queue,
+			store:    queue,
+			poolSize: config.PoolSize,
 		}, nil
 	} else if config.Driver == "redis" {
 		queue, err := NewRedisQueue(config.BeegoQueueStoreConfig)
@@ -61,7 +57,8 @@ func newQueueManager(config QueueManagerConfig) (*QueueManager, error) {
 			return nil, err
 		}
 		return &QueueManager{
-			store: queue,
+			store:    queue,
+			poolSize: config.PoolSize,
 		}, nil
 	} else {
 		return nil, errors.New("invalid memory config " + config.Driver)
@@ -80,11 +77,17 @@ func newQueueManagerFromConfig(configName string) (*QueueManager, error) {
 	driver := beego.AppConfig.String(configName + "driver")
 	savepath := beego.AppConfig.String(configName + "savepath")
 	saveprefix := beego.AppConfig.String(configName + "saveprefix")
+	poolsizeStr := beego.AppConfig.String(configName + "poolsize")
+	poolsize, err := strconv.Atoi(poolsizeStr)
+	if err != nil {
+		return nil, err
+	}
 
 	queueConfig := QueueManagerConfig{}
 	queueConfig.Driver = driver
 	queueConfig.SavePath = savepath
 	queueConfig.SavePrefix = saveprefix
+	queueConfig.PoolSize = poolsize
 	return NewQueueManager(queueConfig)
 }
 
@@ -138,10 +141,25 @@ func (this *QueueManager) WrapData(data []interface{}) (interface{}, error) {
 	return this.EncodeData(data)
 }
 
-func (this *QueueManager) WrapConcurrentListener(listener BeegoQueueListener) BeegoQueueListener {
-	return func(data interface{}) (lastError error) {
-		go listener(data)
-		return nil
+func (this *QueueManager) WrapPoolListener(listener BeegoQueueListener, poolSize int) BeegoQueueListener {
+	if poolSize <= 0 {
+		return func(data interface{}) (lastError error) {
+			go listener(data)
+			return nil
+		}
+	} else if poolSize == 1 {
+		return listener
+	} else {
+		chanConsume := make(chan bool, poolSize)
+		for i := 0; i != poolSize; i++ {
+			chanConsume <- true
+		}
+		return func(data interface{}) (lastError error) {
+			<-chanConsume
+			go listener(data)
+			chanConsume <- true
+			return nil
+		}
 	}
 }
 
@@ -193,7 +211,22 @@ func (this *QueueManager) Consume(topicId string, listener interface{}) error {
 	if err != nil {
 		return err
 	}
-	return this.store.Consume(topicId, this.WrapConcurrentListener(listenerResult))
+	poolSize := 0
+	if this.poolSize != 0 {
+		poolSize = this.poolSize
+	}
+	return this.store.Consume(topicId, this.WrapPoolListener(listenerResult, poolSize))
+}
+
+func (this *QueueManager) ConsumeInPool(topicId string, listener interface{}, poolSize int) error {
+	listenerResult, err := this.WrapExceptionListener(listener)
+	if err != nil {
+		return err
+	}
+	if this.poolSize != 0 {
+		poolSize = this.poolSize
+	}
+	return this.store.Consume(topicId, this.WrapPoolListener(listenerResult, poolSize))
 }
 
 func (this *QueueManager) Publish(topicId string, data ...interface{}) error {
@@ -209,5 +242,20 @@ func (this *QueueManager) Subscribe(topicId string, listener interface{}) error 
 	if err != nil {
 		return err
 	}
-	return this.store.Subscribe(topicId, this.WrapConcurrentListener(listenerResult))
+	poolSize := 0
+	if this.poolSize != 0 {
+		poolSize = this.poolSize
+	}
+	return this.store.Subscribe(topicId, this.WrapPoolListener(listenerResult, poolSize))
+}
+
+func (this *QueueManager) SubscribeInPool(topicId string, listener interface{}, poolSize int) error {
+	listenerResult, err := this.WrapExceptionListener(listener)
+	if err != nil {
+		return err
+	}
+	if this.poolSize != 0 {
+		poolSize = this.poolSize
+	}
+	return this.store.Subscribe(topicId, this.WrapPoolListener(listenerResult, poolSize))
 }
