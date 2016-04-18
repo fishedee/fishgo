@@ -1,5 +1,10 @@
 package test
 
+import (
+	"fmt"
+	"strconv"
+)
+
 type ClientLoginAoModel struct {
 	BaseModel
 }
@@ -42,4 +47,5 @@ func (this *ClientLoginAoModel) Login(name string, password string) bool {
 	defer sess.SessionRelease(this.Ctx.ResponseWriter)
 
 	sess.Set("clientId", 10001)
+	return true
 }

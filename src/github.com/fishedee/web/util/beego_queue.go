@@ -78,10 +78,7 @@ func newQueueManagerFromConfig(configName string) (*QueueManager, error) {
 	savepath := beego.AppConfig.String(configName + "savepath")
 	saveprefix := beego.AppConfig.String(configName + "saveprefix")
 	poolsizeStr := beego.AppConfig.String(configName + "poolsize")
-	poolsize, err := strconv.Atoi(poolsizeStr)
-	if err != nil {
-		return nil, err
-	}
+	poolsize, _ := strconv.Atoi(poolsizeStr)
 
 	queueConfig := QueueManagerConfig{}
 	queueConfig.Driver = driver

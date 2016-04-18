@@ -1,6 +1,7 @@
 package web
 
 import (
+	_ "github.com/a"
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/context"
 	"github.com/fishedee/encoding"
@@ -176,6 +177,7 @@ func (this *BeegoValidateController) parseInput() {
 
 	//解析数据
 	input := queryInput + "&" + postInput
+	this.inputData = nil
 	err = encoding.DecodeUrlQuery([]byte(input), &this.inputData)
 	if err != nil {
 		language.Throw(1, err.Error())

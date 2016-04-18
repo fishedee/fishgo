@@ -3,6 +3,7 @@ package web
 import (
 	"bytes"
 	"fmt"
+	_ "github.com/a"
 	"github.com/astaxie/beego/context"
 	"math/rand"
 	"net/http"
@@ -22,22 +23,41 @@ type BeegoValidateTestInterface interface {
 	RequestReset()
 }
 
+type BeegoValidateTestResponseWriter struct {
+	header     http.Header
+	headerCode int
+	data       []byte
+}
+
+func (this *BeegoValidateTestResponseWriter) Header() http.Header {
+	if this.header == nil {
+		this.header = http.Header{}
+	}
+	return this.header
+}
+
+func (this *BeegoValidateTestResponseWriter) Write(in []byte) (int, error) {
+	this.data = append(this.data, in...)
+	return len(this.data), nil
+}
+
+func (this *BeegoValidateTestResponseWriter) WriteHeader(headerCode int) {
+	this.headerCode = headerCode
+}
+
 type BeegoValidateTest struct {
 	BeegoValidateController
 	testingMethod string
 	t             *testing.T
 }
 
-func (this *BeegoValidateTest) getBackTrace() string {
-	stack := ""
-	for i := 1; ; i++ {
-		_, file, line, ok := runtime.Caller(i)
-		if !ok {
-			break
-		}
-		stack = stack + fmt.Sprintln(fmt.Sprintf("%s:%d", file, line))
+func (this *BeegoValidateTest) getTraceLineNumber(traceNumber int) int {
+	_, _, line, ok := runtime.Caller(traceNumber + 1)
+	if !ok {
+		return 0
+	} else {
+		return line
 	}
-	return stack
 }
 
 func (this *BeegoValidateTest) Concurrent(number int, concurrency int, handler func()) {
@@ -58,6 +78,7 @@ func (this *BeegoValidateTest) Concurrent(number int, concurrency int, handler f
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			runtime.LockOSThread()
 			for i := 0; i < singleConcurrency; i++ {
 				handler()
 			}
@@ -93,11 +114,11 @@ func (this *BeegoValidateTest) AssertEqual(left interface{}, right interface{}, 
 	if isEqual {
 		return
 	}
-	backtrace := this.getBackTrace()
+	lineNumber := this.getTraceLineNumber(1)
 	if len(testCase) == 0 {
-		this.t.Errorf("%v : assertEqual Fail! %v != %v\n%s", this.testingMethod, left, right, backtrace)
+		this.t.Errorf("%v:%v: assertEqual Fail! %v != %v", this.testingMethod, lineNumber, left, right)
 	} else {
-		this.t.Errorf("%v : assertEqual Fail! %v != %v\ntestCase: %+v\n%s", this.testingMethod, left, right, testCase, backtrace)
+		this.t.Errorf("%v:%v:%v: assertEqual Fail! %v != %v", this.testingMethod, lineNumber, testCase[0], left, right)
 	}
 
 }
@@ -136,25 +157,20 @@ func (this *BeegoValidateTest) RequestReset() {
 	if err != nil {
 		panic(err)
 	}
-	ctx.Reset(nil, request)
+	ctx.Reset(&BeegoValidateTestResponseWriter{}, request)
 	this.SetAppContextInner(ctx)
-	return ctx
-}
-
-func (this *BeegoValidateTest) RequestSetCookie() {
-
-}
-
-func (this *BeegoValidateTest) RequestGetCookie() {
-
+	this.Prepare()
 }
 
 func InitBeegoVaildateTest(t *testing.T, test BeegoValidateTestInterface) {
+	//初始化runtime
+	runtime.GOMAXPROCS(runtime.NumCPU() * 4)
+	rand.Seed(time.Now().Unix())
+
 	//初始化test
 	test.SetTesting(t)
 	test.SetAppControllerInner(test)
-	this.RequestReset()
-	test.Prepare()
+	test.RequestReset()
 
 	isBenchTest := false
 	for _, singleArgv := range os.Args {
@@ -182,8 +198,4 @@ func InitBeegoVaildateTest(t *testing.T, test BeegoValidateTestInterface) {
 		//执行测试
 		singleValueMethodType.Func.Call([]reflect.Value{testValue})
 	}
-}
-
-func init() {
-	rand.Seed(time.Now().Unix())
 }

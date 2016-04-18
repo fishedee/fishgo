@@ -1,6 +1,7 @@
 package web
 
 import (
+	_ "github.com/a"
 	"github.com/astaxie/beego/context"
 	"reflect"
 	"sync"

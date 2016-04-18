@@ -1,7 +1,8 @@
-package common
+package test
 
 import (
 	. "github.com/fishedee/web"
+	"testing"
 )
 
 type BaseModel struct {

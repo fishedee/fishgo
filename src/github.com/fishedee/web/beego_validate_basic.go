@@ -1,6 +1,7 @@
 package web
 
 import (
+	"github.com/a"
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/context"
 	. "github.com/fishedee/web/util"
@@ -38,10 +39,7 @@ func checkFileExist(path string) bool {
 }
 
 func findAppConfPath() string {
-	workingDir, err := os.Getwd()
-	if err != nil {
-		return ""
-	}
+	workingDir := a.GetWorkingDir()
 	if checkFileExist(workingDir + "/conf/app.conf") {
 		return ""
 	}
@@ -60,6 +58,11 @@ func init() {
 	//确定appPath
 	appPath := findAppConfPath()
 	if appPath != "" {
+		os.Setenv("BEEGO_RUNMODE", "test")
+		err := beego.LoadAppConfig("ini", appPath+"/conf/app.conf")
+		if err != nil {
+			panic(err)
+		}
 		beego.TestBeegoInit(appPath)
 	}
 
