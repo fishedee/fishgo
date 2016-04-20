@@ -20,6 +20,7 @@ func (this *CounterAoModel) IncrAtomic() {
 func (this *CounterAoModel) Reset() {
 	this.totalInt = 0
 }
+
 func (this *CounterAoModel) Get() int {
 	return (int)(this.totalInt)
 }

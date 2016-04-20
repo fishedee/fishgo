@@ -26,7 +26,6 @@ func (this *CounterAoTest) TestBasic() {
 
 		//并行累加
 		this.CounterAo.Reset()
-		this.Concurrent(total, 10, func() {
 		this.Concurrent(total, 4, func() {
 			singleTestCase()
 		})
