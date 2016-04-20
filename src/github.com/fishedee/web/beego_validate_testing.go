@@ -5,6 +5,7 @@ import (
 	"fmt"
 	_ "github.com/a"
 	"github.com/astaxie/beego/context"
+	. "github.com/fishedee/language"
 	"math/rand"
 	"net/http"
 	"os"
@@ -119,6 +120,25 @@ func (this *BeegoValidateTest) AssertEqual(left interface{}, right interface{}, 
 		this.t.Errorf("%v:%v: assertEqual Fail! %v != %v", this.testingMethod, lineNumber, left, right)
 	} else {
 		this.t.Errorf("%v:%v:%v: assertEqual Fail! %v != %v", this.testingMethod, lineNumber, testCase[0], left, right)
+	}
+}
+
+func (this *BeegoValidateTest) AssertError(left Exception, rightCode int, rightMessage string, testCase ...interface{}) {
+	errorString := ""
+	if left.GetCode() != rightCode {
+		errorString = fmt.Sprintf("assertError Code Fail! %v != %v ", left.GetCode(), rightCode)
+	}
+	if left.GetMessage() != rightMessage {
+		errorString = fmt.Sprintf("assertError Message Fail! %v != %v ", left.GetMessage(), rightMessage)
+	}
+	if errorString == "" {
+		return
+	}
+	lineNumber := this.getTraceLineNumber(1)
+	if len(testCase) == 0 {
+		this.t.Errorf("%v:%v: %v", this.testingMethod, lineNumber, errorString)
+	} else {
+		this.t.Errorf("%v:%v:%v: %v", this.testingMethod, lineNumber, testCase[0], errorString)
 	}
 
 }

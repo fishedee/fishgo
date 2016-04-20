@@ -31,7 +31,7 @@ func generateSingleResult(data []FieldInfo) string {
 	for index, singleData := range data {
 		result = append(result, fmt.Sprintf("_fishgen%d", index+1)+" "+singleData.tag)
 	}
-	result = append(result, "_fishgenErr error")
+	result = append(result, "_fishgenErr Exception")
 	return strings.Join(result, ",")
 }
 
