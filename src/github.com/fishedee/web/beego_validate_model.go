@@ -93,23 +93,10 @@ func getSubModuleFromTypeInner(modelType reflect.Type) []int {
 }
 
 func isFromModelType(target reflect.Type) bool {
-	if target.Kind() != reflect.Struct {
-		return false
-	}
-	if target == beegoValidateModelType {
-		return true
-	}
-	numField := target.NumField()
-	for i := 0; i != numField; i++ {
-		singleFiled := target.Field(i)
-		if singleFiled.Anonymous == false {
-			continue
-		}
-		if isFromModelType(singleFiled.Type) == true {
-			return true
-		}
-	}
-	return false
+	var data *beegoValidateModelInterface
+	interfaceType := reflect.TypeOf(data).Elem()
+	targetType := reflect.PtrTo(target)
+	return targetType.Implements(interfaceType)
 }
 
 func prepareBeegoValidateModelInner(target beegoValidateModelInterface, controller beegoValidateControllerInterface) {

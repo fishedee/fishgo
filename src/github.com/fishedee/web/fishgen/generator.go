@@ -124,6 +124,10 @@ func generateSingleFileImport(data []ParserInfo, source string) (string, error) 
 
 	//建立导入符号的映射
 	nameImport := map[string]ImportInfo{}
+	nameImport["Exception"] = ImportInfo{
+		name: ".",
+		path: "github.com/fishedee/language",
+	}
 	for _, singleParserInfo := range data {
 		for _, singleImport := range singleParserInfo.imports {
 			if singleImport.name == "_" {
@@ -175,10 +179,6 @@ func generateSingleFileImport(data []ParserInfo, source string) (string, error) 
 	}
 
 	//拼凑导入符号
-	result["github.com/fishedee/language"] = ImportInfo{
-		name: ".",
-		path: "github.com/fishedee/language",
-	}
 	resultArray := []string{}
 	for _, singleImportInfo := range result {
 		if singleImportInfo.path == "" {
@@ -214,6 +214,22 @@ func generateSingleFileContent(data []ParserInfo) (string, error) {
 	return packageInfo + importInfo + contentInfo, nil
 }
 
+func generateSingleTestFileContent(data []ParserInfo) (string, error) {
+	packageName := data[0].packname
+	packageInfo := "package " + packageName + "\n"
+	packageImport := `
+		import (
+			"testing"
+			. "github.com/fishedee/web"
+		)`
+	packageFunc := "\ntype testFishGenStruct struct{}\n" +
+		"func Test" + strings.ToUpper(packageName[0:1]) + packageName[1:] + "(t *testing.T){\n" +
+		"RunBeegoValidateTest(t,&testFishGenStruct{})\n" +
+		"}\n"
+
+	return packageInfo + packageImport + packageFunc, nil
+}
+
 func generateSingleFileFormat(filename string, data string) (string, error) {
 	result, err := format.Source([]byte(data))
 	if err != nil {
@@ -226,7 +242,27 @@ func generateSingleFileWrite(filename string, data string) error {
 	return ioutil.WriteFile(filename, []byte(data), 0644)
 }
 
-func generateSingleFile(dirname string, data []ParserInfo) error {
+func generateSingleFileTest(dirname string, data []ParserInfo) error {
+	filename := dirname + "/" + GetGenerateTestFileName(dirname)
+	result, err := generateSingleTestFileContent(data)
+	if err != nil {
+		return err
+	}
+
+	result, err = generateSingleFileFormat(filename, result)
+	if err != nil {
+		return err
+	}
+
+	err = generateSingleFileWrite(filename, result)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func generateSingleFileNormal(dirname string, data []ParserInfo) error {
 	filename := dirname + "/" + GetGenerateFileName(dirname)
 
 	result, err := generateSingleFileContent(data)
@@ -240,6 +276,20 @@ func generateSingleFile(dirname string, data []ParserInfo) error {
 	}
 
 	err = generateSingleFileWrite(filename, result)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func generateSingleFile(dirname string, data []ParserInfo) error {
+	err := generateSingleFileNormal(dirname, data)
+	if err != nil {
+		return err
+	}
+
+	err = generateSingleFileTest(dirname, data)
 	if err != nil {
 		return err
 	}

@@ -1,9 +1,5 @@
 package test
 
-import (
-	"testing"
-)
-
 type CounterAoTest struct {
 	BaseTest
 	CounterAo CounterAoModel
@@ -33,6 +29,6 @@ func (this *CounterAoTest) TestBasic() {
 	}
 }
 
-func TestCounterAo(t *testing.T) {
-	InitTest(t, &CounterAoTest{})
+func init() {
+	InitTest(&CounterAoTest{})
 }

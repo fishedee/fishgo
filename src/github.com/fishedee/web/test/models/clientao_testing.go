@@ -1,9 +1,5 @@
 package test
 
-import (
-	"testing"
-)
-
 type ClientAoTest struct {
 	BaseTest
 	ClientAo ClientLoginAoModel
@@ -34,6 +30,6 @@ func (this *ClientAoTest) TestBasic() {
 	this.AssertEqual(this.ClientAo.IsLogin(), true)
 }
 
-func TestClientAo(t *testing.T) {
-	InitTest(t, &ClientAoTest{})
+func init() {
+	InitTest(&ClientAoTest{})
 }

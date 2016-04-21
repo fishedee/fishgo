@@ -1,4 +1,4 @@
-package test
+package number
 
 import (
 	. "github.com/fishedee/web"

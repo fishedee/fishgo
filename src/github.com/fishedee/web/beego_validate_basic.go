@@ -7,10 +7,12 @@ import (
 	. "github.com/fishedee/web/util"
 	"os"
 	"path"
+	"testing"
 )
 
 type BeegoValidateBasic struct {
 	ctx      *context.Context
+	t        *testing.T
 	Security *SecurityManager
 	Session  *SessionManager
 	DB       *DatabaseManager
@@ -112,9 +114,10 @@ func init() {
 		panic(err)
 	}
 }
-func NewBeegoValidateBasic(ctx *context.Context) *BeegoValidateBasic {
+func NewBeegoValidateBasic(ctx *context.Context, t *testing.T) *BeegoValidateBasic {
 	result := globalBasic
 	result.ctx = ctx
+	result.t = t
 	result.Log = NewLogManagerWithCtxAndMonitor(ctx, result.Monitor, result.logger)
 	result.Timer = NewTimerManagerWithLog(result.Log, result.timer)
 	result.Queue = NewQueueManagerWithLog(result.Log, result.queue)

@@ -9,8 +9,10 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"path"
 	"reflect"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -19,8 +21,6 @@ import (
 
 type BeegoValidateTestInterface interface {
 	beegoValidateControllerInterface
-	SetTesting(*testing.T)
-	SetTestingMethod(method string)
 	RequestReset()
 }
 
@@ -49,15 +49,14 @@ func (this *BeegoValidateTestResponseWriter) WriteHeader(headerCode int) {
 type BeegoValidateTest struct {
 	BeegoValidateController
 	testingMethod string
-	t             *testing.T
 }
 
-func (this *BeegoValidateTest) getTraceLineNumber(traceNumber int) int {
-	_, _, line, ok := runtime.Caller(traceNumber + 1)
+func (this *BeegoValidateTest) getTraceLineNumber(traceNumber int) string {
+	_, filename, line, ok := runtime.Caller(traceNumber + 1)
 	if !ok {
-		return 0
+		return "???.go:???"
 	} else {
-		return line
+		return path.Base(filename) + ":" + strconv.Itoa(line)
 	}
 }
 
@@ -115,11 +114,11 @@ func (this *BeegoValidateTest) AssertEqual(left interface{}, right interface{}, 
 	if isEqual {
 		return
 	}
-	lineNumber := this.getTraceLineNumber(1)
+	traceInfo := this.getTraceLineNumber(1)
 	if len(testCase) == 0 {
-		this.t.Errorf("%v:%v: assertEqual Fail! %v != %v", this.testingMethod, lineNumber, left, right)
+		this.t.Errorf("%v: assertEqual Fail! %v != %v", traceInfo, left, right)
 	} else {
-		this.t.Errorf("%v:%v:%v: assertEqual Fail! %v != %v", this.testingMethod, lineNumber, testCase[0], left, right)
+		this.t.Errorf("%v:%v: assertEqual Fail! %v != %v", traceInfo, testCase[0], left, right)
 	}
 }
 
@@ -134,20 +133,13 @@ func (this *BeegoValidateTest) AssertError(left Exception, rightCode int, rightM
 	if errorString == "" {
 		return
 	}
-	lineNumber := this.getTraceLineNumber(1)
+	traceInfo := this.getTraceLineNumber(1)
 	if len(testCase) == 0 {
-		this.t.Errorf("%v:%v: %v", this.testingMethod, lineNumber, errorString)
+		this.t.Errorf("%v: %v", traceInfo, errorString)
 	} else {
-		this.t.Errorf("%v:%v:%v: %v", this.testingMethod, lineNumber, testCase[0], errorString)
+		this.t.Errorf("%v:%v: %v", traceInfo, testCase[0], errorString)
 	}
 
-}
-
-func (this *BeegoValidateTest) SetTesting(t *testing.T) {
-	this.t = t
-}
-func (this *BeegoValidateTest) SetTestingMethod(method string) {
-	this.testingMethod = method
 }
 
 func (this *BeegoValidateTest) RandomInt() int {
@@ -182,13 +174,17 @@ func (this *BeegoValidateTest) RequestReset() {
 	this.Prepare()
 }
 
-func InitBeegoVaildateTest(t *testing.T, test BeegoValidateTestInterface) {
-	//初始化runtime
-	runtime.GOMAXPROCS(runtime.NumCPU() * 4)
-	rand.Seed(time.Now().Unix())
+var beegoValidateTestMap map[string][]BeegoValidateTestInterface
+var beegoValidateTestMapInit bool
 
+func init() {
+	beegoValidateTestMap = map[string][]BeegoValidateTestInterface{}
+	beegoValidateTestMapInit = false
+}
+
+func runBeegoValidateSingleTest(t *testing.T, test BeegoValidateTestInterface) {
 	//初始化test
-	test.SetTesting(t)
+	test.SetAppTestInner(t)
 	test.SetAppControllerInner(test)
 	test.RequestReset()
 
@@ -198,6 +194,7 @@ func InitBeegoVaildateTest(t *testing.T, test BeegoValidateTestInterface) {
 			isBenchTest = true
 		}
 	}
+
 	//遍历test，执行测试
 	testType := reflect.TypeOf(test)
 	testValue := reflect.ValueOf(test)
@@ -214,8 +211,29 @@ func InitBeegoVaildateTest(t *testing.T, test BeegoValidateTestInterface) {
 				continue
 			}
 		}
-		test.SetTestingMethod(singleValueMethodType.Name)
 		//执行测试
 		singleValueMethodType.Func.Call([]reflect.Value{testValue})
 	}
+}
+
+func RunBeegoValidateTest(t *testing.T, data interface{}) {
+	//获取package
+	pkgPath := reflect.TypeOf(data).Elem().PkgPath()
+
+	//初始化runtime
+	if beegoValidateTestMapInit == false {
+		runtime.GOMAXPROCS(runtime.NumCPU() * 4)
+		rand.Seed(time.Now().Unix())
+		beegoValidateTestMapInit = true
+	}
+
+	//遍历测试
+	for _, singleTest := range beegoValidateTestMap[pkgPath] {
+		runBeegoValidateSingleTest(t, singleTest)
+	}
+}
+
+func InitBeegoVaildateTest(test BeegoValidateTestInterface) {
+	pkgPath := reflect.TypeOf(test).Elem().PkgPath()
+	beegoValidateTestMap[pkgPath] = append(beegoValidateTestMap[pkgPath], test)
 }

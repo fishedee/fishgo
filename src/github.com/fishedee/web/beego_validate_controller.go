@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"reflect"
 	"strings"
+	"testing"
 )
 
 type beegoValidateControllerInterface interface {
@@ -17,6 +18,7 @@ type beegoValidateControllerInterface interface {
 	GetBasic() *BeegoValidateBasic
 	SetAppControllerInner(controller beegoValidateControllerInterface)
 	SetAppContextInner(*context.Context)
+	SetAppTestInner(*testing.T)
 	AutoRender(result interface{}, view string)
 	Prepare()
 }
@@ -30,8 +32,10 @@ func init() {
 type BeegoValidateController struct {
 	beego.Controller
 	*BeegoValidateBasic
-	inputData     interface{}
 	appController beegoValidateControllerInterface
+	AppModel      interface{}
+	AppTest       *testing.T
+	inputData     interface{}
 }
 
 func (this *BeegoValidateController) Get() {
@@ -65,7 +69,7 @@ func (this *BeegoValidateController) Options() {
 func (this *BeegoValidateController) Prepare() {
 	this.parseInput()
 	this.appController = this.AppController.(beegoValidateControllerInterface)
-	this.BeegoValidateBasic = NewBeegoValidateBasic(this.Ctx)
+	this.BeegoValidateBasic = NewBeegoValidateBasic(this.Ctx, this.AppTest)
 	PrepareBeegoValidateModel(this.appController)
 }
 
@@ -84,16 +88,27 @@ func (this *BeegoValidateController) SetAppContextInner(ctx *context.Context) {
 	this.Ctx = ctx
 }
 
+func (this *BeegoValidateController) SetAppTestInner(t *testing.T) {
+	this.AppTest = t
+}
+
 func (this *BeegoValidateController) SetAppController(controller beegoValidateControllerInterface) {
+	if this.appController != nil {
+		return
+	}
+	this.appController = controller
+	this.BeegoValidateBasic = controller.GetBasic()
+	this.Ctx = this.BeegoValidateBasic.ctx
 }
 
 func (this *BeegoValidateController) SetAppModel(model beegoValidateModelInterface) {
+	this.AppModel = model
 }
 
 func (this *BeegoValidateController) GetSubModel() []beegoValidateModelInterface {
 	result := []beegoValidateModelInterface{}
-	modelType := reflect.TypeOf(this.AppController).Elem()
-	modelValue := reflect.ValueOf(this.AppController).Elem()
+	modelType := reflect.TypeOf(this.AppModel).Elem()
+	modelValue := reflect.ValueOf(this.AppModel).Elem()
 	modelTypeFields := getSubModuleFromType(modelType)
 	for _, i := range modelTypeFields {
 		result = append(

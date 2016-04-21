@@ -1,9 +1,5 @@
 package test
 
-import (
-	"testing"
-)
-
 type ConfigAoTest struct {
 	BaseTest
 	ConfigAo ConfigAoModel
@@ -52,6 +48,6 @@ func (this *ConfigAoTest) TestBasic() {
 	this.testBasicEmpty(noTestCase)
 }
 
-func TestConfigAo(t *testing.T) {
-	InitTest(t, &ConfigAoTest{})
+func init() {
+	InitTest(&ConfigAoTest{})
 }

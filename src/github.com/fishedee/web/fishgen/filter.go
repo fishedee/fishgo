@@ -34,7 +34,9 @@ func filterSingleDir(path string, data []os.FileInfo) ([]os.FileInfo, error) {
 			return newdata, nil
 		}
 	}
-	return nil, nil
+
+	//FIXME 暂时不做增量更新策略
+	return newdata, nil
 }
 
 func FilterDir(data map[string][]os.FileInfo) (map[string][]os.FileInfo, error) {
