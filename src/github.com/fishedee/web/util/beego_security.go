@@ -5,6 +5,7 @@ import (
 	"github.com/astaxie/beego"
 	. "github.com/fishedee/language"
 	. "github.com/fishedee/util"
+	"runtime"
 )
 
 type SecurityManagerConfig struct {
@@ -15,10 +16,17 @@ type SecurityManager struct {
 }
 
 func NewSecurityManager(config SecurityManagerConfig) (*SecurityManager, error) {
-	ip, err := NewIfconfig().GetIP("eth0")
+	var netConfig string
+	if runtime.GOOS == "darwin" {
+		netConfig = "en0"
+	} else {
+		netConfig = "eth0"
+	}
+	ip, err := NewIfconfig().GetIP(netConfig)
 	if err != nil {
 		return nil, err
 	}
+
 	ipStr := ip.IP.String()
 	if len(config.IpWhite) != 0 && ArrayIn(config.IpWhite, ipStr) == -1 {
 		return nil, errors.New("当前IP: " + ipStr + "不在IP白名单中: " + Implode(config.IpWhite, ","))
