@@ -11,7 +11,7 @@ func (this *NumberAoTest) TestBasic() {
 		origin2 int
 		target  int
 	}{
-		{-1, 0, 1},
+		{-1, 0, -1},
 		{0, -1, -1},
 		{0, 0, 0},
 		{1, 0, 1},
