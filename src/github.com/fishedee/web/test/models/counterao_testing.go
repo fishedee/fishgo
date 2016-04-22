@@ -9,7 +9,7 @@ func (this *CounterAoTest) TestBasic() {
 	total := 1000000
 
 	testCase := []func(){
-		this.CounterAo.Incr,
+		this.CounterAo.Incr, //并行累加会失败
 		this.CounterAo.IncrAtomic,
 	}
 	for singleTestCaseIndex, singleTestCase := range testCase {

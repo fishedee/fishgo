@@ -6,6 +6,7 @@ import (
 	_ "github.com/a"
 	"github.com/astaxie/beego/context"
 	. "github.com/fishedee/language"
+	. "github.com/fishedee/web/util"
 	"math/rand"
 	"net/http"
 	"os"
@@ -110,7 +111,7 @@ func (this *BeegoValidateTest) Benchmark(number int, concurrency int, handler fu
 }
 
 func (this *BeegoValidateTest) AssertEqual(left interface{}, right interface{}, testCase ...interface{}) {
-	isEqual := reflect.DeepEqual(left, right)
+	isEqual := DeepEqual(left, right)
 	if isEqual {
 		return
 	}

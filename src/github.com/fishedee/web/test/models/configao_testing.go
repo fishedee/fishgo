@@ -1,5 +1,9 @@
 package test
 
+import (
+	"time"
+)
+
 type ConfigAoTest struct {
 	BaseTest
 	ConfigAo ConfigAoModel
@@ -46,6 +50,29 @@ func (this *ConfigAoTest) TestBasic() {
 		this.AssertEqual(data, singleTestCase.target)
 	}
 	this.testBasicEmpty(noTestCase)
+}
+
+func (this *ConfigAoTest) TestStruct() {
+	//struct中的created,updated字段不比较
+	data1 := ConfigData{
+		Data: "123",
+	}
+	this.ConfigAo.SetStruct("test1", data1)
+	this.AssertEqual(this.ConfigAo.GetStruct("test1"), data1)
+
+	data2 := ConfigData{
+		Data:       "123",
+		CreateTime: time.Now().AddDate(0, -1, 0),
+		ModifyTime: time.Now().AddDate(0, -1, 0),
+	}
+	this.AssertEqual(this.ConfigAo.GetStruct("test1"), data2)
+	this.AssertEqual(data1, data2)
+
+	//struct中的非created,updated字段会比较
+	data3 := ConfigData{
+		Data: "789",
+	}
+	this.AssertEqual(this.ConfigAo.GetStruct("test1"), data3)
 }
 
 func init() {

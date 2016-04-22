@@ -13,13 +13,14 @@ import (
 )
 
 type DatabaseManagerConfig struct {
-	Driver   string
-	Host     string
-	Port     int
-	User     string
-	Passowrd string
-	Database string
-	Debug    bool
+	Driver        string
+	Host          string
+	Port          int
+	User          string
+	Passowrd      string
+	Database      string
+	Debug         bool
+	MaxConnection int
 }
 
 type DatabaseManager struct {
@@ -188,7 +189,10 @@ func newDatabaseManager(config DatabaseManagerConfig) (*DatabaseManager, error) 
 	tempDb.SetTableMapper(&tableMapper{})
 	tempDb.SetColumnMapper(&columnMapper{})
 	if config.Debug {
-		tempDb.ShowSQL = true
+		tempDb.ShowSQL(true)
+	}
+	if config.MaxConnection >= 0 {
+		tempDb.SetMaxOpenConns(config.MaxConnection)
 	}
 	tempDb.Ping()
 	return &DatabaseManager{
@@ -209,6 +213,7 @@ func newDatabaseManagerFromConfig(configName string) (*DatabaseManager, error) {
 	dbuser := beego.AppConfig.String(configName + "user")
 	dbpassword := beego.AppConfig.String(configName + "password")
 	dbdatabase := beego.AppConfig.String(configName + "database")
+	dbmaxconnection := beego.AppConfig.String(configName + "maxconnection")
 	dbdebug := beego.AppConfig.String(configName + "debug")
 
 	config := DatabaseManagerConfig{}
@@ -219,6 +224,7 @@ func newDatabaseManagerFromConfig(configName string) (*DatabaseManager, error) {
 	config.Passowrd = dbpassword
 	config.Database = dbdatabase
 	config.Debug, _ = strconv.ParseBool(dbdebug)
+	config.MaxConnection, _ = strconv.Atoi(dbmaxconnection)
 
 	return NewDatabaseManager(config)
 }
