@@ -191,7 +191,7 @@ func newDatabaseManager(config DatabaseManagerConfig) (*DatabaseManager, error) 
 	if config.Debug {
 		tempDb.ShowSQL(true)
 	}
-	if config.MaxConnection >= 0 {
+	if config.MaxConnection > 0 {
 		tempDb.SetMaxOpenConns(config.MaxConnection)
 	}
 	tempDb.Ping()
