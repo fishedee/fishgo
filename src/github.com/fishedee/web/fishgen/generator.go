@@ -164,7 +164,9 @@ func generateSingleFileImport(data []ParserInfo, source string) (string, error) 
 	result := map[string]ImportInfo{}
 	//遍历需要的命名导入
 	for _, singleUseType := range sourceParserInfo.useType {
-		if singleUseType == "string" || singleUseType == "int" ||
+		if singleUseType == "string" ||
+			singleUseType == "int" || singleUseType == "int8" || singleUseType == "int16" || singleUseType == "int32" || singleUseType == "int64" ||
+			singleUseType == "float" || singleUseType == "float32" || singleUseType == "float64" ||
 			singleUseType == "byte" || singleUseType == "bool" ||
 			singleUseType == "error" {
 			continue
@@ -233,7 +235,7 @@ func generateSingleTestFileContent(data []ParserInfo) (string, error) {
 func generateSingleFileFormat(filename string, data string) (string, error) {
 	result, err := format.Source([]byte(data))
 	if err != nil {
-		return "", err
+		return "", errors.New(err.Error() + "," + data)
 	}
 	return string(result), nil
 }
@@ -309,7 +311,7 @@ func Generator(data map[string][]os.FileInfo) error {
 		}
 		err := generateSingleFile(singleKey, singleResult)
 		if err != nil {
-			return err
+			return errors.New(singleKey + ":" + err.Error())
 		}
 	}
 	return nil

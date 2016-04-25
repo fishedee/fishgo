@@ -72,7 +72,8 @@ func getFieldType(fieldType ast.Expr, useType map[string]bool) string {
 	}
 	_, ok = fieldType.(*ast.InterfaceType)
 	if ok {
-		return "!nosupport interface type!"
+		//FIXME only support base interface type
+		return "interface{}"
 	}
 	panic(fmt.Sprintf("%#v unknown fieldType ", fieldType))
 }
