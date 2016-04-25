@@ -100,10 +100,9 @@ func NewQueueManagerWithLog(log *LogManager, queue *QueueManager) *QueueManager 
 	if queue == nil {
 		return nil
 	} else {
-		return &QueueManager{
-			store: queue.store,
-			Log:   log,
-		}
+		newQueueManager := *queue
+		newQueueManager.Log = log
+		return &newQueueManager
 	}
 }
 
