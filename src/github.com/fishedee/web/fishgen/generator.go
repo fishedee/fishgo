@@ -196,10 +196,10 @@ func generateSingleFileImport(data []ParserInfo, source string) (string, error) 
 		}
 		resultArray = append(
 			resultArray,
-			"import "+singleImportInfo.name+" \""+singleImportInfo.path+"\"",
+			singleImportInfo.name+" \""+singleImportInfo.path+"\"",
 		)
 	}
-	return strings.Join(resultArray, "\n") + "\n", nil
+	return "import (" + strings.Join(resultArray, "\n") + ")\n", nil
 }
 
 func generateSingleFileFunction(data []ParserInfo) (string, error) {
