@@ -53,9 +53,11 @@ func TestCacheBasic(t *testing.T) {
 		manager.Set("key1", "value1", time.Minute)
 		manager.Set("key2", "100", time.Minute)
 		manager.Set("key3", "value3", time.Minute)
+		manager.Set("key4", "", time.Minute)
 		assertCacheEqual(t, getExistData(t, manager, "key1", index), "value1", index)
 		assertCacheEqual(t, getExistData(t, manager, "key2", index), "100", index)
 		assertCacheEqual(t, getExistData(t, manager, "key3", index), "value3", index)
+		assertCacheEqual(t, getExistData(t, manager, "key4", index), "", index)
 
 		//del
 		manager.Del("key3")
