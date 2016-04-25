@@ -6,7 +6,6 @@ import (
 
 type ConfigAoModel struct {
 	BaseModel
-	data       map[string]string
 	dataStruct map[string]ConfigData
 }
 
@@ -17,14 +16,11 @@ type ConfigData struct {
 }
 
 func (this *ConfigAoModel) Set(key string, value string) {
-	if this.data == nil {
-		this.data = map[string]string{}
-	}
-	this.data[key] = value
+	this.Cache.Set(key, value, time.Hour*24)
 }
 
 func (this *ConfigAoModel) Get(key string) string {
-	return this.data[key]
+	return this.Cache.Get(key)
 }
 
 func (this *ConfigAoModel) SetStruct(key string, value ConfigData) {

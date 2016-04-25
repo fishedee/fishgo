@@ -27,6 +27,7 @@ type BeegoValidateBasic struct {
 	Timer    *TimerManager
 	queue    *QueueManager
 	Queue    *QueueManager
+	Cache    *CacheManager
 }
 
 var globalBasic BeegoValidateBasic
@@ -110,6 +111,10 @@ func init() {
 		panic(err)
 	}
 	globalBasic.queue, err = NewQueueManagerFromConfig("fishqueue")
+	if err != nil {
+		panic(err)
+	}
+	globalBasic.Cache, err = NewCacheManagerFromConfig("fishcache")
 	if err != nil {
 		panic(err)
 	}
