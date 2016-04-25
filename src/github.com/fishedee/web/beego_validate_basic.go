@@ -27,6 +27,7 @@ type BeegoValidateBasic struct {
 	Timer    *TimerManager
 	queue    *QueueManager
 	Queue    *QueueManager
+	cache    *CacheManager
 	Cache    *CacheManager
 }
 
@@ -114,7 +115,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	globalBasic.Cache, err = NewCacheManagerFromConfig("fishcache")
+	globalBasic.cache, err = NewCacheManagerFromConfig("fishcache")
 	if err != nil {
 		panic(err)
 	}
@@ -126,5 +127,6 @@ func NewBeegoValidateBasic(ctx *context.Context, t *testing.T) *BeegoValidateBas
 	result.Log = NewLogManagerWithCtxAndMonitor(ctx, result.Monitor, result.logger)
 	result.Timer = NewTimerManagerWithLog(result.Log, result.timer)
 	result.Queue = NewQueueManagerWithLog(result.Log, result.queue)
+	result.Cache = NewCacheManagerWithLog(result.Log, result.cache)
 	return &result
 }

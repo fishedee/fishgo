@@ -18,6 +18,18 @@ func newCacheManagerForTest(t *testing.T, config CacheManagerConfig) *CacheManag
 	return manager
 }
 
+func getExistData(t *testing.T, cache *CacheManager, key string, index int) string {
+	data, isOk := cache.Get(key)
+	assertCacheEqual(t, isOk, true, index)
+	return data
+}
+
+func getNoExistData(t *testing.T, cache *CacheManager, key string, index int) string {
+	data, isOk := cache.Get(key)
+	assertCacheEqual(t, isOk, false, index)
+	return data
+}
+
 func TestCacheBasic(t *testing.T) {
 	testCaseDriver := []*CacheManager{
 		newCacheManagerForTest(t, CacheManagerConfig{
@@ -31,7 +43,6 @@ func TestCacheBasic(t *testing.T) {
 			SavePrefix: "cache:",
 		}),
 	}
-
 	for index, manager := range testCaseDriver {
 		//清空数据
 		manager.Del("key1")
@@ -42,19 +53,19 @@ func TestCacheBasic(t *testing.T) {
 		manager.Set("key1", "value1", time.Minute)
 		manager.Set("key2", "100", time.Minute)
 		manager.Set("key3", "value3", time.Minute)
-		assertCacheEqual(t, manager.Get("key1"), "value1", index)
-		assertCacheEqual(t, manager.Get("key2"), "100", index)
-		assertCacheEqual(t, manager.Get("key3"), "value3", index)
+		assertCacheEqual(t, getExistData(t, manager, "key1", index), "value1", index)
+		assertCacheEqual(t, getExistData(t, manager, "key2", index), "100", index)
+		assertCacheEqual(t, getExistData(t, manager, "key3", index), "value3", index)
 
 		//del
 		manager.Del("key3")
-		assertCacheEqual(t, manager.Get("key1"), "value1", index)
-		assertCacheEqual(t, manager.Get("key2"), "100", index)
-		assertCacheEqual(t, manager.Get("key3"), "", index)
+		assertCacheEqual(t, getExistData(t, manager, "key1", index), "value1", index)
+		assertCacheEqual(t, getExistData(t, manager, "key2", index), "100", index)
+		assertCacheEqual(t, getNoExistData(t, manager, "key3", index), "", index)
 
 		//timeout expire
 		manager.Set("key2", "101", time.Second)
 		time.Sleep(time.Second * 3)
-		assertCacheEqual(t, manager.Get("key2"), "", index)
+		assertCacheEqual(t, getNoExistData(t, manager, "key2", index), "", index)
 	}
 }

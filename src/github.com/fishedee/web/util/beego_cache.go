@@ -9,6 +9,7 @@ import (
 	. "github.com/fishedee/language"
 	. "github.com/fishedee/util"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -22,6 +23,7 @@ type CacheManagerConfig struct {
 type CacheManager struct {
 	store      cache.Cache
 	saveprefix string
+	Log        *LogManager
 }
 
 var newCacheManagerMemory *MemoryFunc
@@ -125,18 +127,40 @@ func NewCacheManagerFromConfig(configName string) (*CacheManager, error) {
 	return result.(*CacheManager), err
 }
 
-func (this *CacheManager) Get(key string) string {
+func NewCacheManagerWithLog(log *LogManager, cache *CacheManager) *CacheManager {
+	if cache == nil {
+		return nil
+	} else {
+		newCache := *cache
+		newCache.Log = log
+		return &newCache
+	}
+}
+
+func (this *CacheManager) Get(key string) (string, bool) {
 	result := this.store.Get(this.saveprefix + key)
 	if result == nil {
-		return ""
+		return "", false
 	}
-	return string(result.([]byte))
+	return string(result.([]byte)), true
 }
 
-func (this *CacheManager) Set(key string, value string, timeout time.Duration) error {
-	return this.store.Put(this.saveprefix+key, []byte(value), timeout)
+func (this *CacheManager) Set(key string, value string, timeout time.Duration) {
+	defer CatchCrash(func(exception Exception) {
+		this.Log.Critical("Cache Crash Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
+	})
+	err := this.store.Put(this.saveprefix+key, []byte(value), timeout)
+	if err != nil {
+		panic(err)
+	}
 }
 
-func (this *CacheManager) Del(key string) error {
-	return this.store.Delete(this.saveprefix + key)
+func (this *CacheManager) Del(key string) {
+	defer CatchCrash(func(exception Exception) {
+		this.Log.Critical("Cache Crash Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
+	})
+	err := this.store.Delete(this.saveprefix + key)
+	if err != nil && strings.Index(err.Error(), "not exist") == -1 {
+		panic(err)
+	}
 }

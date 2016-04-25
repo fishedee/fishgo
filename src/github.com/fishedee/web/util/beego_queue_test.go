@@ -70,11 +70,15 @@ func TestQueueBasic(t *testing.T) {
 
 	testCaseDriver := []*QueueManager{
 		newQueueManagerForTest(t, QueueManagerConfig{
+			BeegoQueueStoreConfig: BeegoQueueStoreConfig{
+				SavePrefix: "queue:",
+			},
 			Driver: "memory",
 		}),
 		newQueueManagerForTest(t, QueueManagerConfig{
 			BeegoQueueStoreConfig: BeegoQueueStoreConfig{
-				SavePath: "127.0.0.1:6379,100,13420693396",
+				SavePath:   "127.0.0.1:6379,100,13420693396",
+				SavePrefix: "queue:",
 			},
 			Driver: "redis",
 		}),
