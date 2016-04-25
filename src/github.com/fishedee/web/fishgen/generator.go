@@ -54,16 +54,24 @@ func generateSingleReturn(fun FunctionInfo) string {
 	}
 }
 
-func generateSingleFunction(fun FunctionInfo) string {
+func generateSingleFunction(fun FunctionInfo) (string, error) {
 	if len(fun.receiver) == 0 {
-		return ""
+		return "", nil
 	}
 	receiverName := fun.receiver[0].tag
 	if strings.HasSuffix(receiverName, "Model") == false {
-		return ""
+		return "", nil
 	}
 	if fun.name[0] < 'A' || fun.name[0] > 'Z' {
-		return ""
+		return "", nil
+	}
+	for _, singleParam := range fun.params {
+		if strings.Index(singleParam.tag, "interface{") != -1 {
+			return "", errors.New("invalid has interface type![" + singleParam.tag + "]")
+		}
+		if strings.Index(singleParam.tag, "func(") != -1 {
+			return "", errors.New("invalid has function type![" + singleParam.tag + "]")
+		}
 	}
 	return "func (" + generateSingleField(fun.receiver) + ")" +
 		fun.name + "_WithError" +
@@ -73,7 +81,7 @@ func generateSingleFunction(fun FunctionInfo) string {
 		"_fishgenErr = exception\n" +
 		"})\n" +
 		generateSingleReturn(fun) +
-		"}\n"
+		"}\n", nil
 
 }
 
@@ -194,20 +202,27 @@ func generateSingleFileImport(data []ParserInfo, source string) (string, error) 
 	return strings.Join(resultArray, "\n") + "\n", nil
 }
 
-func generateSingleFileFunction(data []ParserInfo) string {
+func generateSingleFileFunction(data []ParserInfo) (string, error) {
 	var result []string
 	for _, singleParserInfo := range data {
 		for _, singleFun := range singleParserInfo.functions {
-			result = append(result, generateSingleFunction(singleFun))
+			singleFunStr, err := generateSingleFunction(singleFun)
+			if err != nil {
+				return "", errors.New(singleFun.name + ":" + err.Error())
+			}
+			result = append(result, singleFunStr)
 		}
 	}
-	return strings.Join(result, "\n")
+	return strings.Join(result, "\n"), nil
 }
 
 func generateSingleFileContent(data []ParserInfo) (string, error) {
 	packageInfo := "package " + data[0].packname + "\n"
 
-	contentInfo := generateSingleFileFunction(data)
+	contentInfo, err := generateSingleFileFunction(data)
+	if err != nil {
+		return "", err
+	}
 
 	importInfo, err := generateSingleFileImport(data, packageInfo+contentInfo)
 	if err != nil {

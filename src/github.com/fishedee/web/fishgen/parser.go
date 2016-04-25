@@ -66,16 +66,38 @@ func getFieldType(fieldType ast.Expr, useType map[string]bool) string {
 	if ok {
 		return "..." + getFieldType(ellipse.Elt, useType)
 	}
-	_, ok = fieldType.(*ast.FuncType)
+	funcType, ok := fieldType.(*ast.FuncType)
 	if ok {
-		return "!nosupport func type!"
+		data := ""
+		if funcType.Func != token.NoPos {
+			data += "func"
+		}
+		data += "(" + getFieldListTypeString(funcType.Params, useType) + ")"
+		data += "(" + getFieldListTypeString(funcType.Results, useType) + ")"
+		return data
 	}
-	_, ok = fieldType.(*ast.InterfaceType)
+	interfaceType, ok := fieldType.(*ast.InterfaceType)
 	if ok {
-		//FIXME only support base interface type
-		return "interface{}"
+		data := "interface{"
+		for _, singleMethod := range interfaceType.Methods.List {
+			fieldListInner := []*ast.Field{singleMethod}
+			fieldList := &ast.FieldList{List: fieldListInner}
+
+			data += "\n" + getFieldListTypeString(fieldList, useType)
+		}
+		data += "}"
+		return data
 	}
 	panic(fmt.Sprintf("%#v unknown fieldType ", fieldType))
+}
+
+func getFieldListTypeString(fieldList *ast.FieldList, useType map[string]bool) string {
+	var result []string
+	data := getFieldListType(fieldList, useType)
+	for _, singleData := range data {
+		result = append(result, singleData.name+" "+singleData.tag)
+	}
+	return strings.Join(result, ",")
 }
 
 func getFieldListType(fieldList *ast.FieldList, useType map[string]bool) []FieldInfo {
