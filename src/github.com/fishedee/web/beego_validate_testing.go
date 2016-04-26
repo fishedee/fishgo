@@ -6,6 +6,7 @@ import (
 	_ "github.com/a"
 	"github.com/astaxie/beego/context"
 	. "github.com/fishedee/language"
+	// . "github.com/fishedee/util"
 	. "github.com/fishedee/web/util"
 	"math/rand"
 	"net/http"
@@ -111,15 +112,15 @@ func (this *BeegoValidateTest) Benchmark(number int, concurrency int, handler fu
 }
 
 func (this *BeegoValidateTest) AssertEqual(left interface{}, right interface{}, testCase ...interface{}) {
-	isEqual := DeepEqual(left, right)
+	errorString, isEqual := DeepEqual(left, right)
 	if isEqual {
 		return
 	}
 	traceInfo := this.getTraceLineNumber(1)
 	if len(testCase) == 0 {
-		this.t.Errorf("%v: assertEqual Fail! %v != %v", traceInfo, left, right)
+		this.t.Errorf("%v: assertEqual Fail! %v != %v,%v", traceInfo, left, right, errorString)
 	} else {
-		this.t.Errorf("%v:%v: assertEqual Fail! %v != %v", traceInfo, testCase[0], left, right)
+		this.t.Errorf("%v:%v: assertEqual Fail! %v != %v,%v", traceInfo, testCase[0], left, right, errorString)
 	}
 }
 

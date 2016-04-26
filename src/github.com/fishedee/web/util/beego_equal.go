@@ -1,6 +1,8 @@
 package util
 
 import (
+	"fmt"
+	. "github.com/fishedee/util"
 	"reflect"
 	"strings"
 	"unsafe"
@@ -16,10 +18,38 @@ type visit struct {
 	typ reflect.Type
 }
 
+func checkImageEqual(left string, right string) string {
+	var err error
+	var leftData []byte
+	var rightData []byte
+	if left == right {
+		return ""
+	}
+	errorString := ""
+	err = DefaultAjaxPool.Get(&Ajax{
+		Url:          left,
+		ResponseData: &leftData,
+	})
+	if err != nil && errorString == "" {
+		errorString = fmt.Sprintf("Get Image %v Error %v", left, err.Error())
+	}
+	err = DefaultAjaxPool.Get(&Ajax{
+		Url:          right,
+		ResponseData: &rightData,
+	})
+	if err != nil && errorString == "" {
+		errorString = fmt.Sprintf("Get Image %v Error %v", right, err.Error())
+	}
+	if reflect.DeepEqual(leftData, rightData) == false && errorString == "" {
+		errorString = fmt.Sprintf("%v Image != %v Image", left, right)
+	}
+	return errorString
+}
+
 // Tests for deep equality using reflected types. The map argument tracks
 // comparisons that have already been seen, which allows short circuiting on
 // recursive types.
-func deepValueEqual(v1, v2 reflect.Value, visited map[visit]bool, depth int) bool {
+func deepValueEqual(v1, v2 reflect.Value, visited map[visit]bool, depth int, errorString *string) bool {
 	if !v1.IsValid() || !v2.IsValid() {
 		return v1.IsValid() == v2.IsValid()
 	}
@@ -59,7 +89,7 @@ func deepValueEqual(v1, v2 reflect.Value, visited map[visit]bool, depth int) boo
 	switch v1.Kind() {
 	case reflect.Array:
 		for i := 0; i < v1.Len(); i++ {
-			if !deepValueEqual(v1.Index(i), v2.Index(i), visited, depth+1) {
+			if !deepValueEqual(v1.Index(i), v2.Index(i), visited, depth+1, errorString) {
 				return false
 			}
 		}
@@ -75,7 +105,7 @@ func deepValueEqual(v1, v2 reflect.Value, visited map[visit]bool, depth int) boo
 			return true
 		}
 		for i := 0; i < v1.Len(); i++ {
-			if !deepValueEqual(v1.Index(i), v2.Index(i), visited, depth+1) {
+			if !deepValueEqual(v1.Index(i), v2.Index(i), visited, depth+1, errorString) {
 				return false
 			}
 		}
@@ -84,29 +114,43 @@ func deepValueEqual(v1, v2 reflect.Value, visited map[visit]bool, depth int) boo
 		if v1.IsNil() || v2.IsNil() {
 			return v1.IsNil() == v2.IsNil()
 		}
-		return deepValueEqual(v1.Elem(), v2.Elem(), visited, depth+1)
+		return deepValueEqual(v1.Elem(), v2.Elem(), visited, depth+1, errorString)
 	case reflect.Ptr:
 		if v1.Pointer() == v2.Pointer() {
 			return true
 		}
-		return deepValueEqual(v1.Elem(), v2.Elem(), visited, depth+1)
+		return deepValueEqual(v1.Elem(), v2.Elem(), visited, depth+1, errorString)
 	case reflect.Struct:
 		for i, n := 0, v1.NumField(); i < n; i++ {
 			fieldInfo := v1.Type().Field(i)
+			//xorm 特殊处理
 			xormTag := fieldInfo.Tag.Get("xorm")
 			xormTagInfo := strings.Split(xormTag, " ")
 			isOmit := false
+			isImage := false
 			for _, singleXormTagInfo := range xormTagInfo {
 				if singleXormTagInfo == "created" ||
 					singleXormTagInfo == "updated" {
 					isOmit = true
+					break
+				} else if singleXormTagInfo == "image" {
+					isImage = true
 					break
 				}
 			}
 			if isOmit {
 				continue
 			}
-			if !deepValueEqual(v1.Field(i), v2.Field(i), visited, depth+1) {
+			if isImage {
+				equalResult := checkImageEqual(v1.Field(i).String(), v2.Field(i).String())
+				if equalResult != "" {
+					*errorString = equalResult
+					return false
+				} else {
+					continue
+				}
+			}
+			if !deepValueEqual(v1.Field(i), v2.Field(i), visited, depth+1, errorString) {
 				return false
 			}
 		}
@@ -124,7 +168,7 @@ func deepValueEqual(v1, v2 reflect.Value, visited map[visit]bool, depth int) boo
 		for _, k := range v1.MapKeys() {
 			val1 := v1.MapIndex(k)
 			val2 := v2.MapIndex(k)
-			if !val1.IsValid() || !val2.IsValid() || !deepValueEqual(v1.MapIndex(k), v2.MapIndex(k), visited, depth+1) {
+			if !val1.IsValid() || !val2.IsValid() || !deepValueEqual(v1.MapIndex(k), v2.MapIndex(k), visited, depth+1, errorString) {
 				return false
 			}
 		}
@@ -185,14 +229,16 @@ func deepValueEqual(v1, v2 reflect.Value, visited map[visit]bool, depth int) boo
 // DeepEqual has been defined so that the same short-cut applies
 // to slices and maps: if x and y are the same slice or the same map,
 // they are deeply equal regardless of content.
-func DeepEqual(x, y interface{}) bool {
+func DeepEqual(x, y interface{}) (string, bool) {
 	if x == nil || y == nil {
-		return x == y
+		return "", x == y
 	}
 	v1 := reflect.ValueOf(x)
 	v2 := reflect.ValueOf(y)
 	if v1.Type() != v2.Type() {
-		return false
+		return fmt.Sprintf("%v type != %v type", v1.String(), v2.String()), false
 	}
-	return deepValueEqual(v1, v2, make(map[visit]bool), 0)
+	var errorString string
+	result := deepValueEqual(v1, v2, make(map[visit]bool), 0, &errorString)
+	return errorString, result
 }
