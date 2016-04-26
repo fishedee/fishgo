@@ -19,6 +19,7 @@ import (
 type WxSdk struct {
 	AppId     string
 	AppSecret string
+	Token     string
 }
 
 type WxSdkToken struct {
@@ -36,49 +37,102 @@ type WxSdkServerIp struct {
 }
 
 type WxSdkUserInfo struct {
-	Subscribe     int    `joson:"subscribe"`
-	OpenId        string `joson:"openid"`
-	NickName      string `joson:"nickname"`
-	Sex           int    `joson:"sex"`
-	Language      string `joson:"language"`
-	City          string `joson:"city"`
-	Province      string `joson:"province"`
-	Country       string `joson:"country"`
-	HeadImgUrl    string `joson:"headimgurl"`
-	SubscribeTime int    `joson:"subscribe_time"`
-	Unionid       string `joson:"unionid"`
-	Remark        string `joson:"remark"`
-	GroupId       int    `joson:"groupid"`
+	Subscribe     int    `json:"subscribe"`
+	OpenId        string `json:"openid"`
+	NickName      string `json:"nickname"`
+	Sex           int    `json:"sex"`
+	Language      string `json:"language"`
+	City          string `json:"city"`
+	Province      string `json:"province"`
+	Country       string `json:"country"`
+	HeadImgUrl    string `json:"headimgurl"`
+	SubscribeTime int    `json:"subscribe_time"`
+	Unionid       string `json:"unionid"`
+	Remark        string `json:"remark"`
+	GroupId       int    `json:"groupid"`
 }
 
 type WxSdkUserList struct {
-	Total int `joson:"total"`
-	Count int `joson:"count"`
+	Total int `json:"total"`
+	Count int `json:"count"`
 	Data  struct {
-		OpenId []string `joson:"openid"`
-	} `joson:"data"`
-	NextOpenid string `joson:"next_openid"`
+		OpenId []string `json:"openid"`
+	} `json:"data"`
+	NextOpenid string `json:"next_openid"`
 }
 
-type WxSdkMessage struct {
+type WxSdkReceiveMessage struct {
 	ToUserName   string
 	FromUserName string
-	CreateTime   int64
+	CreateTime   int
 	MsgType      string
-	MsgId        int64
-	Content      string
-	PicUrl       string
-	MediaId      string
-	Format       string
-	Recognition  string
+	MsgId        int
+	//文本消息
+	Content string
+	//图片消息
+	PicUrl  string
+	MediaId string
+	//语音消息
+	Format      string
+	Recognition string
+	//视频消息
 	ThumbMediaId string
-	Location_X   float64
-	Location_Y   float64
-	Scale        int64
-	Label        string
-	Title        string
-	Description  string
-	Url          string
+	//地理位置消息
+	Location_X float64
+	Location_Y float64
+	Scale      int
+	Label      string
+	//链接消息
+	Title       string
+	Description string
+	Url         string
+}
+
+type WxSdkSendImageMessage struct {
+	MediaId string `xml:"MediaId,omitempty"`
+}
+
+type WxSdkSendVoiceMessage struct {
+	MediaId string `xml:"MediaId,omitempty"`
+}
+
+type WxSdkSendVideoMessage struct {
+	MediaId string `xml:"MediaId,omitempty"`
+}
+
+type WxSdkSendMusicMessage struct {
+	Title        string `xml:"Title,omitempty"`
+	Description  string `xml:"Description,omitempty"`
+	MusicUrl     string `xml:"MusicUrl,omitempty"`
+	HQMusicUrl   string `xml:"HQMusicUrl,omitempty"`
+	ThumbMediaId string `xml:"ThumbMediaId,omitempty"`
+}
+
+type WxSdkSendArticleMessage struct {
+	Title       string `xml:"Title,omitempty"`
+	Description string `xml:"Description,omitempty"`
+	PicUrl      string `xml:"PicUrl,omitempty"`
+	Url         string `xml:"Url,omitempty"`
+}
+
+type WxSdkSendMessage struct {
+	ToUserName   string `xml:"ToUserName"`
+	FromUserName string `xml:"FromUserName"`
+	CreateTime   int    `xml:"CreateTime"`
+	MsgType      string `xml:"MsgType"`
+	//文本消息
+	Content string `xml:"Content,omitempty"`
+	//图片消息
+	Image WxSdkSendImageMessage `xml:"Image,omitempty"`
+	//语音消息
+	Voice WxSdkSendVoiceMessage `xml:"Voice,omitempty"`
+	//视频消息
+	Video WxSdkSendVideoMessage `xml:"Video,omitempty"`
+	//视频消息
+	Music WxSdkSendMusicMessage `xml:"Music,omitempty"`
+	//图文消息
+	ArticleCount int                       `xml:"ArticleCount,omitempty"`
+	Articles     []WxSdkSendArticleMessage `xml:"Articles,omitempty"`
 }
 
 type WxSdkOauthToken struct {
@@ -90,15 +144,15 @@ type WxSdkOauthToken struct {
 }
 
 type WxSdkOauthUserInfo struct {
-	OpenId     string `joson:"openid"`
-	NickName   string `joson:"nickname"`
-	Sex        int    `joson:"sex"`
-	Province   string `joson:"province"`
-	City       string `joson:"city"`
-	Country    string `joson:"country"`
-	HeadImgUrl string `joson:"headimgurl"`
-	Privilege  string `joson:"privilege"`
-	Unionid    string `joson:"unionid"`
+	OpenId     string   `json:"openid"`
+	NickName   string   `json:"nickname"`
+	Sex        int      `json:"sex"`
+	Province   string   `json:"province"`
+	City       string   `json:"city"`
+	Country    string   `json:"country"`
+	HeadImgUrl string   `json:"headimgurl"`
+	Privilege  []string `json:"privilege"`
+	Unionid    string   `json:"unionid"`
 }
 
 type WxSdkJsConfig struct {
@@ -182,7 +236,7 @@ func (this *WxSdk) apiJson(method string, url string, query interface{}, data in
 		return err
 	}
 
-	result, err := this.api(url, method, query, data)
+	result, err := this.api(method, url, query, data)
 	if err != nil {
 		return err
 	}
@@ -194,7 +248,7 @@ func (this *WxSdk) apiJson(method string, url string, query interface{}, data in
 }
 
 //基础接口
-func (this *WxSdk) CheckSignature(accessToken string, requestUrl url.URL) error {
+func (this *WxSdk) CheckSignature(requestUrl *url.URL) error {
 	var input struct {
 		Signature string `url:"signature"`
 		Timestamp string `url:"timestamp"`
@@ -205,7 +259,7 @@ func (this *WxSdk) CheckSignature(accessToken string, requestUrl url.URL) error 
 	if err != nil {
 		return err
 	}
-	arrayInfo := []string{accessToken, input.Timestamp, input.Nonce}
+	arrayInfo := []string{this.Token, input.Timestamp, input.Nonce}
 	arrayInfo = ArraySort(arrayInfo).([]string)
 	arrayInfoString := Implode(arrayInfo, "")
 	curSignature := this.sha1(arrayInfoString)
@@ -249,7 +303,7 @@ func (this *WxSdk) DownloadMedia(accessToken, mediaId string) ([]byte, error) {
 }
 
 //用户接口
-func (this *WxSdk) getUserInfo(accessToken, openId string) (WxSdkUserInfo, error) {
+func (this *WxSdk) GetUserInfo(accessToken, openId string) (WxSdkUserInfo, error) {
 	result := WxSdkUserInfo{}
 	err := this.apiJson("GET", "/cgi-bin/user/info", map[string]string{
 		"access_token": accessToken,
@@ -262,7 +316,7 @@ func (this *WxSdk) getUserInfo(accessToken, openId string) (WxSdkUserInfo, error
 	return result, nil
 }
 
-func (this *WxSdk) getUserList(accessToken, next_openid string) (WxSdkUserList, error) {
+func (this *WxSdk) GetUserList(accessToken, next_openid string) (WxSdkUserList, error) {
 	argv := map[string]string{
 		"access_token": accessToken,
 	}
@@ -277,19 +331,45 @@ func (this *WxSdk) getUserList(accessToken, next_openid string) (WxSdkUserList, 
 	return result, nil
 }
 
-//Message接口
-func (this *WxSdk) receiveMessage(data []byte) (WxSdkMessage, error) {
-	var result WxSdkMessage
+//消息接口
+func (this *WxSdk) ReceiveMessage(data []byte) (WxSdkReceiveMessage, error) {
+	var result WxSdkReceiveMessage
 	err := xml.Unmarshal(data, &result)
 	return result, err
 }
 
-func (this *WxSdk) sendMessage(message WxSdkMessage) ([]byte, error) {
-	return xml.Marshal(message)
+func (this *WxSdk) generateXml(data interface{}) string {
+	result := ""
+	if mapData, isOk := data.(map[string]interface{}); isOk {
+		for key, value := range mapData {
+			result += "<" + key + ">"
+			result += this.generateXml(value)
+			result += "</" + key + ">"
+		}
+		return result
+	} else if arrayData, isOk := data.([]interface{}); isOk {
+		for _, singleData := range arrayData {
+			result += "<item>"
+			result += this.generateXml(singleData)
+			result += "</item>"
+		}
+		return result
+	} else if stringData, isOk := data.(string); isOk {
+		return "<![CDATA[" + stringData + "]]>"
+	} else {
+		return fmt.Sprintf("%v", data)
+	}
 }
 
-//Menu接口
-func (this *WxSdk) setMenu(accessToken string, data string) error {
+func (this *WxSdk) SendMessage(message WxSdkSendMessage) ([]byte, error) {
+	data := ArrayToMap(message, "xml")
+	body := this.generateXml(data)
+	result := []byte("<xml>" + body + "</xml>")
+	return result, nil
+}
+
+//菜单接口
+func (this *WxSdk) SetMenu(accessToken string, data string) error {
 	_, err := this.api("POST", "/cgi-bin/menu/create", map[string]string{
 		"access_token": accessToken,
 	}, data)
@@ -299,17 +379,27 @@ func (this *WxSdk) setMenu(accessToken string, data string) error {
 	return nil
 }
 
-func (this *WxSdk) getMenu(accessToken string) (string, error) {
+func (this *WxSdk) GetMenu(accessToken string) (string, error) {
 	data, err := this.api("GET", "/cgi-bin/menu/get", map[string]string{
 		"access_token": accessToken,
 	}, nil)
 	if err != nil {
 		return "", err
 	}
+	var result interface{}
+	err = DecodeJson(data, &result)
+	if err != nil {
+		return "", err
+	}
+	resultJson := result.(map[string]interface{})
+	data, err = EncodeJson(resultJson["menu"])
+	if err != nil {
+		return "", err
+	}
 	return string(data), nil
 }
 
-func (this *WxSdk) delMenu(accessToken string) error {
+func (this *WxSdk) DelMenu(accessToken string) error {
 	_, err := this.api("GET", "/cgi-bin/menu/delete", map[string]string{
 		"access_token": accessToken,
 	}, nil)
@@ -320,7 +410,7 @@ func (this *WxSdk) delMenu(accessToken string) error {
 }
 
 //OAuth接口
-func (this *WxSdk) getLoginUrl(callback string, state string, scope string) (string, error) {
+func (this *WxSdk) GetOauthUrl(callback string, state string, scope string) (string, error) {
 	query := map[string]string{
 		"appid":         this.AppId,
 		"redirect_uri":  callback,
@@ -335,7 +425,7 @@ func (this *WxSdk) getLoginUrl(callback string, state string, scope string) (str
 	return "https://open.weixin.qq.com/connect/oauth2/authorize?" + string(queryStr), nil
 }
 
-func (this *WxSdk) getPcLoginUrl(callback string, state string, scope string) (string, error) {
+func (this *WxSdk) GetPcOauthUrl(callback string, state string, scope string) (string, error) {
 	query := map[string]string{
 		"appid":         this.AppId,
 		"redirect_uri":  callback,
@@ -350,7 +440,7 @@ func (this *WxSdk) getPcLoginUrl(callback string, state string, scope string) (s
 	return "https://open.weixin.qq.com/connect/qrconnect?" + string(queryStr), nil
 }
 
-func (this *WxSdk) getOauhToken(code string) (WxSdkOauthToken, error) {
+func (this *WxSdk) GetOauthToken(code string) (WxSdkOauthToken, error) {
 	result := WxSdkOauthToken{}
 	err := this.apiJson("GET", "/sns/oauth2/access_token", map[string]string{
 		"appid":      this.AppId,
@@ -364,7 +454,7 @@ func (this *WxSdk) getOauhToken(code string) (WxSdkOauthToken, error) {
 	return result, nil
 }
 
-func (this *WxSdk) getOauthUserInfo(accessToken, openid string) (WxSdkOauthUserInfo, error) {
+func (this *WxSdk) GetOauthUserInfo(accessToken, openid string) (WxSdkOauthUserInfo, error) {
 	result := WxSdkOauthUserInfo{}
 	err := this.apiJson("GET", "/sns/userinfo", map[string]string{
 		"access_token": accessToken,
