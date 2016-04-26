@@ -133,3 +133,6 @@
 [submodule "src/github.com/shurcooL/sanitized_anchor_name"]
 	path = src/github.com/shurcooL/sanitized_anchor_name
 	url = git@github.com:shurcooL/sanitized_anchor_name.git
+[submodule "src/golang.org/x/crypto"]
+	path = src/golang.org/x/crypto
+	url = git@github.com:golang/crypto.git
