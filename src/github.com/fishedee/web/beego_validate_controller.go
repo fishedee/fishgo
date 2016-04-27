@@ -1,11 +1,13 @@
 package web
 
 import (
+	"bytes"
 	_ "github.com/a"
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/context"
 	"github.com/fishedee/encoding"
 	"github.com/fishedee/language"
+	"io/ioutil"
 	"mime"
 	"net/http"
 	"reflect"
@@ -196,6 +198,11 @@ func (this *BeegoValidateController) parseInput() {
 	err = encoding.DecodeUrlQuery([]byte(input), &this.inputData)
 	if err != nil {
 		language.Throw(1, err.Error())
+	}
+
+	//重建request的body
+	if len(this.Ctx.Input.RequestBody) != 0 {
+		this.Ctx.Request.Body = ioutil.NopCloser(bytes.NewReader(this.Ctx.Input.RequestBody))
 	}
 }
 
