@@ -24,12 +24,12 @@ func TestBase64(t *testing.T) {
 	}
 
 	for _, singleTestCase := range testCase {
-		result, err := EncodeBase64(singleTestCase.origin)
+		result, err := EncodeBase64([]byte(singleTestCase.origin))
 		assertBase64Equal(t, err, nil)
 		assertBase64Equal(t, result, singleTestCase.target)
 
 		result2, err := DecodeBase64(singleTestCase.target)
 		assertBase64Equal(t, err, nil)
-		assertBase64Equal(t, result2, singleTestCase.origin)
+		assertBase64Equal(t, result2, []byte(singleTestCase.origin))
 	}
 }

@@ -136,3 +136,6 @@
 [submodule "src/golang.org/x/crypto"]
 	path = src/golang.org/x/crypto
 	url = git@github.com:golang/crypto.git
+[submodule "src/github.com/dchest/captcha"]
+	path = src/github.com/dchest/captcha
+	url = git@github.com:dchest/captcha.git
