@@ -467,6 +467,15 @@ func TestQueryJoin(t *testing.T) {
 		Content  string
 	}
 
+	type BaseType struct {
+		ContentId int
+	}
+
+	type ExtendType struct {
+		BaseType
+		Title string
+	}
+
 	type resultType struct {
 		UserName  string
 		Age       int
@@ -501,7 +510,17 @@ func TestQueryJoin(t *testing.T) {
 			},
 			[]userType{},
 		},
+		{
 
+			[]ExtendType{},
+			[]ExtendType{},
+			" left ",
+			"  ContentId  =  ContentId ",
+			func(left ExtendType, right ExtendType) ExtendType {
+				return ExtendType{}
+			},
+			[]ExtendType{},
+		},
 		{
 
 			[]userType{

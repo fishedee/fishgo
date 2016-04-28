@@ -20,7 +20,8 @@ func (this *ConfigAoModel) Set(key string, value string) {
 }
 
 func (this *ConfigAoModel) Get(key string) string {
-	return this.Cache.Get(key)
+	data, _ := this.Cache.Get(key)
+	return data
 }
 
 func (this *ConfigAoModel) SetStruct(key string, value ConfigData) {

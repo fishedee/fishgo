@@ -5,10 +5,13 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 
+	"errors"
 	"github.com/astaxie/beego"
 	. "github.com/fishedee/util"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/go-xorm/core"
 	"github.com/go-xorm/xorm"
 )
 
@@ -28,126 +31,215 @@ type DatabaseManager struct {
 	config DatabaseManagerConfig
 }
 
-func (this *DatabaseManager) UpdateBatch(data interface{}, indexCol string) (int64, error) {
-	tableName := ""
-	updateBatchSqlMap := map[string][]string{}
+type zeroable interface {
+	IsZero() bool
+}
 
-	//判断输入参数类型
-	dataType := reflect.TypeOf(data)
-	if dataType.Kind() != reflect.Slice {
-		panic("update batch should be a slice")
+func (this *DatabaseManager) rValue(bean interface{}) reflect.Value {
+	return reflect.Indirect(reflect.ValueOf(bean))
+}
+
+func (this *DatabaseManager) isZero(k interface{}) bool {
+	switch k.(type) {
+	case int:
+		return k.(int) == 0
+	case int8:
+		return k.(int8) == 0
+	case int16:
+		return k.(int16) == 0
+	case int32:
+		return k.(int32) == 0
+	case int64:
+		return k.(int64) == 0
+	case uint:
+		return k.(uint) == 0
+	case uint8:
+		return k.(uint8) == 0
+	case uint16:
+		return k.(uint16) == 0
+	case uint32:
+		return k.(uint32) == 0
+	case uint64:
+		return k.(uint64) == 0
+	case float32:
+		return k.(float32) == 0
+	case float64:
+		return k.(float64) == 0
+	case bool:
+		return k.(bool) == false
+	case string:
+		return k.(string) == ""
+	case zeroable:
+		return k.(zeroable).IsZero()
 	}
-	dataElemType := dataType.Elem()
-	if dataElemType.Kind() != reflect.Struct {
-		panic("update btach element should be a struct")
+	return false
+}
+
+func (this *DatabaseManager) value2Interface(fieldValue reflect.Value) (interface{}, error) {
+	fieldType := fieldValue.Type()
+	fieldTypeKind := fieldType.Kind()
+	switch fieldTypeKind {
+	case reflect.Bool:
+		return fieldValue.Bool(), nil
+	case reflect.String:
+		return fieldValue.String(), nil
+	case reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int:
+		return fieldValue.Int(), nil
+	case reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint:
+		return fieldValue.Uint(), nil
+	case reflect.Struct:
+		if fieldType == reflect.TypeOf(time.Time{}) {
+			t := fieldValue.Interface().(time.Time)
+			tf := t.Format("2006-01-02 15:04:05")
+			return tf, nil
+		} else {
+			return nil, fmt.Errorf("Unsupported type %v", fieldType)
+		}
+	default:
+		return nil, fmt.Errorf("Unsupported type %v", fieldType)
 	}
-	sf, ok := dataElemType.FieldByName(indexCol)
-	if !ok {
-		panic("dataElemFieldType has not filed " + indexCol)
-	}
-	indexType := ""
-	if sf.Type.Kind() == reflect.Int {
-		indexType = "int"
-	} else if sf.Type.Kind() == reflect.String {
-		indexType = "string"
+}
+
+type tableName interface {
+	TableName() string
+}
+
+func (this *DatabaseManager) autoMapType(v reflect.Value) *core.Table {
+	t := v.Type()
+	table := core.NewEmptyTable()
+	if tb, ok := v.Interface().(tableName); ok {
+		table.Name = tb.TableName()
 	} else {
-		panic("非法类型数据!")
-	}
-
-	//遍历结构体--取出各字段的值
-	dataValue := reflect.ValueOf(data)
-	fmt.Printf("%+v", dataValue)
-	dataLen := dataValue.Len()
-	for i := 0; i != dataLen; i++ {
-		singleDataValue := dataValue.Index(i)
-		fmt.Printf("%+v", singleDataValue.Type())
-		tableInfo := this.TableInfo(singleDataValue.Interface())
-		if tableName == "" {
-			tableName = tableInfo.Name
-		}
-		fmt.Printf("tableInfo:%+v, tableName:%+v", tableInfo, tableName)
-		singleDataValueLen := singleDataValue.NumField()
-		for j := 0; j != singleDataValueLen; j++ {
-			colName := dataElemType.Field(j).Name
-			singleDataField := singleDataValue.Field(j)
-			singleDataFieldType := singleDataField.Kind()
-			colVal := ""
-			if singleDataFieldType == reflect.String {
-				colVal = singleDataField.String()
-			} else if singleDataFieldType == reflect.Int {
-				colVal = strconv.Itoa(int(singleDataField.Int()))
-			} else {
-				panic("结构体中含有非法类型数据！")
-			}
-			fmt.Printf("%+v, %+v", colName, colVal)
-			if strings.ToLower(colName) != strings.ToLower(tableInfo.AutoIncrement) {
-				updateBatchSqlMap[colName] = append(updateBatchSqlMap[colName], colVal)
+		if v.CanAddr() {
+			if tb, ok = v.Addr().Interface().(tableName); ok {
+				table.Name = tb.TableName()
 			}
 		}
+		if table.Name == "" {
+			table.Name = this.TableMapper.Obj2Table(t.Name())
+		}
 	}
-	fmt.Printf("%+v", updateBatchSqlMap)
+	table.Type = t
+	for i := 0; i < t.NumField(); i++ {
+		tag := t.Field(i).Tag
+		ormTagStr := tag.Get("orm")
+		if ormTagStr == "-" || ormTagStr == "<-" {
+			continue
+		}
+		col := &core.Column{FieldName: t.Field(i).Name, Nullable: true, IsPrimaryKey: false,
+			IsAutoIncrement: false, MapType: core.TWOSIDES, Indexes: make(map[string]bool)}
+		col.Name = this.ColumnMapper.Obj2Table(t.Field(i).Name)
+		table.AddColumn(col)
+	}
+	return table
+}
 
-	//拼接sql语句
-	updateBatchSql := " update " + tableName + " set "
-	sum := 0
-	for k, v := range updateBatchSqlMap {
-		if k != indexCol {
-			otherColType := ""
-			sf, ok = dataElemType.FieldByName(k)
-			if !ok {
-				panic("dataElemFieldType has not filed " + k)
-			}
-			if sf.Type.Kind() == reflect.Int {
-				otherColType = "int"
-			} else if sf.Type.Kind() == reflect.String {
-				otherColType = "string"
-			} else {
-				panic("非法类型数据!")
-			}
-			sum++
-			updateBatchSql += " " + k + " = case " + indexCol
-			for n := 0; n < len(v); n++ {
-				//根据数据类型判断是否添加单引号
-				whenSql := ""
-				if indexType == "int" {
-					whenSql = " when " + updateBatchSqlMap[indexCol][n] + " "
-				} else if indexType == "string" {
-					whenSql = " when '" + updateBatchSqlMap[indexCol][n] + "' "
-				} else {
-					panic("非法类型数据!")
+func (this *DatabaseManager) UpdateBatch(rowsSlicePtr interface{}, indexColName string) (int64, error) {
+	sliceValue := reflect.Indirect(reflect.ValueOf(rowsSlicePtr))
+	if sliceValue.Kind() != reflect.Slice {
+		return 0, errors.New("needs a pointer to a slice")
+	}
+	if sliceValue.Len() == 0 {
+		return 0, errors.New("update rows is empty")
+	}
+
+	bean := sliceValue.Index(0).Interface()
+	elementValue := this.rValue(bean)
+	table := this.autoMapType(elementValue)
+	size := sliceValue.Len()
+
+	var rows = make([][]interface{}, size)
+	var indexRow = make([]interface{}, 0)
+	cols := make([]*core.Column, 0)
+	var indexCol *core.Column
+
+	//提取字段
+	for i := 0; i < size; i++ {
+		v := sliceValue.Index(i)
+		vv := reflect.Indirect(v)
+
+		//处理需要的update的列
+		if i == 0 {
+			for _, col := range table.Columns() {
+				ptrFieldValue, err := col.ValueOfV(&vv)
+				if err != nil {
+					return 0, err
 				}
-				thenSql := ""
-				if otherColType == "int" {
-					thenSql = " then " + v[n] + " "
-				} else if otherColType == "string" {
-					thenSql = " then '" + v[n] + "' "
-				} else {
-					panic("非法类型数据!")
+				fieldValue := *ptrFieldValue
+				if this.isZero(fieldValue.Interface()) {
+					continue
 				}
-				updateBatchSql += whenSql + thenSql
+				if col.Name == indexColName {
+					indexCol = col
+				} else {
+					cols = append(cols, col)
+				}
 			}
-			updateBatchSql += " end "
-			if sum < len(updateBatchSqlMap)-1 {
-				updateBatchSql += ", "
+			if indexCol == nil {
+				return 0, errors.New("counld not found index col " + indexColName)
 			}
 		}
-	}
-	updateBatchSql += " where " + indexCol + " in ("
-	for singleKey, singleValue := range updateBatchSqlMap[indexCol] {
-		if indexType == "int" {
-			updateBatchSql += singleValue
-		} else if indexType == "string" {
-			updateBatchSql += " '" + singleValue + "' "
-		}
-		if singleKey < len(updateBatchSqlMap[indexCol])-1 {
-			updateBatchSql += ","
-		}
-	}
-	updateBatchSql += ")"
-	fmt.Printf("%+v", updateBatchSql)
 
+		//处理需要的update的值
+		var singleRow = make([]interface{}, len(cols))
+		for _, col := range cols {
+			ptrFieldValue, err := col.ValueOfV(&vv)
+			if err != nil {
+				return 0, err
+			}
+			fieldValue := *ptrFieldValue
+			arg, err := this.value2Interface(fieldValue)
+			if err != nil {
+				return 0, err
+			}
+			singleRow = append(singleRow, arg)
+		}
+		rows = append(rows, singleRow)
+		ptrFieldValue, err := indexCol.ValueOfV(&vv)
+		if err != nil {
+			return 0, err
+		}
+		fieldValue := *ptrFieldValue
+		arg, err := this.value2Interface(fieldValue)
+		if err != nil {
+			return 0, err
+		}
+		indexRow = append(indexRow, arg)
+	}
+	if len(cols) == 0 {
+		return 0, errors.New("update cols is empty! " + fmt.Sprintf("%v", rowsSlicePtr))
+	}
+
+	//拼接sql
+	var sqlArgs = make([]interface{}, len(cols)*len(rows))
+	var sql = "UPDATE " + table.Name + " SET "
+	for colIndex, col := range cols {
+		if colIndex != 0 {
+			sql += " , "
+		}
+		sql += this.Engine.QuoteStr() + col.Name + this.Engine.QuoteStr()
+		sql += " = CASE "
+		sql += this.Engine.QuoteStr() + indexCol.Name + this.Engine.QuoteStr()
+		for rowIndex, row := range rows {
+			sql += " WHEN ? THEN ? "
+			sqlArgs = append(sqlArgs, row[colIndex])
+			sqlArgs = append(sqlArgs, indexRow[rowIndex])
+		}
+		sql += " END "
+	}
+	sql += " WHERE " + this.Engine.QuoteStr() + indexCol.Name + this.Engine.QuoteStr() + " IN ( "
+	for rowIndex, row := range indexRow {
+		if rowIndex != 0 {
+			sql += " , "
+		}
+		sql += " ? "
+		sqlArgs = append(sqlArgs, row)
+	}
+	sql += " ) "
+
+	fmt.Println(sql)
 	//执行sql
-	res, err := this.Exec(updateBatchSql)
+	res, err := this.Exec(sql, sqlArgs...)
 	if err != nil {
 		return 0, err
 	}

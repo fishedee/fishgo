@@ -35,7 +35,6 @@ type BeegoValidateController struct {
 	beego.Controller
 	*BeegoValidateBasic
 	appController beegoValidateControllerInterface
-	AppModel      interface{}
 	AppTest       *testing.T
 	inputData     interface{}
 }
@@ -101,24 +100,6 @@ func (this *BeegoValidateController) SetAppController(controller beegoValidateCo
 	this.appController = controller
 	this.BeegoValidateBasic = controller.GetBasic()
 	this.Ctx = this.BeegoValidateBasic.ctx
-}
-
-func (this *BeegoValidateController) SetAppModel(model beegoValidateModelInterface) {
-	this.AppModel = model
-}
-
-func (this *BeegoValidateController) GetSubModel() []beegoValidateModelInterface {
-	result := []beegoValidateModelInterface{}
-	modelType := reflect.TypeOf(this.AppModel).Elem()
-	modelValue := reflect.ValueOf(this.AppModel).Elem()
-	modelTypeFields := getSubModuleFromType(modelType)
-	for _, i := range modelTypeFields {
-		result = append(
-			result,
-			modelValue.Field(i).Addr().Interface().(beegoValidateModelInterface),
-		)
-	}
-	return result
 }
 
 func (this *BeegoValidateController) runMethod(method reflect.Value, arguments []reflect.Value) (result []reflect.Value) {
