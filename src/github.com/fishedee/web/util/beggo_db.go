@@ -148,7 +148,7 @@ func (this *DatabaseManager) UpdateBatch(rowsSlicePtr interface{}, indexColName 
 	table := this.autoMapType(elementValue)
 	size := sliceValue.Len()
 
-	var rows = make([][]interface{}, size)
+	var rows = make([][]interface{}, 0)
 	var indexRow = make([]interface{}, 0)
 	cols := make([]*core.Column, 0)
 	var indexCol *core.Column
@@ -181,7 +181,7 @@ func (this *DatabaseManager) UpdateBatch(rowsSlicePtr interface{}, indexColName 
 		}
 
 		//处理需要的update的值
-		var singleRow = make([]interface{}, len(cols))
+		var singleRow = make([]interface{}, 0)
 		for _, col := range cols {
 			ptrFieldValue, err := col.ValueOfV(&vv)
 			if err != nil {
@@ -211,7 +211,7 @@ func (this *DatabaseManager) UpdateBatch(rowsSlicePtr interface{}, indexColName 
 	}
 
 	//拼接sql
-	var sqlArgs = make([]interface{}, len(cols)*len(rows))
+	var sqlArgs = make([]interface{}, 0)
 	var sql = "UPDATE " + table.Name + " SET "
 	for colIndex, col := range cols {
 		if colIndex != 0 {
@@ -222,8 +222,8 @@ func (this *DatabaseManager) UpdateBatch(rowsSlicePtr interface{}, indexColName 
 		sql += this.Engine.QuoteStr() + indexCol.Name + this.Engine.QuoteStr()
 		for rowIndex, row := range rows {
 			sql += " WHEN ? THEN ? "
-			sqlArgs = append(sqlArgs, row[colIndex])
 			sqlArgs = append(sqlArgs, indexRow[rowIndex])
+			sqlArgs = append(sqlArgs, row[colIndex])
 		}
 		sql += " END "
 	}
@@ -237,7 +237,6 @@ func (this *DatabaseManager) UpdateBatch(rowsSlicePtr interface{}, indexColName 
 	}
 	sql += " ) "
 
-	fmt.Println(sql)
 	//执行sql
 	res, err := this.Exec(sql, sqlArgs...)
 	if err != nil {
