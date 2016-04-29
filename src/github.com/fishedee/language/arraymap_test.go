@@ -15,6 +15,7 @@ func AssertEqual(t *testing.T, left interface{}, right interface{}) {
 }
 
 func TestArrayToMapBasic(t *testing.T) {
+	now := time.Now()
 	testCase := []struct {
 		origin interface{}
 		target interface{}
@@ -24,6 +25,7 @@ func TestArrayToMapBasic(t *testing.T) {
 		{1, 1},
 		{1.2, 1.2},
 		{"12", "12"},
+		{now, now.Format("2006-01-02 15:04:05")},
 		{[]int{1, 2, 3}, []interface{}{1, 2, 3}},
 		{map[string]string{
 			"1": "2",
@@ -53,13 +55,14 @@ func TestArrayToMapStruct(t *testing.T) {
 		target interface{}
 	}{
 		{struct {
-			First  string
-			Second string
-			Third  string `json:"Third"`
-			Forth  string `json:"Forth,omitempty"`
-			Fifth  string `json:"Fifth,omitempty"`
-			Sixth  string `json:"-"`
-		}{"1", "2", "3", "4", "", "6"}, map[string]interface{}{
+			First   string
+			Second  string
+			Third   string    `json:"Third"`
+			Forth   string    `json:"Forth,omitempty"`
+			Fifth   string    `json:"Fifth,omitempty"`
+			Sixth   string    `json:"-"`
+			Seventh time.Time `json:"seventh,omitempty"`
+		}{"1", "2", "3", "4", "", "6", time.Time{}}, map[string]interface{}{
 			"first":  "1",
 			"second": "2",
 			"Third":  "3",

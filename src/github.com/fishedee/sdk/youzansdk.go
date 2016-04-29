@@ -1,12 +1,13 @@
 package sdk
 
 import (
+	"errors"
 	"fmt"
 	. "github.com/fishedee/crypto"
 	. "github.com/fishedee/encoding"
 	. "github.com/fishedee/language"
 	. "github.com/fishedee/util"
-	"reflect"
+	"net/url"
 	"time"
 )
 
@@ -15,9 +16,36 @@ type YouzanSdk struct {
 	AppSecret string
 }
 
+type YouzanSdkOauthUserInfo struct {
+	AppId     string    `url:"app_id"`
+	Timestamp time.Time `url:"timestamp"`
+	Custom    string    `url:"custom"`
+	Subscribe int       `url:"subscribe"`
+	FansId    int       `url:"fans_id"`
+	OpenId    string    `url:"open_id"`
+	NickName  string    `url:"nickname"`
+	Sex       string    `url:"sex"`
+	Country   string    `url:"country"`
+	Province  string    `url:"province"`
+	City      string    `url:"city"`
+	Avatar    string    `url:"avatar"`
+	Sign      string    `url:"sign"`
+}
+
 type YouzanSdkError struct {
 	Code    int    `json:"code"`
 	Message string `json:"msg"`
+}
+
+type YouzanSdkTradeRequest struct {
+	Tid              string `url:"tid"`
+	SubTradePageSize string `url:"sub_trade_page_size,omitempty"`
+	SubTradePageNo   string `url:"sub_trade_page_no,omitempty"`
+	Fields           string `url:"fields,omitempty"`
+}
+
+type YouzanSdkTradeResponse struct {
+	Trade YouzanSdkTradeDetail `json:"trade"`
 }
 
 type YouzanSdkTradeSoldRequest struct {
@@ -182,7 +210,11 @@ func (this *YouzanSdkError) Error() string {
 	return fmt.Sprintf("错误码为：%v，错误描述为：%v", this.Code, this.Message)
 }
 
-func (this *YouzanSdk) getSign(data map[string]interface{}) string {
+func (this *YouzanSdk) getNowTime() string {
+	return time.Now().Format("2006-01-02 15:04:05")
+}
+
+func (this *YouzanSdk) getSign(data map[string]interface{}) (string, error) {
 	dataKeysInterface, _ := ArrayKeyAndValue(data)
 	dataKeys := dataKeysInterface.([]string)
 	dataKeys = ArraySort(dataKeys).([]string)
@@ -192,44 +224,61 @@ func (this *YouzanSdk) getSign(data map[string]interface{}) string {
 		if singleDataKey == "sign" {
 			continue
 		} else {
-			result += fmt.Sprintf("%v%v", singleDataKey, data[singleDataKey])
+			singleDataValue := fmt.Sprintf("%v", data[singleDataKey])
+			result += singleDataKey + singleDataValue
 		}
 	}
-	result = this.AppSecret + result
-	return CryptoMd5([]byte(result))
+	result = this.AppSecret + result + this.AppSecret
+	return CryptoMd5([]byte(result)), nil
 }
 
-func (this *YouzanSdk) getMethodSign(method string, data map[string]interface{}) string {
-	var data2 map[string]interface{}
-	reflect.Copy(reflect.ValueOf(data2), reflect.ValueOf(data))
-	data2["app_id"] = this.AppId
-	data2["method"] = method
-	data2["timestamp"] = time.Now().Format("2006-01-02 15:04:05")
-	data2["format"] = "json"
-	data2["v"] = "1.0"
-	data2["sign_method"] = "md5"
-
-	return this.getSign(data2)
+func (this *YouzanSdk) getMethodSign(method string, data map[string]interface{}) (map[string]interface{}, error) {
+	data["app_id"] = this.AppId
+	data["method"] = method
+	data["timestamp"] = this.getNowTime()
+	data["format"] = "json"
+	data["v"] = "1.0"
+	data["sign_method"] = "md5"
+	sign, err := this.getSign(data)
+	if err != nil {
+		return nil, err
+	}
+	data["sign"] = sign
+	return data, nil
 }
 
 func (this *YouzanSdk) api(method string, data interface{}, responseData interface{}) error {
+	//调整输入参数
+	queryParamsInterface := ArrayToMap(data, "url")
+	queryParams := queryParamsInterface.(map[string]interface{})
+	queryParams, err := this.getMethodSign(method, queryParams)
+	if err != nil {
+		return err
+	}
+
+	//请求
 	var dataByte []byte
-	err := DefaultAjaxPool.Get(&Ajax{
+	queryBytes, err := EncodeUrlQuery(queryParams)
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(queryBytes))
+	err = DefaultAjaxPool.Get(&Ajax{
 		Url:          "https://open.koudaitong.com/api/entry",
-		Data:         data,
-		DataType:     "url",
+		Data:         queryBytes,
 		ResponseData: &dataByte,
 	})
 	if err != nil {
 		return err
 	}
+	fmt.Println(string(dataByte))
 
+	//分析输出参数
 	var responseMap map[string]interface{}
 	err = DecodeJson(dataByte, &responseMap)
 	if err != nil {
 		return err
 	}
-
 	if errorData, isErr := responseMap["error_response"]; isErr {
 		var youzanErr YouzanSdkError
 		err := MapToArray(errorData, &youzanErr, "json")
@@ -248,11 +297,72 @@ func (this *YouzanSdk) api(method string, data interface{}, responseData interfa
 }
 
 //交易接口
+func (this *YouzanSdk) GetTrade(input YouzanSdkTradeRequest) (YouzanSdkTradeResponse, error) {
+	var result YouzanSdkTradeResponse
+	err := this.api("kdt.trade.get", input, &result)
+	if err != nil {
+		return YouzanSdkTradeResponse{}, err
+	}
+	return result, nil
+}
+
 func (this *YouzanSdk) GetTradeSold(input YouzanSdkTradeSoldRequest) (YouzanSdkTradeSoldResponse, error) {
 	var result YouzanSdkTradeSoldResponse
 	err := this.api("kdt.trades.sold.get", input, &result)
 	if err != nil {
-		return YouzanSdkTradeSoldResponse{}, nil
+		return YouzanSdkTradeSoldResponse{}, err
+	}
+	return result, nil
+}
+
+//授权接口
+func (this *YouzanSdk) GetOauthUrl(redirectUrl string, scope string, state string) (string, error) {
+	inputData := map[string]interface{}{
+		"app_id":       this.AppId,
+		"redirect_url": redirectUrl,
+		"scope":        scope,
+		"timestamp":    this.getNowTime(),
+		"custom":       state,
+	}
+	sign, err := this.getSign(inputData)
+	if err != nil {
+		return "", err
+	}
+	inputData["sign"] = sign
+
+	inputDataStr, err := EncodeUrlQuery(inputData)
+	if err != nil {
+		return "", err
+	}
+	return "http://wap.koudaitong.com/v2/open/weixin/auth?" + string(inputDataStr), nil
+}
+
+func (this *YouzanSdk) GetOauthUserInfo(requestUrl *url.URL) (YouzanSdkOauthUserInfo, error) {
+	//获取输入
+	urlQuery := requestUrl.RawQuery
+	var inputRequest map[string]interface{}
+	err := DecodeUrlQuery([]byte(urlQuery), &inputRequest)
+	if err != nil {
+		return YouzanSdkOauthUserInfo{}, err
+	}
+	if msg, isErr := inputRequest["msg"]; isErr {
+		return YouzanSdkOauthUserInfo{}, &YouzanSdkError{1, fmt.Sprintf("%v", msg)}
+	}
+
+	//验证签名
+	sign, err := this.getSign(inputRequest)
+	if err != nil {
+		return YouzanSdkOauthUserInfo{}, err
+	}
+	if inputRequest["sign"] != sign {
+		return YouzanSdkOauthUserInfo{}, errors.New(fmt.Sprintf("签名失败 %v != %v", inputRequest["sign"], sign))
+	}
+
+	//提取输出
+	var result YouzanSdkOauthUserInfo
+	err = MapToArray(inputRequest, &result, "url")
+	if err != nil {
+		return YouzanSdkOauthUserInfo{}, err
 	}
 	return result, nil
 }
