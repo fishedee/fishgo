@@ -98,10 +98,6 @@ func deepValueEqual(v1, v2 reflect.Value, visited map[visit]bool, depth int, err
 		}
 		return true
 	case reflect.Slice:
-		if v1.IsNil() != v2.IsNil() {
-			*errorString = fmt.Sprintf("%v: %#v != %#v", equalDesc, v1, v2)
-			return false
-		}
 		if v1.Len() != v2.Len() {
 			*errorString = fmt.Sprintf("%v: len(slice)[%v] != len(slice)[%v]", equalDesc, v1.Len(), v2.Len())
 			return false
@@ -158,10 +154,6 @@ func deepValueEqual(v1, v2 reflect.Value, visited map[visit]bool, depth int, err
 		}
 		return true
 	case reflect.Map:
-		if v1.IsNil() != v2.IsNil() {
-			*errorString = fmt.Sprintf("%v: %#v != %#v", equalDesc, v1, v2)
-			return false
-		}
 		if v1.Len() != v2.Len() {
 			*errorString = fmt.Sprintf("%v: len(map)[%v] != len(map)[%v]", equalDesc, v1.Len(), v2.Len())
 			return false

@@ -53,7 +53,8 @@ func (this *ConfigAoTest) TestBasic() {
 }
 
 func (this *ConfigAoTest) TestStruct() {
-	//struct中的created,updated字段不比较
+	this.Log.Debug("This is a log %v", "123")
+	//struct中的time.Time字段不比较
 	data1 := ConfigData{
 		Data: "123",
 	}
@@ -68,11 +69,15 @@ func (this *ConfigAoTest) TestStruct() {
 	this.AssertEqual(this.ConfigAo.GetStruct("test1"), data2)
 	this.AssertEqual(data1, data2)
 
-	//struct中的非created,updated字段会比较
+	//struct中的非time.Time字段会比较
 	data3 := ConfigData{
 		Data: "789",
 	}
 	this.AssertEqual(this.ConfigAo.GetStruct("test1"), data3)
+
+	//struct里面的数组与映射nil与非nil比较
+	this.AssertEqual([]int(nil), []int{})
+	this.AssertEqual(map[string]string(nil), map[string]string{})
 }
 
 func init() {

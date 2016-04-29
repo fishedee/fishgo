@@ -7,25 +7,30 @@ import (
 	"github.com/astaxie/beego/context"
 	"github.com/astaxie/beego/logs"
 	. "github.com/fishedee/util"
+	"github.com/k0kubun/pp"
+	"path"
+	"runtime"
 	"strconv"
 	"strings"
 )
 
 type LogManagerConfig struct {
-	Driver   string `json:driver`
-	Filename string `json:"filename"`
-	Maxlines int    `json:"maxlines"`
-	Maxsize  int    `json:"maxsize"`
-	Daily    bool   `json:"daily"`
-	Maxdays  int    `json:"maxdays"`
-	Rotate   bool   `json:"rotate"`
-	Level    int    `json:"level"`
+	Driver      string `json:driver`
+	Filename    string `json:"filename"`
+	Maxlines    int    `json:"maxlines"`
+	Maxsize     int    `json:"maxsize"`
+	Daily       bool   `json:"daily"`
+	Maxdays     int    `json:"maxdays"`
+	Rotate      bool   `json:"rotate"`
+	Level       int    `json:"level"`
+	PrettyPrint bool   `json:"prettyprint"`
 }
 
 type LogManager struct {
 	*logs.BeeLogger
-	monitor   *MonitorManager
-	logPrefix string
+	monitor     *MonitorManager
+	logPrefix   string
+	prettyPrint bool
 }
 
 var newLogManagerMemory *MemoryFunc
@@ -77,7 +82,8 @@ func newLogManager(config LogManagerConfig) (*LogManager, error) {
 	}
 	beego.BeeLogger = Log
 	return &LogManager{
-		BeeLogger: Log,
+		BeeLogger:   Log,
+		prettyPrint: config.PrettyPrint,
 	}, nil
 }
 
@@ -98,6 +104,7 @@ func newLogManagerFromConfig(configName string) (*LogManager, error) {
 	fishlogmaxday := beego.AppConfig.String(configName + "maxday")
 	fishlogrotate := beego.AppConfig.String(configName + "rotate")
 	fishloglevel := beego.AppConfig.String(configName + "level")
+	fishlogprettyprint := beego.AppConfig.String(configName + "prettyprint")
 
 	logConfig := LogManagerConfig{}
 	logConfig.Driver = fishlogdriver
@@ -108,6 +115,7 @@ func newLogManagerFromConfig(configName string) (*LogManager, error) {
 	logConfig.Maxdays, _ = strconv.Atoi(fishlogmaxday)
 	logConfig.Rotate, _ = strconv.ParseBool(fishlogrotate)
 	logConfig.Level = getLevel(fishloglevel)
+	logConfig.PrettyPrint, _ = strconv.ParseBool(fishlogprettyprint)
 
 	return NewLogManager(logConfig)
 }
@@ -139,59 +147,79 @@ func NewLogManagerWithCtxAndMonitor(ctx *context.Context, monitor *MonitorManage
 		}
 		logPrefix = fmt.Sprintf(" %s %s ", ip, url)
 	}
-	return &LogManager{
-		BeeLogger: beeLogger,
-		monitor:   monitor,
-		logPrefix: logPrefix,
+	newLogManager := *logger
+	newLogManager.BeeLogger = beeLogger
+	newLogManager.logPrefix = logPrefix
+	newLogManager.monitor = monitor
+	return &newLogManager
+}
+
+func (this *LogManager) getTraceLineNumber(traceNumber int) string {
+	_, filename, line, ok := runtime.Caller(traceNumber + 1)
+	if !ok {
+		return "???.go:???"
+	} else {
+		return path.Base(filename) + ":" + strconv.Itoa(line)
 	}
 }
 
+func (this *LogManager) getLogFormat(format string, v []interface{}) string {
+	if this.prettyPrint {
+		format = strings.Replace(format, "%+v", "%v", -1)
+		format = strings.Replace(format, "%#v", "%v", -1)
+		for singleIndex, singleV := range v {
+			v[singleIndex] = pp.Sprint(singleV)
+		}
+	}
+	return fmt.Sprintf(this.logPrefix+this.getTraceLineNumber(2)+" "+format, v...)
+}
+
 func (this *LogManager) Emergency(format string, v ...interface{}) {
-	this.BeeLogger.Emergency(this.logPrefix+format, v...)
+	this.BeeLogger.Emergency(this.getLogFormat(format, v))
 }
 
 func (this *LogManager) Alert(format string, v ...interface{}) {
-	this.BeeLogger.Alert(this.logPrefix+format, v...)
+	this.BeeLogger.Alert(this.getLogFormat(format, v))
 }
 
 func (this *LogManager) Critical(format string, v ...interface{}) {
 	if this.monitor != nil {
 		this.monitor.AscCriticalCount()
 	}
-	this.BeeLogger.Critical(this.logPrefix+format, v...)
+	this.BeeLogger.Critical(this.getLogFormat(format, v))
 }
 
 func (this *LogManager) Error(format string, v ...interface{}) {
 	if this.monitor != nil {
 		this.monitor.AscErrorCount()
 	}
-	this.BeeLogger.Error(this.logPrefix+format, v...)
+	this.BeeLogger.Error(this.getLogFormat(format, v))
 }
 
 func (this *LogManager) Warning(format string, v ...interface{}) {
-	this.BeeLogger.Warning(this.logPrefix+format, v...)
+	this.BeeLogger.Warning(this.getLogFormat(format, v))
 }
 
 func (this *LogManager) Notice(format string, v ...interface{}) {
-	this.BeeLogger.Notice(this.logPrefix+format, v...)
+	this.BeeLogger.Notice(this.getLogFormat(format, v))
 }
 
 func (this *LogManager) Informational(format string, v ...interface{}) {
-	this.BeeLogger.Informational(this.logPrefix+format, v...)
+	this.BeeLogger.Informational(this.getLogFormat(format, v))
 }
 
 func (this *LogManager) Debug(format string, v ...interface{}) {
-	this.BeeLogger.Debug(this.logPrefix+format, v...)
+	this.BeeLogger.Debug(this.getLogFormat(format, v))
 }
 
 func (this *LogManager) Warn(format string, v ...interface{}) {
-	this.BeeLogger.Warn(this.logPrefix+format, v...)
+	this.BeeLogger.Warn(this.getLogFormat(format, v))
 }
 
 func (this *LogManager) Info(format string, v ...interface{}) {
-	this.BeeLogger.Info(this.logPrefix+format, v...)
+	this.BeeLogger.Info(this.getLogFormat(format, v))
 }
 
 func (this *LogManager) Trace(format string, v ...interface{}) {
-	this.BeeLogger.Trace(this.logPrefix+format, v...)
+	this.BeeLogger.Trace(this.getLogFormat(format, v))
 }

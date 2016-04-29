@@ -11,8 +11,8 @@ type ConfigAoModel struct {
 
 type ConfigData struct {
 	Data       string
-	CreateTime time.Time `xorm:"created"`
-	ModifyTime time.Time `xorm:"updated"`
+	CreateTime time.Time
+	ModifyTime time.Time
 }
 
 func (this *ConfigAoModel) Set(key string, value string) {

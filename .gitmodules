@@ -139,3 +139,6 @@
 [submodule "src/github.com/dchest/captcha"]
 	path = src/github.com/dchest/captcha
 	url = git@github.com:dchest/captcha.git
+[submodule "src/github.com/k0kubun/pp"]
+	path = src/github.com/k0kubun/pp
+	url = git@github.com:k0kubun/pp.git
