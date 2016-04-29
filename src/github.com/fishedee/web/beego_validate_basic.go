@@ -48,14 +48,14 @@ func findAppConfPath() string {
 		return ""
 	}
 
-	for i := 0; i != 3; i++ {
+	for workingDir != "/" {
 		workingDir = path.Dir(workingDir)
 		appPath := workingDir + "/conf/app.conf"
 		if checkFileExist(appPath) {
 			return workingDir
 		}
 	}
-	return ""
+	panic("could not found app.conf")
 }
 
 func init() {

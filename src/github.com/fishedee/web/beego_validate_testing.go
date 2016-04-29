@@ -118,16 +118,16 @@ func (this *BeegoValidateTest) AssertEqual(left interface{}, right interface{}, 
 	}
 	traceInfo := this.getTraceLineNumber(1)
 	if len(testCase) == 0 {
-		this.t.Errorf("%v: assertEqual Fail! %v != %v,%v", traceInfo, left, right, errorString)
+		this.t.Errorf("%v: assertEqual Fail! %v", traceInfo, errorString)
 	} else {
-		this.t.Errorf("%v:%v: assertEqual Fail! %v != %v,%v", traceInfo, testCase[0], left, right, errorString)
+		this.t.Errorf("%v:%v: assertEqual Fail! %v", traceInfo, testCase[0], errorString)
 	}
 }
 
 func (this *BeegoValidateTest) AssertError(left Exception, rightCode int, rightMessage string, testCase ...interface{}) {
 	errorString := ""
 	if left.GetCode() != rightCode {
-		errorString = fmt.Sprintf("assertError Code Fail! %v != %v ", left.GetCode(), rightCode)
+		errorString = fmt.Sprintf("assertError Code Fail! %v != %+v ", left.GetCode(), rightCode)
 	}
 	if left.GetMessage() != rightMessage {
 		errorString = fmt.Sprintf("assertError Message Fail! %v != %v ", left.GetMessage(), rightMessage)
