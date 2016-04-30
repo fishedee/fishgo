@@ -256,6 +256,10 @@ func generateSingleFileFormat(filename string, data string) (string, error) {
 }
 
 func generateSingleFileWrite(filename string, data string) error {
+	oldData, err := ioutil.ReadFile(filename)
+	if err == nil && string(oldData) == data {
+		return nil
+	}
 	return ioutil.WriteFile(filename, []byte(data), 0644)
 }
 

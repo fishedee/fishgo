@@ -54,6 +54,7 @@ func (this *ConfigAoTest) TestBasic() {
 
 func (this *ConfigAoTest) TestStruct() {
 	this.Log.Debug("This is a log %v", "123")
+	this.Log.Debug("This is a log %v", ConfigData{})
 	//struct中的time.Time字段不比较
 	data1 := ConfigData{
 		Data: "123",

@@ -6,9 +6,11 @@ import (
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/context"
 	"github.com/astaxie/beego/logs"
+	. "github.com/fishedee/language"
 	. "github.com/fishedee/util"
 	"github.com/k0kubun/pp"
 	"path"
+	"reflect"
 	"runtime"
 	"strconv"
 	"strings"
@@ -168,7 +170,17 @@ func (this *LogManager) getLogFormat(format string, v []interface{}) string {
 		format = strings.Replace(format, "%+v", "%v", -1)
 		format = strings.Replace(format, "%#v", "%v", -1)
 		for singleIndex, singleV := range v {
-			v[singleIndex] = pp.Sprint(singleV)
+			singleVType := reflect.TypeOf(singleV)
+			singleVTypeKind := GetTypeKind(singleVType)
+			if singleVTypeKind == TypeKind.BOOL ||
+				singleVTypeKind == TypeKind.INT ||
+				singleVTypeKind == TypeKind.UINT ||
+				singleVTypeKind == TypeKind.FLOAT ||
+				singleVTypeKind == TypeKind.STRING {
+				v[singleIndex] = singleV
+			} else {
+				v[singleIndex] = pp.Sprint(singleV)
+			}
 		}
 	}
 	return fmt.Sprintf(this.logPrefix+this.getTraceLineNumber(2)+" "+format, v...)
