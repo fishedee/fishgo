@@ -88,6 +88,8 @@ func (this *DatabaseManager) value2Interface(fieldValue reflect.Value) (interfac
 		return fieldValue.Int(), nil
 	case reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint:
 		return fieldValue.Uint(), nil
+	case reflect.Float32, reflect.Float64:
+		return fieldValue.Float(), nil
 	case reflect.Struct:
 		if fieldType == reflect.TypeOf(time.Time{}) {
 			t := fieldValue.Interface().(time.Time)
@@ -152,6 +154,7 @@ func (this *DatabaseManager) UpdateBatch(rowsSlicePtr interface{}, indexColName 
 	var rows = make([][]interface{}, 0)
 	var indexRow = make([]interface{}, 0)
 	cols := make([]*core.Column, 0)
+	updateCols := make([]bool, 0)
 	var indexCol *core.Column
 
 	//提取字段
@@ -162,18 +165,11 @@ func (this *DatabaseManager) UpdateBatch(rowsSlicePtr interface{}, indexColName 
 		//处理需要的update的列
 		if i == 0 {
 			for _, col := range table.Columns() {
-				ptrFieldValue, err := col.ValueOfV(&vv)
-				if err != nil {
-					return 0, err
-				}
-				fieldValue := *ptrFieldValue
-				if this.isZero(fieldValue.Interface()) {
-					continue
-				}
 				if col.Name == indexColName {
 					indexCol = col
 				} else {
 					cols = append(cols, col)
+					updateCols = append(updateCols, false)
 				}
 			}
 			if indexCol == nil {
@@ -183,15 +179,22 @@ func (this *DatabaseManager) UpdateBatch(rowsSlicePtr interface{}, indexColName 
 
 		//处理需要的update的值
 		var singleRow = make([]interface{}, 0)
-		for _, col := range cols {
+		for colIndex, col := range cols {
 			ptrFieldValue, err := col.ValueOfV(&vv)
 			if err != nil {
 				return 0, err
 			}
 			fieldValue := *ptrFieldValue
-			arg, err := this.value2Interface(fieldValue)
-			if err != nil {
-				return 0, err
+			var arg interface{}
+			if this.isZero(fieldValue.Interface()) {
+				arg = nil
+			} else {
+				var err error
+				arg, err = this.value2Interface(fieldValue)
+				if err != nil {
+					return 0, err
+				}
+				updateCols[colIndex] = true
 			}
 			singleRow = append(singleRow, arg)
 		}
@@ -214,19 +217,27 @@ func (this *DatabaseManager) UpdateBatch(rowsSlicePtr interface{}, indexColName 
 	//拼接sql
 	var sqlArgs = make([]interface{}, 0)
 	var sql = "UPDATE " + table.Name + " SET "
+	var isFirstUpdateCol = true
 	for colIndex, col := range cols {
-		if colIndex != 0 {
+		if updateCols[colIndex] == false {
+			continue
+		}
+		if isFirstUpdateCol == false {
 			sql += " , "
 		}
 		sql += this.Engine.QuoteStr() + col.Name + this.Engine.QuoteStr()
 		sql += " = CASE "
 		sql += this.Engine.QuoteStr() + indexCol.Name + this.Engine.QuoteStr()
 		for rowIndex, row := range rows {
+			if row[colIndex] == nil {
+				continue
+			}
 			sql += " WHEN ? THEN ? "
 			sqlArgs = append(sqlArgs, indexRow[rowIndex])
 			sqlArgs = append(sqlArgs, row[colIndex])
 		}
 		sql += " END "
+		isFirstUpdateCol = false
 	}
 	sql += " WHERE " + this.Engine.QuoteStr() + indexCol.Name + this.Engine.QuoteStr() + " IN ( "
 	for rowIndex, row := range indexRow {
