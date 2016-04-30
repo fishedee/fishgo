@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"errors"
+
 	"github.com/astaxie/beego"
 	. "github.com/fishedee/util"
 	_ "github.com/go-sql-driver/mysql"
@@ -122,7 +123,7 @@ func (this *DatabaseManager) autoMapType(v reflect.Value) *core.Table {
 	table.Type = t
 	for i := 0; i < t.NumField(); i++ {
 		tag := t.Field(i).Tag
-		ormTagStr := tag.Get("orm")
+		ormTagStr := tag.Get("xorm")
 		if ormTagStr == "-" || ormTagStr == "<-" {
 			continue
 		}
