@@ -1,14 +1,11 @@
 package web
 
 import (
-	"bytes"
 	"fmt"
 	_ "github.com/a"
 	. "github.com/fishedee/language"
-	// . "github.com/fishedee/util"
 	. "github.com/fishedee/web/util"
 	"math/rand"
-	"net/http"
 	"os"
 	"path"
 	"reflect"

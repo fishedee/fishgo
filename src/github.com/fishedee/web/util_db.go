@@ -1,19 +1,18 @@
 package util
 
 import (
-	"fmt"
-	"reflect"
-	"strconv"
-	"strings"
-	"time"
-
+	"database/sql"
 	"errors"
-
+	"fmt"
 	"github.com/astaxie/beego"
 	. "github.com/fishedee/util"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/go-xorm/core"
 	"github.com/go-xorm/xorm"
+	"reflect"
+	"strconv"
+	"strings"
+	"time"
 )
 
 type DatabaseManagerConfig struct {
@@ -137,6 +136,49 @@ func (this *DatabaseManager) autoMapType(v reflect.Value) *core.Table {
 	return table
 }
 
+type DatabaseSession interface {
+	Close() error
+	Sql(querystring string, args ...interface{}) DatabaseSession
+	NoAutoTime() DatabaseSession
+	NoAutoCondition(no ...bool) DatabaseSession
+	Cascade(trueOrFalse ...bool) DatabaseSession
+	Where(querystring string, args ...interface{}) DatabaseSession
+	Id(id interface{}) DatabaseSession
+	Distinct(columns ...string) DatabaseSession
+	Select(str string) DatabaseSession
+	Cols(columns ...string) DatabaseSession
+	AllCols() DatabaseSession
+	MustCols(columns ...string) DatabaseSession
+	UseBool(columns ...string) DatabaseSession
+	Omit(columns ...string) DatabaseSession
+	Nullable(columns ...string) DatabaseSession
+	In(column string, args ...interface{}) DatabaseSession
+	Incr(column string, arg ...interface{}) DatabaseSession
+	Decr(column string, arg ...interface{}) DatabaseSession
+	SetExpr(column string, expression string) DatabaseSession
+	Table(tableNameOrBean interface{}) DatabaseSession
+	Alias(alias string) DatabaseSession
+	Limit(limit int, start ...int) DatabaseSession
+	Desc(colNames ...string) DatabaseSession
+	Asc(colNames ...string) DatabaseSession
+	OrderBy(order string) DatabaseSession
+	Join(join_operator string, tablename interface{}, condition string, args ...interface{}) DatabaseSession
+	GroupBy(keys string) DatabaseSession
+	Having(conditions string) DatabaseSession
+	Exec(sql string, args ...interface{}) (sql.Result, error)
+	Query(sql string, paramStr ...interface{}) (resultsSlice []map[string][]byte, err error)
+	Insert(beans ...interface{}) (int64, error)
+	InsertOne(bean interface{}) (int64, error)
+	Update(bean interface{}, condiBeans ...interface{}) (int64, error)
+	Delete(bean interface{}) (int64, error)
+	Get(bean interface{}) (bool, error)
+	Find(beans interface{}, condiBeans ...interface{}) error
+	Count(bean interface{}) (int64, error)
+}
+
+func (this *DatabaseManager) Alias(alias string) DatabaseSession {
+	return this.Alias(alias)
+}
 func (this *DatabaseManager) UpdateBatch(rowsSlicePtr interface{}, indexColName string) (int64, error) {
 	sliceValue := reflect.Indirect(reflect.ValueOf(rowsSlicePtr))
 	if sliceValue.Kind() != reflect.Slice {

@@ -11,26 +11,39 @@ import (
 )
 
 type Basic struct {
-	Ctx      *Context
-	Security *Security
-	Session  *Session
-	DB       *Database
-	DB2      *Database
-	DB3      *Database
-	DB4      *Database
-	DB5      *Database
-	logger   *Log
-	Log      *Log
-	Monitor  *Monitor
-	timer    *Timer
-	Timer    *Timer
-	queue    *Queue
-	Queue    *Queue
-	cache    *Cache
-	Cache    *Cache
+	Ctx      Context
+	Config   Config
+	Security Security
+	Session  Session
+	DB       Database
+	DB2      Database
+	DB3      Database
+	DB4      Database
+	DB5      Database
+	Log      Log
+	Monitor  Monitor
+	Timer    Timer
+	Queue    Queue
+	Cache    Cache
 }
 
-var globalBasic Basic
+type basicInner struct {
+	Config   *ConfigManager
+	Security *SecurityManager
+	Session  *SessionManager
+	DB       *DatabaseManager
+	DB2      *DatabaseManager
+	DB3      *DatabaseManager
+	DB4      *DatabaseManager
+	DB5      *DatabaseManager
+	Log      *LogManager
+	Monitor  *MonitorManager
+	Timer    *TimerManager
+	Queue    *QueueManager
+	Cache    *CacheManager
+}
+
+var globalBasic basicInner
 
 func checkFileExist(path string) bool {
 	_, err := os.Stat(path)
@@ -98,7 +111,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	globalBasic.logger, err = NewLogManagerFromConfig("fishlog")
+	globalBasic.Log, err = NewLogManagerFromConfig("fishlog")
 	if err != nil {
 		panic(err)
 	}
@@ -106,26 +119,36 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	globalBasic.timer, err = NewTimerManager()
+	globalBasic.Timer, err = NewTimerManager()
 	if err != nil {
 		panic(err)
 	}
-	globalBasic.queue, err = NewQueueManagerFromConfig("fishqueue")
+	globalBasic.Queue, err = NewQueueManagerFromConfig("fishqueue")
 	if err != nil {
 		panic(err)
 	}
-	globalBasic.cache, err = NewCacheManagerFromConfig("fishcache")
+	globalBasic.Cache, err = NewCacheManagerFromConfig("fishcache")
 	if err != nil {
 		panic(err)
 	}
 }
-func initBasic(ctx *context.Context, t *testing.T) *Basic {
-	result := globalBasic
-	result.ctx = ctx
-	result.t = t
-	result.Log = NewLogManagerWithCtxAndMonitor(ctx, result.Monitor, result.logger)
-	result.Timer = NewTimerManagerWithLog(result.Log, result.timer)
-	result.Queue = NewQueueManagerWithLog(result.Log, result.queue)
-	result.Cache = NewCacheManagerWithLog(result.Log, result.cache)
-	return &result
+func initBasic(request *http.Request, response http.ResponseWriter, t *testing.T) *Basic {
+	return &Basic{
+		Ctx: Context{
+			Request:  request,
+			Response: response,
+			Testing:  t,
+		},
+		Security: globalBasic.Security,
+		DB:       globalBasic.DB,
+		DB2:      globalBasic.DB2,
+		DB3:      globalBasic.DB3,
+		DB4:      globalBasic.DB4,
+		DB5:      globalBasic.DB5,
+		Monitor:  globalBasic.Monitor,
+		Log:      NewLogManagerWithCtxAndMonitor(request, globalBasic.Monitor, globalBasic.Log),
+		Timer:    NewTimerManagerWithLog(globalBasic.Log, globalBasic.Timer),
+		Queue:    NewQueueManagerWithLog(globalBasic.Log, globalBasic.Queue),
+		Cache:    NewCacheManagerWithLog(globalBasic.Log, globalBasic.Cache),
+	}
 }

@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/astaxie/beego"
-	"github.com/astaxie/beego/context"
 	"github.com/astaxie/beego/logs"
 	. "github.com/fishedee/language"
 	. "github.com/fishedee/util"
 	"github.com/k0kubun/pp"
+	"net/http"
 	"path"
 	"reflect"
 	"runtime"
@@ -130,7 +130,7 @@ func NewLogManagerFromConfig(configName string) (*LogManager, error) {
 	return result.(*LogManager), err
 }
 
-func NewLogManagerWithCtxAndMonitor(ctx *context.Context, monitor *MonitorManager, logger *LogManager) *LogManager {
+func NewLogManagerWithCtxAndMonitor(request *http.Request, monitor *MonitorManager, logger *LogManager) *LogManager {
 	var beeLogger *logs.BeeLogger
 	if logger != nil {
 		beeLogger = logger.BeeLogger
@@ -138,12 +138,12 @@ func NewLogManagerWithCtxAndMonitor(ctx *context.Context, monitor *MonitorManage
 		beeLogger = beego.BeeLogger
 	}
 	logPrefix := ""
-	if ctx == nil {
+	if request == nil {
 		logPrefix = " 0.0.0.0 * "
 	} else {
-		ip := ctx.Input.IP()
-		url := ctx.Input.URL()
-		realIP := ctx.Input.Header("X-Real-Ip")
+		ip := request.RemoteAddr
+		url := request.RequestURI
+		realIP := request.Header.Get("X-Real-Ip")
 		if ip == "127.0.0.1" && realIP != "" {
 			ip = realIP
 		}

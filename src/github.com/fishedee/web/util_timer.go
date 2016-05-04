@@ -10,8 +10,6 @@ type TimerManager struct {
 	Log *LogManager
 }
 
-type TimerHandler func()
-
 func NewTimerManager() (*TimerManager, error) {
 	return &TimerManager{}, nil
 }
@@ -26,7 +24,7 @@ func NewTimerManagerWithLog(log *LogManager, manager *TimerManager) *TimerManage
 	}
 }
 
-func (this *TimerManager) startSingleTask(handler TimerHandler) {
+func (this *TimerManager) startSingleTask(handler func()) {
 	defer CatchCrash(func(exception Exception) {
 		this.Log.Critical("TimerTask Crash Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
 	})
@@ -36,7 +34,7 @@ func (this *TimerManager) startSingleTask(handler TimerHandler) {
 	handler()
 }
 
-func (this *TimerManager) Cron(cronspec string, handler TimerHandler) error {
+func (this *TimerManager) Cron(cronspec string, handler func()) error {
 	//使用crontab标准的定时器
 	// (second) (minute) (hour) (day of month) (month) (day of week, optional)
 	// * * * * * *
@@ -52,7 +50,7 @@ func (this *TimerManager) Cron(cronspec string, handler TimerHandler) error {
 	return nil
 }
 
-func (this *TimerManager) Interval(duraction time.Duration, handler TimerHandler) error {
+func (this *TimerManager) Interval(duraction time.Duration, handler func()) error {
 	//带有延后属性的定时器
 	go func() {
 		timeChan := time.After(duraction)
@@ -65,7 +63,7 @@ func (this *TimerManager) Interval(duraction time.Duration, handler TimerHandler
 	return nil
 }
 
-func (this *TimerManager) Tick(duraction time.Duration, handler TimerHandler) error {
+func (this *TimerManager) Tick(duraction time.Duration, handler func()) error {
 	//带有延后属性的定时器
 	go func() {
 		tickChan := time.Tick(duraction)

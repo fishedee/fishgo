@@ -22,7 +22,7 @@ func (this *daemonController) startSingleTask(handler reflect.Value, handlerArgv
 
 func newDaemonModel(targetType reflect.Type, controller *daemonController) reflect.Value {
 	model := reflect.New(targetType.Elem())
-	initModelInner(model.Interface().(beegoValidateModelInterface), controller)
+	initModelInner(model.Interface().(ModelInterface), controller)
 	return model
 }
 
