@@ -7,7 +7,7 @@ import (
 )
 
 type daemonController struct {
-	BeegoValidateController
+	Controller
 }
 
 func (this *daemonController) startSingleTask(handler reflect.Value, handlerArgv []reflect.Value) {
@@ -20,21 +20,16 @@ func (this *daemonController) startSingleTask(handler reflect.Value, handlerArgv
 	handler.Call(handlerArgv)
 }
 
-func newDaemonController() *daemonController {
-	controller := &daemonController{}
-	controller.AppController = controller
-	controller.Prepare()
-	return controller
-}
-
 func newDaemonModel(targetType reflect.Type, controller *daemonController) reflect.Value {
 	model := reflect.New(targetType.Elem())
-	prepareBeegoValidateModelInner(model.Interface().(beegoValidateModelInterface), controller)
+	initModelInner(model.Interface().(beegoValidateModelInterface), controller)
 	return model
 }
 
 func startSingleTask(handler interface{}) {
-	controller := newDaemonController()
+	controller := &daemonController{}
+	controller.InitEmpty(controller, nil)
+
 	handlerType := reflect.TypeOf(handler)
 	handlerValue := reflect.ValueOf(handler)
 	if handlerType.NumIn() == 0 {

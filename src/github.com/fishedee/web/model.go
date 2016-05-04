@@ -2,51 +2,51 @@ package web
 
 import (
 	_ "github.com/a"
-	"github.com/astaxie/beego/context"
 	"reflect"
 	"sync"
 )
 
-var beegoValidateModelType reflect.Type
-var beegoValidateModelInfo struct {
+var modelInfo struct {
 	mutex sync.RWMutex
 	data  map[reflect.Type][][]int
 }
 
 func init() {
-	beegoValidateModelType = reflect.TypeOf(BeegoValidateModel{})
-	beegoValidateModelInfo.data = map[reflect.Type][][]int{}
+	modelInfo.data = map[reflect.Type][][]int{}
 }
 
-type beegoValidateModelInterface interface {
-	SetAppController(controller beegoValidateControllerInterface)
+type ModelInterface interface {
+	SetAppController(controller ControllerInterface)
+	GetBasic() *Basic
 }
 
-type BeegoValidateModel struct {
-	*BeegoValidateBasic
-	AppController interface{}
-	Ctx           *context.Context
+type Model struct {
+	*Basic
+	appController ControllerInterface
 }
 
-func (this *BeegoValidateModel) SetAppController(controller beegoValidateControllerInterface) {
-	this.AppController = controller
-	this.BeegoValidateBasic = controller.GetBasic()
-	this.Ctx = this.BeegoValidateBasic.ctx
+func (this *Model) SetAppController(controller ControllerInterface) {
+	this.appController = controller
+	this.Basic = controller.GetBasic()
+}
+
+func (this *Model) GetBasic() *Basic {
+	return this.Basic
 }
 
 func getSubModuleFromType(target reflect.Type) [][]int {
-	beegoValidateModelInfo.mutex.RLock()
-	result, ok := beegoValidateModelInfo.data[target]
-	beegoValidateModelInfo.mutex.RUnlock()
+	modelInfo.mutex.RLock()
+	result, ok := modelInfo.data[target]
+	modelInfo.mutex.RUnlock()
 
 	if ok {
 		return result
 	}
 	result = getSubModuleFromTypeInner(target)
 
-	beegoValidateModelInfo.mutex.Lock()
-	beegoValidateModelInfo.data[target] = result
-	beegoValidateModelInfo.mutex.Unlock()
+	modelInfo.mutex.Lock()
+	modelInfo.data[target] = result
+	modelInfo.mutex.Unlock()
 	return result
 }
 
@@ -75,22 +75,22 @@ func getSubModuleFromTypeInner(modelType reflect.Type) [][]int {
 }
 
 func isFromModelType(target reflect.Type) bool {
-	var data *beegoValidateModelInterface
+	var data *ModelInterface
 	interfaceType := reflect.TypeOf(data).Elem()
 	targetType := reflect.PtrTo(target)
 	return targetType.Implements(interfaceType)
 }
 
-func prepareBeegoValidateModelInner(model beegoValidateModelInterface, controller beegoValidateControllerInterface) {
+func initModelInner(model ModelInterface, controller ControllerInterface) {
 	modelValue := reflect.ValueOf(model).Elem()
 	modelType := modelValue.Type()
 	modelSubModels := getSubModuleFromType(modelType)
 	model.SetAppController(controller)
 	for _, singleModel := range modelSubModels {
-		target := modelValue.FieldByIndex(singleModel).Addr().Interface().(beegoValidateModelInterface)
+		target := modelValue.FieldByIndex(singleModel).Addr().Interface().(ModelInterface)
 		target.SetAppController(controller)
 	}
 }
-func PrepareBeegoValidateModel(controller beegoValidateControllerInterface) {
-	prepareBeegoValidateModelInner(controller, controller)
+func initModel(controller ControllerInterface) {
+	initModelInner(controller, controller)
 }

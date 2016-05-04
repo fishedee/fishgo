@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	_ "github.com/a"
-	"github.com/astaxie/beego/context"
 	. "github.com/fishedee/language"
 	// . "github.com/fishedee/util"
 	. "github.com/fishedee/web/util"
@@ -21,39 +20,15 @@ import (
 	"time"
 )
 
-type BeegoValidateTestInterface interface {
-	beegoValidateControllerInterface
-	RequestReset()
+type TestInterface interface {
+	ControllerInterface
 }
 
-type BeegoValidateTestResponseWriter struct {
-	header     http.Header
-	headerCode int
-	data       []byte
+type Test struct {
+	Controller
 }
 
-func (this *BeegoValidateTestResponseWriter) Header() http.Header {
-	if this.header == nil {
-		this.header = http.Header{}
-	}
-	return this.header
-}
-
-func (this *BeegoValidateTestResponseWriter) Write(in []byte) (int, error) {
-	this.data = append(this.data, in...)
-	return len(this.data), nil
-}
-
-func (this *BeegoValidateTestResponseWriter) WriteHeader(headerCode int) {
-	this.headerCode = headerCode
-}
-
-type BeegoValidateTest struct {
-	BeegoValidateController
-	testingMethod string
-}
-
-func (this *BeegoValidateTest) getTraceLineNumber(traceNumber int) string {
+func (this *Test) getTraceLineNumber(traceNumber int) string {
 	_, filename, line, ok := runtime.Caller(traceNumber + 1)
 	if !ok {
 		return "???.go:???"
@@ -62,7 +37,7 @@ func (this *BeegoValidateTest) getTraceLineNumber(traceNumber int) string {
 	}
 }
 
-func (this *BeegoValidateTest) Concurrent(number int, concurrency int, handler func()) {
+func (this *Test) Concurrent(number int, concurrency int, handler func()) {
 	if number <= 0 {
 		panic("benchmark numer is invalid")
 	}
@@ -89,7 +64,7 @@ func (this *BeegoValidateTest) Concurrent(number int, concurrency int, handler f
 	wg.Wait()
 }
 
-func (this *BeegoValidateTest) Benchmark(number int, concurrency int, handler func(), testCase ...interface{}) {
+func (this *Test) Benchmark(number int, concurrency int, handler func(), testCase ...interface{}) {
 	beginTime := time.Now().UnixNano()
 	this.Concurrent(number, concurrency, handler)
 	endTime := time.Now().UnixNano()
@@ -100,10 +75,10 @@ func (this *BeegoValidateTest) Benchmark(number int, concurrency int, handler fu
 	if len(testCase) == 0 {
 		testCase = []interface{}{""}
 	}
+	traceInfo := this.getTraceLineNumber(1)
 	fmt.Printf(
-		"%v:%v %v number %v concurrency %v / req, %.2freq / s\n",
-		this.testingMethod,
-		testCase[0],
+		"%v: %v number %v concurrency %v / req, %.2freq / s\n",
+		traceInfo,
 		number,
 		concurrency,
 		time.Duration(singleTime).String(),
@@ -111,7 +86,7 @@ func (this *BeegoValidateTest) Benchmark(number int, concurrency int, handler fu
 	)
 }
 
-func (this *BeegoValidateTest) AssertEqual(left interface{}, right interface{}, testCase ...interface{}) {
+func (this *Test) AssertEqual(left interface{}, right interface{}, testCase ...interface{}) {
 	errorString, isEqual := DeepEqual(left, right)
 	if isEqual {
 		return
@@ -124,7 +99,7 @@ func (this *BeegoValidateTest) AssertEqual(left interface{}, right interface{}, 
 	}
 }
 
-func (this *BeegoValidateTest) AssertError(left Exception, rightCode int, rightMessage string, testCase ...interface{}) {
+func (this *Test) AssertError(left Exception, rightCode int, rightMessage string, testCase ...interface{}) {
 	errorString := ""
 	if left.GetCode() != rightCode {
 		errorString = fmt.Sprintf("assertError Code Fail! %v != %+v ", left.GetCode(), rightCode)
@@ -144,11 +119,11 @@ func (this *BeegoValidateTest) AssertError(left Exception, rightCode int, rightM
 
 }
 
-func (this *BeegoValidateTest) RandomInt() int {
+func (this *Test) RandomInt() int {
 	return rand.Int()
 }
 
-func (this *BeegoValidateTest) RandomString(length int) string {
+func (this *Test) RandomString(length int) string {
 	result := []rune{}
 	for i := 0; i != length; i++ {
 		var single rune
@@ -165,30 +140,21 @@ func (this *BeegoValidateTest) RandomString(length int) string {
 	return string(result)
 }
 
-func (this *BeegoValidateTest) RequestReset() {
-	ctx := context.NewContext()
-	request, err := http.NewRequest("get", "/", bytes.NewReader([]byte("")))
-	if err != nil {
-		panic(err)
-	}
-	ctx.Reset(&BeegoValidateTestResponseWriter{}, request)
-	this.SetAppContextInner(ctx)
-	this.Prepare()
+func (this *Test) RequestReset() {
+	this.InitEmpty(this, this.Ctx.t)
 }
 
-var beegoValidateTestMap map[string][]BeegoValidateTestInterface
-var beegoValidateTestMapInit bool
+var testMap map[string][]BeegoValidateTestInterface
+var testMapInit bool
 
 func init() {
-	beegoValidateTestMap = map[string][]BeegoValidateTestInterface{}
-	beegoValidateTestMapInit = false
+	testMap = map[string][]BeegoValidateTestInterface{}
+	testMapInit = false
 }
 
-func runBeegoValidateSingleTest(t *testing.T, test BeegoValidateTestInterface) {
+func runBeegoValidateSingleTest(t *testing.T, test TestInterface) {
 	//初始化test
-	test.SetAppTestInner(t)
-	test.SetAppControllerInner(test)
-	test.RequestReset()
+	test.InitEmpty(test, t)
 
 	isBenchTest := false
 	for _, singleArgv := range os.Args {
@@ -218,24 +184,24 @@ func runBeegoValidateSingleTest(t *testing.T, test BeegoValidateTestInterface) {
 	}
 }
 
-func RunBeegoValidateTest(t *testing.T, data interface{}) {
+func RunTest(t *testing.T, data interface{}) {
 	//获取package
 	pkgPath := reflect.TypeOf(data).Elem().PkgPath()
 
 	//初始化runtime
-	if beegoValidateTestMapInit == false {
+	if testMapInit == false {
 		runtime.GOMAXPROCS(runtime.NumCPU() * 4)
 		rand.Seed(time.Now().Unix())
-		beegoValidateTestMapInit = true
+		testMapInit = true
 	}
 
 	//遍历测试
-	for _, singleTest := range beegoValidateTestMap[pkgPath] {
+	for _, singleTest := range testMap[pkgPath] {
 		runBeegoValidateSingleTest(t, singleTest)
 	}
 }
 
-func InitBeegoVaildateTest(test BeegoValidateTestInterface) {
+func InitTest(test TestInterface) {
 	pkgPath := reflect.TypeOf(test).Elem().PkgPath()
-	beegoValidateTestMap[pkgPath] = append(beegoValidateTestMap[pkgPath], test)
+	testMap[pkgPath] = append(testMap[pkgPath], test)
 }

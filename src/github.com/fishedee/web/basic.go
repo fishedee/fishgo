@@ -3,35 +3,34 @@ package web
 import (
 	"github.com/a"
 	"github.com/astaxie/beego"
-	"github.com/astaxie/beego/context"
 	. "github.com/fishedee/web/util"
+	"net/http"
 	"os"
 	"path"
 	"testing"
 )
 
-type BeegoValidateBasic struct {
-	ctx      *context.Context
-	t        *testing.T
-	Security *SecurityManager
-	Session  *SessionManager
-	DB       *DatabaseManager
-	DB2      *DatabaseManager
-	DB3      *DatabaseManager
-	DB4      *DatabaseManager
-	DB5      *DatabaseManager
-	logger   *LogManager
-	Log      *LogManager
-	Monitor  *MonitorManager
-	timer    *TimerManager
-	Timer    *TimerManager
-	queue    *QueueManager
-	Queue    *QueueManager
-	cache    *CacheManager
-	Cache    *CacheManager
+type Basic struct {
+	Ctx      *Context
+	Security *Security
+	Session  *Session
+	DB       *Database
+	DB2      *Database
+	DB3      *Database
+	DB4      *Database
+	DB5      *Database
+	logger   *Log
+	Log      *Log
+	Monitor  *Monitor
+	timer    *Timer
+	Timer    *Timer
+	queue    *Queue
+	Queue    *Queue
+	cache    *Cache
+	Cache    *Cache
 }
 
-var globalBasic BeegoValidateBasic
+var globalBasic Basic
 
 func checkFileExist(path string) bool {
 	_, err := os.Stat(path)
@@ -120,7 +119,7 @@ func init() {
 		panic(err)
 	}
 }
-func NewBeegoValidateBasic(ctx *context.Context, t *testing.T) *BeegoValidateBasic {
+func initBasic(ctx *context.Context, t *testing.T) *Basic {
 	result := globalBasic
 	result.ctx = ctx
 	result.t = t
