@@ -1,7 +1,6 @@
 package web
 
 import (
-	_ "github.com/a"
 	"reflect"
 	"sync"
 )

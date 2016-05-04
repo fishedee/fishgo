@@ -2,10 +2,9 @@ package util
 
 import (
 	"encoding/json"
-	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/session"
 	. "github.com/fishedee/util"
-	_ "github.com/fishedee/web/util/beego_session"
+	_ "github.com/fishedee/util_session"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -81,14 +80,14 @@ func NewSessionManager(config SessionManagerConfig) (*SessionManager, error) {
 }
 
 func newSessionManagerFromConfig(configName string) (*SessionManager, error) {
-	sessiondirver := beego.AppConfig.String(configName + "driver")
-	sessionname := beego.AppConfig.String(configName + "name")
-	sessiongclifttime := beego.AppConfig.String(configName + "gclifttime")
-	sessioncookielifetime := beego.AppConfig.String(configName + "cookielifetime")
-	sessionsavepath := beego.AppConfig.String(configName + "savepath")
-	sessionsecure := beego.AppConfig.String(configName + "secure")
-	sessiondomain := beego.AppConfig.String(configName + "domain")
-	sessionlength := beego.AppConfig.String(configName + "length")
+	sessiondirver := globalBasic.Config.String(configName + "driver")
+	sessionname := globalBasic.Config.String(configName + "name")
+	sessiongclifttime := globalBasic.Config.String(configName + "gclifttime")
+	sessioncookielifetime := globalBasic.Config.String(configName + "cookielifetime")
+	sessionsavepath := globalBasic.Config.String(configName + "savepath")
+	sessionsecure := globalBasic.Config.String(configName + "secure")
+	sessiondomain := globalBasic.Config.String(configName + "domain")
+	sessionlength := globalBasic.Config.String(configName + "length")
 
 	sessionlink := SessionManagerConfig{}
 	sessionlink.Driver = sessiondirver

@@ -4,10 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/astaxie/beego"
 	. "github.com/fishedee/language"
 	. "github.com/fishedee/util"
-	. "github.com/fishedee/web/util/beego_queue"
+	. "github.com/fishedee/util_queue"
 	"reflect"
 	"strconv"
 )
@@ -74,10 +73,10 @@ func NewQueueManager(config QueueManagerConfig) (*QueueManager, error) {
 }
 
 func newQueueManagerFromConfig(configName string) (*QueueManager, error) {
-	driver := beego.AppConfig.String(configName + "driver")
-	savepath := beego.AppConfig.String(configName + "savepath")
-	saveprefix := beego.AppConfig.String(configName + "saveprefix")
-	poolsizeStr := beego.AppConfig.String(configName + "poolsize")
+	driver := globalBasic.Config.String(configName + "driver")
+	savepath := globalBasic.Config.String(configName + "savepath")
+	saveprefix := globalBasic.Config.String(configName + "saveprefix")
+	poolsizeStr := globalBasic.Config.String(configName + "poolsize")
 	poolsize, _ := strconv.Atoi(poolsizeStr)
 
 	queueConfig := QueueManagerConfig{}

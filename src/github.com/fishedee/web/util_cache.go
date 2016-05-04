@@ -3,7 +3,6 @@ package util
 import (
 	"encoding/json"
 	"errors"
-	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/cache"
 	_ "github.com/astaxie/beego/cache/redis"
 	. "github.com/fishedee/language"
@@ -105,10 +104,10 @@ func NewCacheManager(config CacheManagerConfig) (*CacheManager, error) {
 }
 
 func newCacheManagerFromConfig(configName string) (*CacheManager, error) {
-	driver := beego.AppConfig.String(configName + "driver")
-	savepath := beego.AppConfig.String(configName + "savepath")
-	saveprefix := beego.AppConfig.String(configName + "saveprefix")
-	gcintervalStr := beego.AppConfig.String(configName + "gcinterval")
+	driver := globalBasic.Config.String(configName + "driver")
+	savepath := globalBasic.Config.String(configName + "savepath")
+	saveprefix := globalBasic.Config.String(configName + "saveprefix")
+	gcintervalStr := globalBasic.Config.String(configName + "gcinterval")
 	gcinterval, _ := strconv.Atoi(gcintervalStr)
 
 	cacheConfig := CacheManagerConfig{}

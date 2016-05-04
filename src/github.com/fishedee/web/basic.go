@@ -1,9 +1,6 @@
 package web
 
 import (
-	"github.com/a"
-	"github.com/astaxie/beego"
-	. "github.com/fishedee/web/util"
 	"net/http"
 	"os"
 	"path"
@@ -45,44 +42,12 @@ type basicInner struct {
 
 var globalBasic basicInner
 
-func checkFileExist(path string) bool {
-	_, err := os.Stat(path)
-	if err != nil {
-		return false
-	} else {
-		return true
-	}
-}
-
-func findAppConfPath() string {
-	workingDir := a.GetWorkingDir()
-	if checkFileExist(workingDir + "/conf/app.conf") {
-		return ""
-	}
-
-	for workingDir != "/" {
-		workingDir = path.Dir(workingDir)
-		appPath := workingDir + "/conf/app.conf"
-		if checkFileExist(appPath) {
-			return workingDir
-		}
-	}
-	panic("could not found app.conf")
-}
-
 func init() {
-	//确定appPath
-	appPath := findAppConfPath()
-	if appPath != "" {
-		os.Setenv("BEEGO_RUNMODE", "test")
-		err := beego.LoadAppConfig("ini", appPath+"/conf/app.conf")
-		if err != nil {
-			panic(err)
-		}
-		beego.TestBeegoInit(appPath)
-	}
-
 	var err error
+	globalBasic.Config, err = NewConfigManager("conf/app.conf")
+	if err != nil {
+		panic(err)
+	}
 	globalBasic.Security, err = NewSecurityManagerFromConfig("fishsecurity")
 	if err != nil {
 		panic(err)

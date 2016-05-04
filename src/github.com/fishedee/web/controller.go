@@ -2,7 +2,6 @@ package web
 
 import (
 	"bytes"
-	_ "github.com/a"
 	"github.com/fishedee/encoding"
 	"github.com/fishedee/language"
 	"io/ioutil"

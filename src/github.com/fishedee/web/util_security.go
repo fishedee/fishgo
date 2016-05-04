@@ -2,7 +2,6 @@ package util
 
 import (
 	"errors"
-	"github.com/astaxie/beego"
 	. "github.com/fishedee/language"
 	. "github.com/fishedee/util"
 	"runtime"
@@ -36,7 +35,7 @@ func NewSecurityManager(config SecurityManagerConfig) (*SecurityManager, error) 
 }
 
 func NewSecurityManagerFromConfig(configName string) (*SecurityManager, error) {
-	ipwhite := beego.AppConfig.String(configName + "ipwhite")
+	ipwhite := globalBasic.Config.String(configName + "ipwhite")
 	ipwhiteList := Explode(ipwhite, ",")
 	return NewSecurityManager(SecurityManagerConfig{IpWhite: ipwhiteList})
 }

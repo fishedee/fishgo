@@ -2,9 +2,7 @@ package web
 
 import (
 	"fmt"
-	_ "github.com/a"
 	. "github.com/fishedee/language"
-	. "github.com/fishedee/web/util"
 	"math/rand"
 	"os"
 	"path"

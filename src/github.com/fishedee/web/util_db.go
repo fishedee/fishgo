@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/astaxie/beego"
 	. "github.com/fishedee/util"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/go-xorm/core"
@@ -14,6 +13,46 @@ import (
 	"strings"
 	"time"
 )
+
+type DatabaseSession interface {
+	Close() error
+	Sql(querystring string, args ...interface{}) DatabaseSession
+	NoAutoTime() DatabaseSession
+	NoAutoCondition(no ...bool) DatabaseSession
+	Cascade(trueOrFalse ...bool) DatabaseSession
+	Where(querystring string, args ...interface{}) DatabaseSession
+	Id(id interface{}) DatabaseSession
+	Distinct(columns ...string) DatabaseSession
+	Select(str string) DatabaseSession
+	Cols(columns ...string) DatabaseSession
+	AllCols() DatabaseSession
+	MustCols(columns ...string) DatabaseSession
+	UseBool(columns ...string) DatabaseSession
+	Omit(columns ...string) DatabaseSession
+	Nullable(columns ...string) DatabaseSession
+	In(column string, args ...interface{}) DatabaseSession
+	Incr(column string, arg ...interface{}) DatabaseSession
+	Decr(column string, arg ...interface{}) DatabaseSession
+	SetExpr(column string, expression string) DatabaseSession
+	Table(tableNameOrBean interface{}) DatabaseSession
+	Alias(alias string) DatabaseSession
+	Limit(limit int, start ...int) DatabaseSession
+	Desc(colNames ...string) DatabaseSession
+	Asc(colNames ...string) DatabaseSession
+	OrderBy(order string) DatabaseSession
+	Join(join_operator string, tablename interface{}, condition string, args ...interface{}) DatabaseSession
+	GroupBy(keys string) DatabaseSession
+	Having(conditions string) DatabaseSession
+	Exec(sql string, args ...interface{}) (sql.Result, error)
+	Query(sql string, paramStr ...interface{}) (resultsSlice []map[string][]byte, err error)
+	Insert(beans ...interface{}) (int64, error)
+	InsertOne(bean interface{}) (int64, error)
+	Update(bean interface{}, condiBeans ...interface{}) (int64, error)
+	Delete(bean interface{}) (int64, error)
+	Get(bean interface{}) (bool, error)
+	Find(beans interface{}, condiBeans ...interface{}) error
+	Count(bean interface{}) (int64, error)
+}
 
 type DatabaseManagerConfig struct {
 	Driver        string
@@ -134,46 +173,6 @@ func (this *DatabaseManager) autoMapType(v reflect.Value) *core.Table {
 		table.AddColumn(col)
 	}
 	return table
-}
-
-type DatabaseSession interface {
-	Close() error
-	Sql(querystring string, args ...interface{}) DatabaseSession
-	NoAutoTime() DatabaseSession
-	NoAutoCondition(no ...bool) DatabaseSession
-	Cascade(trueOrFalse ...bool) DatabaseSession
-	Where(querystring string, args ...interface{}) DatabaseSession
-	Id(id interface{}) DatabaseSession
-	Distinct(columns ...string) DatabaseSession
-	Select(str string) DatabaseSession
-	Cols(columns ...string) DatabaseSession
-	AllCols() DatabaseSession
-	MustCols(columns ...string) DatabaseSession
-	UseBool(columns ...string) DatabaseSession
-	Omit(columns ...string) DatabaseSession
-	Nullable(columns ...string) DatabaseSession
-	In(column string, args ...interface{}) DatabaseSession
-	Incr(column string, arg ...interface{}) DatabaseSession
-	Decr(column string, arg ...interface{}) DatabaseSession
-	SetExpr(column string, expression string) DatabaseSession
-	Table(tableNameOrBean interface{}) DatabaseSession
-	Alias(alias string) DatabaseSession
-	Limit(limit int, start ...int) DatabaseSession
-	Desc(colNames ...string) DatabaseSession
-	Asc(colNames ...string) DatabaseSession
-	OrderBy(order string) DatabaseSession
-	Join(join_operator string, tablename interface{}, condition string, args ...interface{}) DatabaseSession
-	GroupBy(keys string) DatabaseSession
-	Having(conditions string) DatabaseSession
-	Exec(sql string, args ...interface{}) (sql.Result, error)
-	Query(sql string, paramStr ...interface{}) (resultsSlice []map[string][]byte, err error)
-	Insert(beans ...interface{}) (int64, error)
-	InsertOne(bean interface{}) (int64, error)
-	Update(bean interface{}, condiBeans ...interface{}) (int64, error)
-	Delete(bean interface{}) (int64, error)
-	Get(bean interface{}) (bool, error)
-	Find(beans interface{}, condiBeans ...interface{}) error
-	Count(bean interface{}) (int64, error)
 }
 
 func (this *DatabaseManager) Alias(alias string) DatabaseSession {
@@ -352,14 +351,14 @@ func NewDatabaseManager(config DatabaseManagerConfig) (*DatabaseManager, error) 
 }
 
 func newDatabaseManagerFromConfig(configName string) (*DatabaseManager, error) {
-	dbdirver := beego.AppConfig.String(configName + "dirver")
-	dbhost := beego.AppConfig.String(configName + "host")
-	dbport := beego.AppConfig.String(configName + "port")
-	dbuser := beego.AppConfig.String(configName + "user")
-	dbpassword := beego.AppConfig.String(configName + "password")
-	dbdatabase := beego.AppConfig.String(configName + "database")
-	dbmaxconnection := beego.AppConfig.String(configName + "maxconnection")
-	dbdebug := beego.AppConfig.String(configName + "debug")
+	dbdirver := globalBasic.Config.String(configName + "dirver")
+	dbhost := globalBasic.Config.String(configName + "host")
+	dbport := globalBasic.Config.String(configName + "port")
+	dbuser := globalBasic.Config.String(configName + "user")
+	dbpassword := globalBasic.Config.String(configName + "password")
+	dbdatabase := globalBasic.Config.String(configName + "database")
+	dbmaxconnection := globalBasic.Config.String(configName + "maxconnection")
+	dbdebug := globalBasic.Config.String(configName + "debug")
 
 	config := DatabaseManagerConfig{}
 	config.Driver = dbdirver

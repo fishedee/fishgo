@@ -2,7 +2,6 @@ package util
 
 import (
 	"errors"
-	"github.com/astaxie/beego"
 	. "github.com/fishedee/sdk"
 	. "github.com/fishedee/util"
 )
@@ -60,10 +59,10 @@ func NewMonitorManager(config MonitorManagerConfig) (*MonitorManager, error) {
 }
 
 func newMonitorManagerFromConfig(configName string) (*MonitorManager, error) {
-	driver := beego.AppConfig.String(configName + "driver")
-	appId := beego.AppConfig.String(configName + "appid")
-	errorCount := beego.AppConfig.String(configName + "errorcount")
-	criticalCount := beego.AppConfig.String(configName + "criticalcount")
+	driver := globalBasic.Config.String(configName + "driver")
+	appId := globalBasic.Config.String(configName + "appid")
+	errorCount := globalBasic.Config.String(configName + "errorcount")
+	criticalCount := globalBasic.Config.String(configName + "criticalcount")
 
 	monitorConfig := MonitorManagerConfig{}
 	monitorConfig.Driver = driver

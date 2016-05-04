@@ -3,7 +3,6 @@ package util
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/logs"
 	. "github.com/fishedee/language"
 	. "github.com/fishedee/util"
@@ -98,15 +97,15 @@ func NewLogManager(config LogManagerConfig) (*LogManager, error) {
 }
 
 func newLogManagerFromConfig(configName string) (*LogManager, error) {
-	fishlogdriver := beego.AppConfig.String(configName + "driver")
-	fishlogfile := beego.AppConfig.String(configName + "file")
-	fishlogmaxline := beego.AppConfig.String(configName + "maxline")
-	fishlogmaxsize := beego.AppConfig.String(configName + "maxsize")
-	fishlogdaily := beego.AppConfig.String(configName + "daily")
-	fishlogmaxday := beego.AppConfig.String(configName + "maxday")
-	fishlogrotate := beego.AppConfig.String(configName + "rotate")
-	fishloglevel := beego.AppConfig.String(configName + "level")
-	fishlogprettyprint := beego.AppConfig.String(configName + "prettyprint")
+	fishlogdriver := globalBasic.Config.String(configName + "driver")
+	fishlogfile := globalBasic.Config.String(configName + "file")
+	fishlogmaxline := globalBasic.Config.String(configName + "maxline")
+	fishlogmaxsize := globalBasic.Config.String(configName + "maxsize")
+	fishlogdaily := globalBasic.Config.String(configName + "daily")
+	fishlogmaxday := globalBasic.Config.String(configName + "maxday")
+	fishlogrotate := globalBasic.Config.String(configName + "rotate")
+	fishloglevel := globalBasic.Config.String(configName + "level")
+	fishlogprettyprint := globalBasic.Config.String(configName + "prettyprint")
 
 	logConfig := LogManagerConfig{}
 	logConfig.Driver = fishlogdriver
