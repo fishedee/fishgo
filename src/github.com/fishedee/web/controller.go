@@ -131,6 +131,11 @@ func (this *Controller) Write(data []byte) {
 	writer.Write(data)
 }
 
+func (this *Controller) WriteHeader(key string, value string) {
+	writer := this.Ctx.ResponseWriter
+	writer.Header().Set(key, value)
+}
+
 func (this *Controller) WriteMimeHeader(mime string, title string) {
 	writer := this.Ctx.ResponseWriter
 	writerHeader := writer.Header()

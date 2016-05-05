@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-type DatabaseSession interface {
+type DatabaseCommon interface {
 	Close() error
 	Sql(querystring string, args ...interface{}) DatabaseSession
 	NoAutoTime() DatabaseSession
@@ -53,8 +53,14 @@ type DatabaseSession interface {
 	Count(bean interface{}) (int64, error)
 }
 
+type DatabaseSession interface {
+	DatabaseCommon
+	And(querystring string, args ...interface{}) DatabaseSession
+	Or(querystring string, args ...interface{}) DatabaseSession
+}
+
 type Database interface {
-	DatabaseSession
+	DatabaseCommon
 	NewSession() DatabaseSession
 	UpdateBatch(rowsSlicePtr interface{}, indexColName string) (int64, error)
 }

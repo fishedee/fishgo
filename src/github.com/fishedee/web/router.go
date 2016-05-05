@@ -1,6 +1,7 @@
 package web
 
 import (
+	"fmt"
 	"github.com/fishedee/language"
 	"net/http"
 	"reflect"
@@ -61,10 +62,10 @@ func (this *handlerType) addRoute(namespace string, target ControllerInterface) 
 		}
 		namespace := strings.Trim(namespace, "/")
 		methodName[0] = strings.Trim(methodName[0], "/")
-		url := namespace + "/" + methodName[0]
+		url := strings.ToLower(namespace + "/" + methodName[0])
 		this.routerControllerMethod[url] = methodInfo{
 			viewName:       this.firstLowerName(methodName[1]),
-			controllerType: controllerType,
+			controllerType: controllerType.Elem(),
 			methodType:     singleMethod,
 		}
 	}
@@ -73,7 +74,7 @@ func (this *handlerType) addRoute(namespace string, target ControllerInterface) 
 func (this *handlerType) handleRequest(request *http.Request, response http.ResponseWriter) {
 	//查找路由
 	url := request.URL.Path
-	url = strings.Trim(url, "/")
+	url = strings.ToLower(strings.Trim(url, "/"))
 	method, isExist := this.routerControllerMethod[url]
 	if isExist == false {
 		response.WriteHeader(404)

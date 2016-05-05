@@ -83,8 +83,14 @@ func initBasic(request *http.Request, response http.ResponseWriter, t *testing.T
 	result := globalBasic
 	result.Ctx = NewContext(request, response, t)
 	result.Log = result.Log.WithContextAndMonitor(result.Ctx, result.Monitor)
-	result.Timer = result.Timer.WithLog(result.Log)
-	result.Queue = result.Queue.WithLog(result.Log)
-	result.Cache = result.Cache.WithLog(result.Log)
+	if result.Timer != nil {
+		result.Timer = result.Timer.WithLog(result.Log)
+	}
+	if result.Queue != nil {
+		result.Queue = result.Queue.WithLog(result.Log)
+	}
+	if result.Cache != nil {
+		result.Cache = result.Cache.WithLog(result.Log)
+	}
 	return &result
 }
