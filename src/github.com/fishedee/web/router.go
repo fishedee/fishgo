@@ -94,7 +94,7 @@ func (this *handlerType) runRequest(controller reflect.Value, method methodInfo,
 		response.WriteHeader(500)
 		response.Write([]byte("server internal error"))
 	})
-	target.Init(target, request, response, nil)
+	target.init(target, request, response, nil)
 	var controllerResult interface{}
 	if urlMethod == "GET" || urlMethod == "POST" ||
 		urlMethod == "DELETE" || urlMethod == "PUT" {

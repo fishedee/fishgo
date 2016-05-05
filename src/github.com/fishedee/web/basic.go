@@ -7,7 +7,7 @@ import (
 
 type Basic struct {
 	Ctx      Context
-	Config   Config
+	Config   Configure
 	Security Security
 	Session  Session
 	DB       Database

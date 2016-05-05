@@ -136,7 +136,7 @@ func (this *Test) RandomString(length int) string {
 }
 
 func (this *Test) RequestReset() {
-	this.InitEmpty(this.appController, this.Ctx.Testing)
+	this.initEmpty(this.appController, this.Ctx.Testing)
 }
 
 var testMap map[string][]TestInterface
@@ -149,7 +149,7 @@ func init() {
 
 func runSingleTest(t *testing.T, test TestInterface) {
 	//初始化test
-	test.InitEmpty(test, t)
+	test.initEmpty(test, t)
 
 	isBenchTest := false
 	for _, singleArgv := range os.Args {

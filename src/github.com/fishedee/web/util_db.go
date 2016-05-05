@@ -57,6 +57,9 @@ type DatabaseSession interface {
 	DatabaseCommon
 	And(querystring string, args ...interface{}) DatabaseSession
 	Or(querystring string, args ...interface{}) DatabaseSession
+	ForUpdate() DatabaseSession
+	Begin() error
+	Commit() error
 }
 
 type Database interface {
@@ -79,6 +82,10 @@ type DatabaseConfig struct {
 type databaseImplement struct {
 	*xorm.Engine
 	config DatabaseConfig
+}
+
+type databaseSessionImplement struct {
+	*xorm.Session
 }
 
 func NewDatabase(config DatabaseConfig) (Database, error) {

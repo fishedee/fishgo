@@ -27,7 +27,7 @@ func newDaemonModel(targetType reflect.Type, controller *daemonController) refle
 
 func startSingleTask(handler interface{}) {
 	controller := &daemonController{}
-	controller.InitEmpty(controller, nil)
+	controller.initEmpty(controller, nil)
 
 	handlerType := reflect.TypeOf(handler)
 	handlerValue := reflect.ValueOf(handler)

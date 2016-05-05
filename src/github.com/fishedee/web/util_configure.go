@@ -6,16 +6,17 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"strings"
 )
 
-type Config interface {
+type Configure interface {
 	GetString(key string) string
 	GetFloat(key string) float64
 	GetInt(key string) int
 	GetBool(key string) bool
 }
 
-type configImplement struct {
+type configureImplement struct {
 	runMode  string
 	configer config.Configer
 }
@@ -49,7 +50,7 @@ func findAppConfPath(file string) (string, bool, error) {
 	return "", false, errors.New("can't not find conf")
 }
 
-func NewConfig(file string) (Config, error) {
+func NewConfig(file string) (Configure, error) {
 	appConfigPath, isCurrentDir, err := findAppConfPath(file)
 	if err != nil {
 		return nil, err
@@ -70,32 +71,35 @@ func NewConfig(file string) (Config, error) {
 		runMode = "dev"
 	}
 
-	return &configImplement{
+	return &configureImplement{
 		runMode:  runMode,
 		configer: configer,
 	}, nil
 }
 
-func (this *configImplement) GetString(key string) string {
+func (this *configureImplement) GetString(key string) string {
+	if strings.ToLower(key) == "runmode" {
+		return this.runMode
+	}
 	if v := this.configer.String(this.runMode + "::" + key); v != "" {
 		return v
 	}
 	return this.configer.String(key)
 }
 
-func (this *configImplement) GetFloat(key string) float64 {
+func (this *configureImplement) GetFloat(key string) float64 {
 	v := this.GetString(key)
 	vF, _ := strconv.ParseFloat(v, 64)
 	return vF
 }
 
-func (this *configImplement) GetInt(key string) int {
+func (this *configureImplement) GetInt(key string) int {
 	v := this.GetString(key)
 	vI, _ := strconv.ParseInt(v, 10, 64)
 	return int(vI)
 }
 
-func (this *configImplement) GetBool(key string) bool {
+func (this *configureImplement) GetBool(key string) bool {
 	v := this.GetString(key)
 	vB, _ := strconv.ParseBool(v)
 	return bool(vB)
