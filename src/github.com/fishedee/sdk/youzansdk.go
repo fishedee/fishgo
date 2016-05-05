@@ -262,7 +262,7 @@ func (this *YouzanSdk) api(method string, data interface{}, responseData interfa
 	if err != nil {
 		return err
 	}
-	fmt.Println(string(queryBytes))
+
 	err = DefaultAjaxPool.Get(&Ajax{
 		Url:          "https://open.koudaitong.com/api/entry",
 		Data:         queryBytes,
@@ -271,7 +271,6 @@ func (this *YouzanSdk) api(method string, data interface{}, responseData interfa
 	if err != nil {
 		return err
 	}
-	fmt.Println(string(dataByte))
 
 	//分析输出参数
 	var responseMap map[string]interface{}
