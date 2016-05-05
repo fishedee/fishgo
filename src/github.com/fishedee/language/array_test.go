@@ -172,3 +172,26 @@ func TestArraySort(t *testing.T) {
 		AssertArrayEqual(t, singleTestCaseIndex, result, singleTestCase.target)
 	}
 }
+
+func TestArrayShuffle(t *testing.T) {
+	testCase := []struct {
+		origin interface{}
+	}{
+		{[]int{}},
+		{[]int{1}},
+		{[]int{2, 1}},
+		{[]int{1, 2, 3}},
+		{[]string{}},
+		{[]string{"a"}},
+		{[]string{"b", "a"}},
+		{[]string{"a", "b"}},
+		{[]string{"a", "c", "b"}},
+	}
+
+	for singleTestCaseIndex, singleTestCase := range testCase {
+		result := ArrayShuffle(singleTestCase.origin)
+		leftResult := ArraySort(singleTestCase.origin)
+		rightResult := ArraySort(result)
+		AssertArrayEqual(t, singleTestCaseIndex, leftResult, rightResult)
+	}
+}

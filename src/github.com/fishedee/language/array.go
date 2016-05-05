@@ -2,6 +2,7 @@ package language
 
 import (
 	"fmt"
+	"math/rand"
 	"reflect"
 	"sort"
 )
@@ -192,4 +193,20 @@ func ArraySort(data interface{}) interface{} {
 		panic("invalid sort type " + fmt.Sprintf("%v", dataElemType))
 	}
 	return result
+}
+
+func ArrayShuffle(data interface{}) interface{} {
+	//建立一份拷贝数据
+	dataValue := reflect.ValueOf(data)
+	dataType := dataValue.Type()
+	dataValueLen := dataValue.Len()
+
+	dataResult := reflect.MakeSlice(dataType, dataValueLen, dataValueLen)
+
+	//打乱
+	perm := rand.Perm(dataValueLen)
+	for index, newIndex := range perm {
+		dataResult.Index(newIndex).Set(dataValue.Index(index))
+	}
+	return dataResult.Interface()
 }

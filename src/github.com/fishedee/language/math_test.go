@@ -13,9 +13,16 @@ func assert(t *testing.T, x, y int) {
 }
 
 func TestAbsInt(t *testing.T) {
-	x1 := []int{1, 0, -1}
+	testCase := []struct {
+		origin int
+		target int
+	}{
+		{1, 1},
+		{0, 0},
+		{-1, 1},
+	}
 
-	assert(t, AbsInt(x1[0]), 1)
-	assert(t, AbsInt(x1[1]), 0)
-	assert(t, AbsInt(x1[2]), 1)
+	for _, singleTestCase := range testCase {
+		assert(t, AbsInt(singleTestCase.origin), singleTestCase.target)
+	}
 }
