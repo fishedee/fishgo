@@ -1,11 +1,12 @@
 package test
 
 import (
+	. "github.com/fishedee/web"
 	"time"
 )
 
 type ConfigAoTest struct {
-	BaseTest
+	Test
 	ConfigAo ConfigAoModel
 }
 

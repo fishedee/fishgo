@@ -1,43 +1,32 @@
-package util
+package web
 
 import (
 	"errors"
 	. "github.com/fishedee/sdk"
-	. "github.com/fishedee/util"
 )
 
-type MonitorManagerConfig struct {
+type Monitor interface {
+	AscErrorCount()
+	AscCriticalCount()
+}
+
+type MonitorConfig struct {
 	Driver        string
 	AppId         string
 	ErrorCount    string
 	CriticalCount string
 }
 
-type MonitorManager struct {
+type monitorImplement struct {
 	AliCloudMonitorSdk
-	config MonitorManagerConfig
+	config MonitorConfig
 }
 
-var newMonitorManagerMemory *MemoryFunc
-var newMonitorManagerFromConfigMemory *MemoryFunc
-
-func init() {
-	var err error
-	newMonitorManagerMemory, err = NewMemoryFunc(newMonitorManager, MemoryFuncCacheNormal)
-	if err != nil {
-		panic(err)
-	}
-	newMonitorManagerFromConfigMemory, err = NewMemoryFunc(newMonitorManagerFromConfig, MemoryFuncCacheNormal)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func newMonitorManager(config MonitorManagerConfig) (*MonitorManager, error) {
+func NewMonitor(config MonitorConfig) (Monitor, error) {
 	if config.Driver == "" {
 		return nil, nil
 	} else if config.Driver == "aliyuncloudmonitor" {
-		result := &MonitorManager{
+		result := &monitorImplement{
 			AliCloudMonitorSdk: AliCloudMonitorSdk{
 				AppId: config.AppId,
 			},
@@ -50,43 +39,27 @@ func newMonitorManager(config MonitorManagerConfig) (*MonitorManager, error) {
 	}
 }
 
-func NewMonitorManager(config MonitorManagerConfig) (*MonitorManager, error) {
-	result, err := newMonitorManagerMemory.Call(config)
-	if err != nil {
-		return nil, err
-	}
-	return result.(*MonitorManager), err
-}
+func NewMonitorFromConfig(configName string) (Monitor, error) {
+	driver := globalBasic.Config.GetString(configName + "driver")
+	appId := globalBasic.Config.GetString(configName + "appid")
+	errorCount := globalBasic.Config.GetString(configName + "errorcount")
+	criticalCount := globalBasic.Config.GetString(configName + "criticalcount")
 
-func newMonitorManagerFromConfig(configName string) (*MonitorManager, error) {
-	driver := globalBasic.Config.String(configName + "driver")
-	appId := globalBasic.Config.String(configName + "appid")
-	errorCount := globalBasic.Config.String(configName + "errorcount")
-	criticalCount := globalBasic.Config.String(configName + "criticalcount")
-
-	monitorConfig := MonitorManagerConfig{}
+	monitorConfig := MonitorConfig{}
 	monitorConfig.Driver = driver
 	monitorConfig.AppId = appId
 	monitorConfig.ErrorCount = errorCount
 	monitorConfig.CriticalCount = criticalCount
-	return NewMonitorManager(monitorConfig)
+	return NewMonitor(monitorConfig)
 }
 
-func NewMonitorManagerFromConfig(configName string) (*MonitorManager, error) {
-	result, err := newMonitorManagerFromConfigMemory.Call(configName)
-	if err != nil {
-		return nil, err
-	}
-	return result.(*MonitorManager), err
-}
-
-func (this *MonitorManager) AscErrorCount() {
+func (this *monitorImplement) AscErrorCount() {
 	if this.config.ErrorCount != "" {
 		this.Asc(this.config.ErrorCount, 1)
 	}
 }
 
-func (this *MonitorManager) AscCriticalCount() {
+func (this *monitorImplement) AscCriticalCount() {
 	if this.config.CriticalCount != "" {
 		this.Asc(this.config.CriticalCount, 1)
 	}

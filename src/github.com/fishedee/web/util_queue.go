@@ -1,61 +1,59 @@
-package util
+package web
 
 import (
 	"encoding/json"
 	"errors"
 	"fmt"
 	. "github.com/fishedee/language"
-	. "github.com/fishedee/util"
-	. "github.com/fishedee/util_queue"
+	. "github.com/fishedee/web/util_queue"
 	"reflect"
 	"strconv"
 )
 
-type QueueManagerConfig struct {
-	BeegoQueueStoreConfig
-	Driver   string
-	PoolSize int
+type Queue interface {
+	WithLog(log Log) Queue
+	Produce(topicId string, data ...interface{}) error
+	Consume(topicId string, listener interface{}) error
+	ConsumeInPool(topicId string, listener interface{}, poolSize int) error
+	Publish(topicId string, data ...interface{}) error
+	Subscribe(topicId string, listener interface{}) error
+	SubscribeInPool(topicId string, listener interface{}, poolSize int) error
 }
 
-type QueueManager struct {
-	store    BeegoQueueStoreInterface
-	Log      *LogManager
+type QueueConfig struct {
+	SavePath   string
+	SavePrefix string
+	Driver     string
+	PoolSize   int
+}
+
+type queueImplement struct {
+	store    QueueStoreInterface
+	Log      Log
 	poolSize int
 }
 
-var newQueueManagerMemory *MemoryFunc
-var newQueueManagerFromConfigMemory *MemoryFunc
-
-func init() {
-	var err error
-	newQueueManagerMemory, err = NewMemoryFunc(newQueueManager, MemoryFuncCacheNormal)
-	if err != nil {
-		panic(err)
-	}
-	newQueueManagerFromConfigMemory, err = NewMemoryFunc(newQueueManagerFromConfig, MemoryFuncCacheNormal)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func newQueueManager(config QueueManagerConfig) (*QueueManager, error) {
+func NewQueue(config QueueConfig) (Queue, error) {
 	if config.Driver == "" {
 		return nil, nil
 	} else if config.Driver == "memory" {
-		queue, err := NewMemoryQueue(config.BeegoQueueStoreConfig)
+		queue, err := NewMemoryQueue(QueueStoreConfig{})
 		if err != nil {
 			return nil, err
 		}
-		return &QueueManager{
+		return &queueImplement{
 			store:    queue,
 			poolSize: config.PoolSize,
 		}, nil
 	} else if config.Driver == "redis" {
-		queue, err := NewRedisQueue(config.BeegoQueueStoreConfig)
+		queue, err := NewRedisQueue(QueueStoreConfig{
+			SavePath:   config.SavePath,
+			SavePrefix: config.SavePrefix,
+		})
 		if err != nil {
 			return nil, err
 		}
-		return &QueueManager{
+		return &queueImplement{
 			store:    queue,
 			poolSize: config.PoolSize,
 		}, nil
@@ -64,48 +62,28 @@ func newQueueManager(config QueueManagerConfig) (*QueueManager, error) {
 	}
 }
 
-func NewQueueManager(config QueueManagerConfig) (*QueueManager, error) {
-	result, err := newQueueManagerMemory.Call(config)
-	if err != nil {
-		return nil, err
-	}
-	return result.(*QueueManager), err
-}
-
-func newQueueManagerFromConfig(configName string) (*QueueManager, error) {
-	driver := globalBasic.Config.String(configName + "driver")
-	savepath := globalBasic.Config.String(configName + "savepath")
-	saveprefix := globalBasic.Config.String(configName + "saveprefix")
-	poolsizeStr := globalBasic.Config.String(configName + "poolsize")
+func NewQueueFromConfig(configName string) (Queue, error) {
+	driver := globalBasic.Config.GetString(configName + "driver")
+	savepath := globalBasic.Config.GetString(configName + "savepath")
+	saveprefix := globalBasic.Config.GetString(configName + "saveprefix")
+	poolsizeStr := globalBasic.Config.GetString(configName + "poolsize")
 	poolsize, _ := strconv.Atoi(poolsizeStr)
 
-	queueConfig := QueueManagerConfig{}
+	queueConfig := QueueConfig{}
 	queueConfig.Driver = driver
 	queueConfig.SavePath = savepath
 	queueConfig.SavePrefix = saveprefix
 	queueConfig.PoolSize = poolsize
-	return NewQueueManager(queueConfig)
+	return NewQueue(queueConfig)
 }
 
-func NewQueueManagerFromConfig(configName string) (*QueueManager, error) {
-	result, err := newQueueManagerFromConfigMemory.Call(configName)
-	if err != nil {
-		return nil, err
-	}
-	return result.(*QueueManager), err
+func (this *queueImplement) WithLog(log Log) Queue {
+	newQueueManager := *this
+	newQueueManager.Log = log
+	return &newQueueManager
 }
 
-func NewQueueManagerWithLog(log *LogManager, queue *QueueManager) *QueueManager {
-	if queue == nil {
-		return nil
-	} else {
-		newQueueManager := *queue
-		newQueueManager.Log = log
-		return &newQueueManager
-	}
-}
-
-func (this *QueueManager) EncodeData(data []interface{}) ([]byte, error) {
+func (this *queueImplement) EncodeData(data []interface{}) ([]byte, error) {
 	dataByte, err := json.Marshal(data)
 	if err != nil {
 		return nil, err
@@ -113,7 +91,7 @@ func (this *QueueManager) EncodeData(data []interface{}) ([]byte, error) {
 	return dataByte, nil
 }
 
-func (this *QueueManager) DecodeData(dataByte []byte, dataType []reflect.Type) ([]reflect.Value, error) {
+func (this *queueImplement) DecodeData(dataByte []byte, dataType []reflect.Type) ([]reflect.Value, error) {
 	result := []interface{}{}
 	for _, singleDataType := range dataType {
 		result = append(result, reflect.New(singleDataType).Interface())
@@ -132,11 +110,11 @@ func (this *QueueManager) DecodeData(dataByte []byte, dataType []reflect.Type) (
 	return valueResult, nil
 }
 
-func (this *QueueManager) WrapData(data []interface{}) (interface{}, error) {
+func (this *queueImplement) WrapData(data []interface{}) (interface{}, error) {
 	return this.EncodeData(data)
 }
 
-func (this *QueueManager) WrapPoolListener(listener BeegoQueueListener, poolSize int) BeegoQueueListener {
+func (this *queueImplement) WrapPoolListener(listener QueueListener, poolSize int) QueueListener {
 	if poolSize <= 0 {
 		return func(data interface{}) (lastError error) {
 			go listener(data)
@@ -158,7 +136,7 @@ func (this *QueueManager) WrapPoolListener(listener BeegoQueueListener, poolSize
 	}
 }
 
-func (this *QueueManager) WrapExceptionListener(listener interface{}) (BeegoQueueListener, error) {
+func (this *queueImplement) WrapExceptionListener(listener interface{}) (QueueListener, error) {
 	listenerType := reflect.TypeOf(listener)
 	listenerValue := reflect.ValueOf(listener)
 	if listenerType.Kind() != reflect.Func {
@@ -193,7 +171,7 @@ func (this *QueueManager) WrapExceptionListener(listener interface{}) (BeegoQueu
 	}, nil
 }
 
-func (this *QueueManager) Produce(topicId string, data ...interface{}) error {
+func (this *queueImplement) Produce(topicId string, data ...interface{}) error {
 	dataResult, err := this.WrapData(data)
 	if err != nil {
 		return err
@@ -201,7 +179,7 @@ func (this *QueueManager) Produce(topicId string, data ...interface{}) error {
 	return this.store.Produce(topicId, dataResult)
 }
 
-func (this *QueueManager) Consume(topicId string, listener interface{}) error {
+func (this *queueImplement) Consume(topicId string, listener interface{}) error {
 	listenerResult, err := this.WrapExceptionListener(listener)
 	if err != nil {
 		return err
@@ -213,7 +191,7 @@ func (this *QueueManager) Consume(topicId string, listener interface{}) error {
 	return this.store.Consume(topicId, this.WrapPoolListener(listenerResult, poolSize))
 }
 
-func (this *QueueManager) ConsumeInPool(topicId string, listener interface{}, poolSize int) error {
+func (this *queueImplement) ConsumeInPool(topicId string, listener interface{}, poolSize int) error {
 	listenerResult, err := this.WrapExceptionListener(listener)
 	if err != nil {
 		return err
@@ -224,7 +202,7 @@ func (this *QueueManager) ConsumeInPool(topicId string, listener interface{}, po
 	return this.store.Consume(topicId, this.WrapPoolListener(listenerResult, poolSize))
 }
 
-func (this *QueueManager) Publish(topicId string, data ...interface{}) error {
+func (this *queueImplement) Publish(topicId string, data ...interface{}) error {
 	dataResult, err := this.WrapData(data)
 	if err != nil {
 		return err
@@ -232,7 +210,7 @@ func (this *QueueManager) Publish(topicId string, data ...interface{}) error {
 	return this.store.Publish(topicId, dataResult)
 }
 
-func (this *QueueManager) Subscribe(topicId string, listener interface{}) error {
+func (this *queueImplement) Subscribe(topicId string, listener interface{}) error {
 	listenerResult, err := this.WrapExceptionListener(listener)
 	if err != nil {
 		return err
@@ -244,7 +222,7 @@ func (this *QueueManager) Subscribe(topicId string, listener interface{}) error 
 	return this.store.Subscribe(topicId, this.WrapPoolListener(listenerResult, poolSize))
 }
 
-func (this *QueueManager) SubscribeInPool(topicId string, listener interface{}, poolSize int) error {
+func (this *queueImplement) SubscribeInPool(topicId string, listener interface{}, poolSize int) error {
 	listenerResult, err := this.WrapExceptionListener(listener)
 	if err != nil {
 		return err

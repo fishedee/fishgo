@@ -1,26 +1,26 @@
-package beego_queue
+package util_queue
 
 const (
-	BEEGO_QUEUE_UNKNOWN = iota
-	BEEGO_QUEUE_PUBLISH_SUBSCRIBE
-	BEEGO_QUEUE_PRODUCE_CONSUME
+	QUEUE_UNKNOWN = iota
+	QUEUE_PUBLISH_SUBSCRIBE
+	QUEUE_PRODUCE_CONSUME
 )
 
-type BeegoQueueListener func(argv interface{}) error
+type QueueListener func(argv interface{}) error
 
-type BeegoQueueStoreInterface interface {
+type QueueStoreInterface interface {
 	Produce(topicId string, data interface{}) error
-	Consume(topicId string, listener BeegoQueueListener) error
+	Consume(topicId string, listener QueueListener) error
 	Publish(topicId string, data interface{}) error
-	Subscribe(topicId string, listener BeegoQueueListener) error
+	Subscribe(topicId string, listener QueueListener) error
 }
 
-type BeegoQueueStoreBasicInterface interface {
+type QueueStoreBasicInterface interface {
 	Produce(topicId string, data interface{}) error
-	Consume(topicId string, listener BeegoQueueListener) error
+	Consume(topicId string, listener QueueListener) error
 }
 
-type BeegoQueueStoreConfig struct {
+type QueueStoreConfig struct {
 	SavePath   string
 	SavePrefix string
 }

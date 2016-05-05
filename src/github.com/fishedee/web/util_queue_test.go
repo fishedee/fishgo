@@ -1,4 +1,4 @@
-package util
+package web
 
 import (
 	. "github.com/fishedee/web/util/beego_queue"

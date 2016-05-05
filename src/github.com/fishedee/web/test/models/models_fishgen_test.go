@@ -8,5 +8,5 @@ import (
 type testFishGenStruct struct{}
 
 func TestTest(t *testing.T) {
-	RunBeegoValidateTest(t, &testFishGenStruct{})
+	RunTest(t, &testFishGenStruct{})
 }

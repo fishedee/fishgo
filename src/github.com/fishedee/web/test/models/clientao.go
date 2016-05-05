@@ -2,11 +2,12 @@ package test
 
 import (
 	"fmt"
+	. "github.com/fishedee/web"
 	"strconv"
 )
 
 type ClientLoginAoModel struct {
-	BaseModel
+	Model
 }
 
 func (this *ClientLoginAoModel) IsLogin() bool {

@@ -1,4 +1,4 @@
-package beego_queue
+package util_queue
 
 import (
 	"errors"
@@ -6,20 +6,20 @@ import (
 )
 
 type BasicAsyncQueuePubSubStore struct {
-	listener []BeegoQueueListener
+	listener []QueueListener
 	mutex    sync.RWMutex
 }
 
 type BasicQueueStore struct {
-	BeegoQueueStoreBasicInterface
+	QueueStoreBasicInterface
 	mapPubSubStore map[string]*BasicAsyncQueuePubSubStore
 	mutex          sync.Mutex
 }
 
-func NewBasicQueue(target BeegoQueueStoreBasicInterface) *BasicQueueStore {
+func NewBasicQueue(target QueueStoreBasicInterface) *BasicQueueStore {
 	return &BasicQueueStore{
-		BeegoQueueStoreBasicInterface: target,
-		mapPubSubStore:                map[string]*BasicAsyncQueuePubSubStore{},
+		QueueStoreBasicInterface: target,
+		mapPubSubStore:           map[string]*BasicAsyncQueuePubSubStore{},
 	}
 }
 
@@ -48,12 +48,12 @@ func (this *BasicQueueStore) subscribeInner(topicId string, single *BasicAsyncQu
 	})
 }
 
-func (this *BasicQueueStore) Subscribe(topicId string, listener BeegoQueueListener) error {
+func (this *BasicQueueStore) Subscribe(topicId string, listener QueueListener) error {
 	this.mutex.Lock()
 	result, ok := this.mapPubSubStore[topicId]
 	if !ok {
 		result = &BasicAsyncQueuePubSubStore{}
-		result.listener = []BeegoQueueListener{listener}
+		result.listener = []QueueListener{listener}
 	}
 	this.mapPubSubStore[topicId] = result
 	this.mutex.Unlock()

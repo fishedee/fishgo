@@ -30,7 +30,7 @@
 //	}
 //
 // more docs: http://beego.me/docs/module/session.md
-package beegon_session
+package util_session
 
 import (
 	"net/http"

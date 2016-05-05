@@ -1,9 +1,11 @@
 package test
 
-import ()
+import (
+	. "github.com/fishedee/web"
+)
 
 type BaseAoModel struct {
-	BaseModel
+	Model
 	ConfigAo ConfigAoModel
 }
 

@@ -1,11 +1,10 @@
 package web
 
 import (
-	"bytes"
 	"github.com/fishedee/language"
-	"io/ioutil"
 	"net/http"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -22,7 +21,7 @@ type handlerType struct {
 
 func (this *handlerType) ServeHTTP(response http.ResponseWriter, request *http.Request) {
 	beginTime := time.Now().UnixNano()
-	this.handleBeegoRequest(request, response)
+	this.handleRequest(request, response)
 	endTime := time.Now().UnixNano()
 	globalBasic.Log.Debug("%s %s : %s", request.Method, request.URL.String(), time.Duration(endTime-beginTime).String())
 }
@@ -44,7 +43,7 @@ func (this *handlerType) isPublic(name string) bool {
 	}
 }
 
-func (this *handlerType) addRoute(namespace string, target interface{}) {
+func (this *handlerType) addRoute(namespace string, target ControllerInterface) {
 	if this.routerControllerMethod == nil {
 		this.routerControllerMethod = map[string]methodInfo{}
 	}
@@ -56,15 +55,15 @@ func (this *handlerType) addRoute(namespace string, target interface{}) {
 		if this.isPublic(singleMethodName) == false {
 			continue
 		}
-		methodNameInfo := language.Explode(singleMethodName, "_")
-		if len(methodNameInfo) < 2 {
+		methodName := language.Explode(singleMethodName, "_")
+		if len(methodName) < 2 {
 			continue
 		}
 		namespace := strings.Trim(namespace, "/")
 		methodName[0] = strings.Trim(methodName[0], "/")
 		url := namespace + "/" + methodName[0]
-		routerControllerMethod[url] = &methodInfo{
-			viewName:       firstLowerName(methodNameInfo[1]),
+		this.routerControllerMethod[url] = methodInfo{
+			viewName:       this.firstLowerName(methodName[1]),
 			controllerType: controllerType,
 			methodType:     singleMethod,
 		}
@@ -73,11 +72,12 @@ func (this *handlerType) addRoute(namespace string, target interface{}) {
 
 func (this *handlerType) handleRequest(request *http.Request, response http.ResponseWriter) {
 	//查找路由
-	url := ctx.Input.URL()
+	url := request.URL.Path
 	url = strings.Trim(url, "/")
 	method, isExist := this.routerControllerMethod[url]
 	if isExist == false {
-		ctx.Abort("404", "File Not Found")
+		response.WriteHeader(404)
+		response.Write([]byte("file not found"))
 		return
 	}
 
@@ -87,20 +87,23 @@ func (this *handlerType) handleRequest(request *http.Request, response http.Resp
 }
 
 func (this *handlerType) runRequest(controller reflect.Value, method methodInfo, request *http.Request, response http.ResponseWriter) {
-	urlMethod := request.Method()
+	urlMethod := request.Method
 	target := controller.Interface().(ControllerInterface)
 	defer language.CatchCrash(func(exception language.Exception) {
 		target.GetBasic().Log.Critical("Buiness Crash Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
+		response.WriteHeader(500)
+		response.Write([]byte("server internal error"))
 	})
-	target.Init(controller, request, response, nil)
+	target.Init(target, request, response, nil)
 	var controllerResult interface{}
 	if urlMethod == "GET" || urlMethod == "POST" ||
 		urlMethod == "DELETE" || urlMethod == "PUT" {
-		result := this.runRequestBusiness(target, method.methodType, []reflect.Value{controller})
-		if len(result) != 1 {
-			panic("url controller should has return value " + url)
+		result := this.runRequestBusiness(target, method.methodType.Func, []reflect.Value{controller})
+		if len(result) >= 1 {
+			controllerResult = result[0].Interface()
+		} else {
+			controllerResult = nil
 		}
-		controllerResult = result[0].Interface()
 	} else {
 		controllerResult = nil
 	}
@@ -113,15 +116,12 @@ func (this *handlerType) runRequestBusiness(target ControllerInterface, method r
 		result = []reflect.Value{reflect.ValueOf(exception)}
 	})
 	result = method.Call(arguments)
-	if len(result) == 0 {
-		result = []reflect.Value{reflect.Zero(reflect.TypeOf(ControllerInterface))}
-	}
 	return
 }
 
 var handler handlerType
 
-func InitRoute(namespace string, target interface{}) {
+func InitRoute(namespace string, target ControllerInterface) {
 	handler.addRoute(namespace, target)
 }
 
@@ -131,7 +131,7 @@ func Run() error {
 		httpPort = 8080
 	}
 	globalBasic.Log.Debug("Server is Running :%v", httpPort)
-	err := http.ListenAndServe(":"+strings.Atoi(httpPort), &handler)
+	err := http.ListenAndServe(":"+strconv.Itoa(httpPort), &handler)
 	if err != nil {
 		globalBasic.Log.Error("Listen fail! " + err.Error())
 		return err

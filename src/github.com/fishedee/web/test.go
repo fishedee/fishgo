@@ -88,9 +88,9 @@ func (this *Test) AssertEqual(left interface{}, right interface{}, testCase ...i
 	}
 	traceInfo := this.getTraceLineNumber(1)
 	if len(testCase) == 0 {
-		this.t.Errorf("%v: assertEqual Fail! %v", traceInfo, errorString)
+		this.Ctx.Testing.Errorf("%v: assertEqual Fail! %v", traceInfo, errorString)
 	} else {
-		this.t.Errorf("%v:%v: assertEqual Fail! %v", traceInfo, testCase[0], errorString)
+		this.Ctx.Testing.Errorf("%v:%v: assertEqual Fail! %v", traceInfo, testCase[0], errorString)
 	}
 }
 
@@ -107,9 +107,9 @@ func (this *Test) AssertError(left Exception, rightCode int, rightMessage string
 	}
 	traceInfo := this.getTraceLineNumber(1)
 	if len(testCase) == 0 {
-		this.t.Errorf("%v: %v", traceInfo, errorString)
+		this.Ctx.Testing.Errorf("%v: %v", traceInfo, errorString)
 	} else {
-		this.t.Errorf("%v:%v: %v", traceInfo, testCase[0], errorString)
+		this.Ctx.Testing.Errorf("%v:%v: %v", traceInfo, testCase[0], errorString)
 	}
 
 }
@@ -136,18 +136,18 @@ func (this *Test) RandomString(length int) string {
 }
 
 func (this *Test) RequestReset() {
-	this.InitEmpty(this, this.Ctx.t)
+	this.InitEmpty(this.appController, this.Ctx.Testing)
 }
 
-var testMap map[string][]BeegoValidateTestInterface
+var testMap map[string][]TestInterface
 var testMapInit bool
 
 func init() {
-	testMap = map[string][]BeegoValidateTestInterface{}
+	testMap = map[string][]TestInterface{}
 	testMapInit = false
 }
 
-func runBeegoValidateSingleTest(t *testing.T, test TestInterface) {
+func runSingleTest(t *testing.T, test TestInterface) {
 	//初始化test
 	test.InitEmpty(test, t)
 
@@ -192,7 +192,7 @@ func RunTest(t *testing.T, data interface{}) {
 
 	//遍历测试
 	for _, singleTest := range testMap[pkgPath] {
-		runBeegoValidateSingleTest(t, singleTest)
+		runSingleTest(t, singleTest)
 	}
 }
 

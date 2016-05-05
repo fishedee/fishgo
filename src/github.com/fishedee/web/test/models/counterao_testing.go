@@ -1,7 +1,11 @@
 package test
 
+import (
+	. "github.com/fishedee/web"
+)
+
 type CounterAoTest struct {
-	BaseTest
+	Test
 	CounterAo CounterAoModel
 }
 

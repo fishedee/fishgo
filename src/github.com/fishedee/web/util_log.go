@@ -1,13 +1,11 @@
-package util
+package web
 
 import (
 	"encoding/json"
 	"fmt"
 	"github.com/astaxie/beego/logs"
 	. "github.com/fishedee/language"
-	. "github.com/fishedee/util"
 	"github.com/k0kubun/pp"
-	"net/http"
 	"path"
 	"reflect"
 	"runtime"
@@ -15,7 +13,19 @@ import (
 	"strings"
 )
 
-type LogManagerConfig struct {
+type Log interface {
+	WithContextAndMonitor(ctx Context, monitor Monitor) Log
+	Emergency(format string, v ...interface{})
+	Alert(format string, v ...interface{})
+	Critical(format string, v ...interface{})
+	Error(format string, v ...interface{})
+	Warning(format string, v ...interface{})
+	Notice(format string, v ...interface{})
+	Informational(format string, v ...interface{})
+	Debug(format string, v ...interface{})
+}
+
+type LogConfig struct {
 	Driver      string `json:driver`
 	Filename    string `json:"filename"`
 	Maxlines    int    `json:"maxlines"`
@@ -27,26 +37,11 @@ type LogManagerConfig struct {
 	PrettyPrint bool   `json:"prettyprint"`
 }
 
-type LogManager struct {
+type logImplement struct {
 	*logs.BeeLogger
-	monitor     *MonitorManager
+	monitor     Monitor
 	logPrefix   string
 	prettyPrint bool
-}
-
-var newLogManagerMemory *MemoryFunc
-var newLogManagerFromConfigMemory *MemoryFunc
-
-func init() {
-	var err error
-	newLogManagerMemory, err = NewMemoryFunc(newLogManager, MemoryFuncCacheNormal)
-	if err != nil {
-		panic(err)
-	}
-	newLogManagerFromConfigMemory, err = NewMemoryFunc(newLogManagerFromConfig, MemoryFuncCacheNormal)
-	if err != nil {
-		panic(err)
-	}
 }
 
 func getLevel(in string) int {
@@ -68,7 +63,7 @@ func getLevel(in string) int {
 	return logs.LevelDebug
 }
 
-func newLogManager(config LogManagerConfig) (*LogManager, error) {
+func NewLog(config LogConfig) (Log, error) {
 	if config.Driver == "" {
 		return nil, nil
 	}
@@ -81,33 +76,24 @@ func newLogManager(config LogManagerConfig) (*LogManager, error) {
 	if err != nil {
 		return nil, err
 	}
-	beego.BeeLogger = Log
-	return &LogManager{
+	return &logImplement{
 		BeeLogger:   Log,
 		prettyPrint: config.PrettyPrint,
 	}, nil
 }
 
-func NewLogManager(config LogManagerConfig) (*LogManager, error) {
-	result, err := newLogManagerMemory.Call(config)
-	if err != nil {
-		return nil, err
-	}
-	return result.(*LogManager), err
-}
+func NewLogFromConfig(configName string) (Log, error) {
+	fishlogdriver := globalBasic.Config.GetString(configName + "driver")
+	fishlogfile := globalBasic.Config.GetString(configName + "file")
+	fishlogmaxline := globalBasic.Config.GetString(configName + "maxline")
+	fishlogmaxsize := globalBasic.Config.GetString(configName + "maxsize")
+	fishlogdaily := globalBasic.Config.GetString(configName + "daily")
+	fishlogmaxday := globalBasic.Config.GetString(configName + "maxday")
+	fishlogrotate := globalBasic.Config.GetString(configName + "rotate")
+	fishloglevel := globalBasic.Config.GetString(configName + "level")
+	fishlogprettyprint := globalBasic.Config.GetString(configName + "prettyprint")
 
-func newLogManagerFromConfig(configName string) (*LogManager, error) {
-	fishlogdriver := globalBasic.Config.String(configName + "driver")
-	fishlogfile := globalBasic.Config.String(configName + "file")
-	fishlogmaxline := globalBasic.Config.String(configName + "maxline")
-	fishlogmaxsize := globalBasic.Config.String(configName + "maxsize")
-	fishlogdaily := globalBasic.Config.String(configName + "daily")
-	fishlogmaxday := globalBasic.Config.String(configName + "maxday")
-	fishlogrotate := globalBasic.Config.String(configName + "rotate")
-	fishloglevel := globalBasic.Config.String(configName + "level")
-	fishlogprettyprint := globalBasic.Config.String(configName + "prettyprint")
-
-	logConfig := LogManagerConfig{}
+	logConfig := LogConfig{}
 	logConfig.Driver = fishlogdriver
 	logConfig.Filename = fishlogfile
 	logConfig.Maxlines, _ = strconv.Atoi(fishlogmaxline)
@@ -118,44 +104,29 @@ func newLogManagerFromConfig(configName string) (*LogManager, error) {
 	logConfig.Level = getLevel(fishloglevel)
 	logConfig.PrettyPrint, _ = strconv.ParseBool(fishlogprettyprint)
 
-	return NewLogManager(logConfig)
+	return NewLog(logConfig)
 }
 
-func NewLogManagerFromConfig(configName string) (*LogManager, error) {
-	result, err := newLogManagerFromConfigMemory.Call(configName)
-	if err != nil {
-		return nil, err
-	}
-	return result.(*LogManager), err
-}
-
-func NewLogManagerWithCtxAndMonitor(request *http.Request, monitor *MonitorManager, logger *LogManager) *LogManager {
-	var beeLogger *logs.BeeLogger
-	if logger != nil {
-		beeLogger = logger.BeeLogger
-	} else {
-		beeLogger = beego.BeeLogger
-	}
+func (this *logImplement) WithContextAndMonitor(ctx Context, monitor Monitor) Log {
 	logPrefix := ""
-	if request == nil {
+	if ctx.Request == nil {
 		logPrefix = " 0.0.0.0 * "
 	} else {
-		ip := request.RemoteAddr
-		url := request.RequestURI
-		realIP := request.Header.Get("X-Real-Ip")
+		ip := ctx.Request.RemoteAddr
+		url := ctx.Request.RequestURI
+		realIP := ctx.Request.Header.Get("X-Real-Ip")
 		if ip == "127.0.0.1" && realIP != "" {
 			ip = realIP
 		}
 		logPrefix = fmt.Sprintf(" %s %s ", ip, url)
 	}
-	newLogManager := *logger
-	newLogManager.BeeLogger = beeLogger
+	newLogManager := *this
 	newLogManager.logPrefix = logPrefix
 	newLogManager.monitor = monitor
 	return &newLogManager
 }
 
-func (this *LogManager) getTraceLineNumber(traceNumber int) string {
+func (this *logImplement) getTraceLineNumber(traceNumber int) string {
 	_, filename, line, ok := runtime.Caller(traceNumber + 1)
 	if !ok {
 		return "???.go:???"
@@ -164,7 +135,7 @@ func (this *LogManager) getTraceLineNumber(traceNumber int) string {
 	}
 }
 
-func (this *LogManager) getLogFormat(format string, v []interface{}) string {
+func (this *logImplement) getLogFormat(format string, v []interface{}) string {
 	if this.prettyPrint {
 		format = strings.Replace(format, "%+v", "%v", -1)
 		format = strings.Replace(format, "%#v", "%v", -1)
@@ -185,52 +156,52 @@ func (this *LogManager) getLogFormat(format string, v []interface{}) string {
 	return fmt.Sprintf(this.logPrefix+this.getTraceLineNumber(2)+" "+format, v...)
 }
 
-func (this *LogManager) Emergency(format string, v ...interface{}) {
+func (this *logImplement) Emergency(format string, v ...interface{}) {
 	this.BeeLogger.Emergency(this.getLogFormat(format, v))
 }
 
-func (this *LogManager) Alert(format string, v ...interface{}) {
+func (this *logImplement) Alert(format string, v ...interface{}) {
 	this.BeeLogger.Alert(this.getLogFormat(format, v))
 }
 
-func (this *LogManager) Critical(format string, v ...interface{}) {
+func (this *logImplement) Critical(format string, v ...interface{}) {
 	if this.monitor != nil {
 		this.monitor.AscCriticalCount()
 	}
 	this.BeeLogger.Critical(this.getLogFormat(format, v))
 }
 
-func (this *LogManager) Error(format string, v ...interface{}) {
+func (this *logImplement) Error(format string, v ...interface{}) {
 	if this.monitor != nil {
 		this.monitor.AscErrorCount()
 	}
 	this.BeeLogger.Error(this.getLogFormat(format, v))
 }
 
-func (this *LogManager) Warning(format string, v ...interface{}) {
+func (this *logImplement) Warning(format string, v ...interface{}) {
 	this.BeeLogger.Warning(this.getLogFormat(format, v))
 }
 
-func (this *LogManager) Notice(format string, v ...interface{}) {
+func (this *logImplement) Notice(format string, v ...interface{}) {
 	this.BeeLogger.Notice(this.getLogFormat(format, v))
 }
 
-func (this *LogManager) Informational(format string, v ...interface{}) {
+func (this *logImplement) Informational(format string, v ...interface{}) {
 	this.BeeLogger.Informational(this.getLogFormat(format, v))
 }
 
-func (this *LogManager) Debug(format string, v ...interface{}) {
+func (this *logImplement) Debug(format string, v ...interface{}) {
 	this.BeeLogger.Debug(this.getLogFormat(format, v))
 }
 
-func (this *LogManager) Warn(format string, v ...interface{}) {
+func (this *logImplement) Warn(format string, v ...interface{}) {
 	this.BeeLogger.Warn(this.getLogFormat(format, v))
 }
 
-func (this *LogManager) Info(format string, v ...interface{}) {
+func (this *logImplement) Info(format string, v ...interface{}) {
 	this.BeeLogger.Info(this.getLogFormat(format, v))
 }
 
-func (this *LogManager) Trace(format string, v ...interface{}) {
+func (this *logImplement) Trace(format string, v ...interface{}) {
 	this.BeeLogger.Trace(this.getLogFormat(format, v))
 }

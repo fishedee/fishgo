@@ -1,4 +1,4 @@
-package util
+package web
 
 import (
 	"encoding/json"
@@ -6,41 +6,32 @@ import (
 	"github.com/astaxie/beego/cache"
 	_ "github.com/astaxie/beego/cache/redis"
 	. "github.com/fishedee/language"
-	. "github.com/fishedee/util"
 	"strconv"
 	"strings"
 	"time"
 )
 
-type CacheManagerConfig struct {
+type Cache interface {
+	WithLog(log Log) Cache
+	Get(key string) (string, bool)
+	Set(key string, value string, timeout time.Duration)
+	Del(key string)
+}
+
+type CacheConfig struct {
 	Driver     string
 	SavePath   string
 	SavePrefix string
 	GcInterval int
 }
 
-type CacheManager struct {
+type cacheImplement struct {
 	store      cache.Cache
 	saveprefix string
-	Log        *LogManager
+	log        Log
 }
 
-var newCacheManagerMemory *MemoryFunc
-var newCacheManagerFromConfigMemory *MemoryFunc
-
-func init() {
-	var err error
-	newCacheManagerMemory, err = NewMemoryFunc(newCacheManager, MemoryFuncCacheNormal)
-	if err != nil {
-		panic(err)
-	}
-	newCacheManagerFromConfigMemory, err = NewMemoryFunc(newCacheManagerFromConfig, MemoryFuncCacheNormal)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func newCacheManager(config CacheManagerConfig) (*CacheManager, error) {
+func NewCache(config CacheConfig) (Cache, error) {
 	if config.Driver == "" {
 		return nil, nil
 	} else if config.Driver == "memory" {
@@ -56,7 +47,7 @@ func newCacheManager(config CacheManagerConfig) (*CacheManager, error) {
 		if err != nil {
 			return nil, err
 		}
-		return &CacheManager{
+		return &cacheImplement{
 			store:      cacheInner,
 			saveprefix: config.SavePrefix,
 		}, nil
@@ -86,7 +77,7 @@ func newCacheManager(config CacheManagerConfig) (*CacheManager, error) {
 		if err != nil {
 			return nil, err
 		}
-		return &CacheManager{
+		return &cacheImplement{
 			store:      cacheInner,
 			saveprefix: config.SavePrefix,
 		}, nil
@@ -95,48 +86,32 @@ func newCacheManager(config CacheManagerConfig) (*CacheManager, error) {
 	}
 }
 
-func NewCacheManager(config CacheManagerConfig) (*CacheManager, error) {
-	result, err := newCacheManagerMemory.Call(config)
-	if err != nil {
-		return nil, err
-	}
-	return result.(*CacheManager), err
-}
-
-func newCacheManagerFromConfig(configName string) (*CacheManager, error) {
-	driver := globalBasic.Config.String(configName + "driver")
-	savepath := globalBasic.Config.String(configName + "savepath")
-	saveprefix := globalBasic.Config.String(configName + "saveprefix")
-	gcintervalStr := globalBasic.Config.String(configName + "gcinterval")
+func NewCacheFromConfig(configName string) (Cache, error) {
+	driver := globalBasic.Config.GetString(configName + "driver")
+	savepath := globalBasic.Config.GetString(configName + "savepath")
+	saveprefix := globalBasic.Config.GetString(configName + "saveprefix")
+	gcintervalStr := globalBasic.Config.GetString(configName + "gcinterval")
 	gcinterval, _ := strconv.Atoi(gcintervalStr)
 
-	cacheConfig := CacheManagerConfig{}
+	cacheConfig := CacheConfig{}
 	cacheConfig.Driver = driver
 	cacheConfig.SavePath = savepath
 	cacheConfig.SavePrefix = saveprefix
 	cacheConfig.GcInterval = gcinterval
-	return NewCacheManager(cacheConfig)
+	return NewCache(cacheConfig)
 }
 
-func NewCacheManagerFromConfig(configName string) (*CacheManager, error) {
-	result, err := newCacheManagerFromConfigMemory.Call(configName)
-	if err != nil {
-		return nil, err
-	}
-	return result.(*CacheManager), err
-}
-
-func NewCacheManagerWithLog(log *LogManager, cache *CacheManager) *CacheManager {
-	if cache == nil {
+func (this *cacheImplement) WithLog(log Log) Cache {
+	if this == nil {
 		return nil
 	} else {
-		newCache := *cache
-		newCache.Log = log
+		newCache := *this
+		newCache.log = log
 		return &newCache
 	}
 }
 
-func (this *CacheManager) Get(key string) (string, bool) {
+func (this *cacheImplement) Get(key string) (string, bool) {
 	result := this.store.Get(this.saveprefix + key)
 	if result == nil {
 		return "", false
@@ -144,9 +119,9 @@ func (this *CacheManager) Get(key string) (string, bool) {
 	return string(result.([]byte)), true
 }
 
-func (this *CacheManager) Set(key string, value string, timeout time.Duration) {
+func (this *cacheImplement) Set(key string, value string, timeout time.Duration) {
 	defer CatchCrash(func(exception Exception) {
-		this.Log.Critical("Cache Crash Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
+		this.log.Critical("Cache Crash Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
 	})
 	err := this.store.Put(this.saveprefix+key, []byte(value), timeout)
 	if err != nil {
@@ -154,9 +129,9 @@ func (this *CacheManager) Set(key string, value string, timeout time.Duration) {
 	}
 }
 
-func (this *CacheManager) Del(key string) {
+func (this *cacheImplement) Del(key string) {
 	defer CatchCrash(func(exception Exception) {
-		this.Log.Critical("Cache Crash Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
+		this.log.Critical("Cache Crash Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
 	})
 	err := this.store.Delete(this.saveprefix + key)
 	if err != nil && strings.Index(err.Error(), "not exist") == -1 {

@@ -1,11 +1,12 @@
 package test
 
 import (
+	. "github.com/fishedee/web"
 	"time"
 )
 
 type ConfigAoModel struct {
-	BaseModel
+	Model
 	dataStruct map[string]ConfigData
 }
 

@@ -1,7 +1,11 @@
 package number
 
+import (
+	. "github.com/fishedee/web"
+)
+
 type NumberAoModel struct {
-	BaseModel
+	Model
 }
 
 func (this *NumberAoModel) Add(left int, right int) int {

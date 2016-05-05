@@ -1,4 +1,4 @@
-package util
+package web
 
 import (
 	"errors"
@@ -7,14 +7,14 @@ import (
 	"runtime"
 )
 
-type SecurityManagerConfig struct {
+type Security interface {
+}
+
+type SecurityConfig struct {
 	IpWhite []string
 }
 
-type SecurityManager struct {
-}
-
-func NewSecurityManager(config SecurityManagerConfig) (*SecurityManager, error) {
+func NewSecurity(config SecurityConfig) (Security, error) {
 	var netConfig string
 	if runtime.GOOS == "darwin" {
 		netConfig = "en0"
@@ -31,11 +31,11 @@ func NewSecurityManager(config SecurityManagerConfig) (*SecurityManager, error) 
 		return nil, errors.New("当前IP: " + ipStr + "不在IP白名单中: " + Implode(config.IpWhite, ","))
 	}
 
-	return &SecurityManager{}, nil
+	return nil, nil
 }
 
-func NewSecurityManagerFromConfig(configName string) (*SecurityManager, error) {
-	ipwhite := globalBasic.Config.String(configName + "ipwhite")
+func NewSecurityFromConfig(configName string) (Security, error) {
+	ipwhite := globalBasic.Config.GetString(configName + "ipwhite")
 	ipwhiteList := Explode(ipwhite, ",")
-	return NewSecurityManager(SecurityManagerConfig{IpWhite: ipwhiteList})
+	return NewSecurity(SecurityConfig{IpWhite: ipwhiteList})
 }

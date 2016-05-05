@@ -1,4 +1,4 @@
-package util
+package web
 
 import (
 	. "github.com/fishedee/language"
@@ -6,35 +6,38 @@ import (
 	"time"
 )
 
-type TimerManager struct {
-	Log *LogManager
+type Timer interface {
+	WithLog(log Log) Timer
+	Cron(cronspec string, handler func()) error
+	Interval(duraction time.Duration, handler func()) error
+	Tick(duraction time.Duration, handler func()) error
 }
 
-func NewTimerManager() (*TimerManager, error) {
-	return &TimerManager{}, nil
+type timerImplement struct {
+	log Log
 }
 
-func NewTimerManagerWithLog(log *LogManager, manager *TimerManager) *TimerManager {
-	if manager == nil {
-		return nil
-	} else {
-		return &TimerManager{
-			Log: log,
-		}
-	}
+func NewTimer() (Timer, error) {
+	return &timerImplement{}, nil
 }
 
-func (this *TimerManager) startSingleTask(handler func()) {
+func (this *timerImplement) WithLog(log Log) Timer {
+	result := *this
+	result.log = log
+	return &result
+}
+
+func (this *timerImplement) startSingleTask(handler func()) {
 	defer CatchCrash(func(exception Exception) {
-		this.Log.Critical("TimerTask Crash Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
+		this.log.Critical("TimerTask Crash Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
 	})
 	defer Catch(func(exception Exception) {
-		this.Log.Error("TimerTask Error Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
+		this.log.Error("TimerTask Error Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
 	})
 	handler()
 }
 
-func (this *TimerManager) Cron(cronspec string, handler func()) error {
+func (this *timerImplement) Cron(cronspec string, handler func()) error {
 	//使用crontab标准的定时器
 	// (second) (minute) (hour) (day of month) (month) (day of week, optional)
 	// * * * * * *
@@ -50,7 +53,7 @@ func (this *TimerManager) Cron(cronspec string, handler func()) error {
 	return nil
 }
 
-func (this *TimerManager) Interval(duraction time.Duration, handler func()) error {
+func (this *timerImplement) Interval(duraction time.Duration, handler func()) error {
 	//带有延后属性的定时器
 	go func() {
 		timeChan := time.After(duraction)
@@ -63,7 +66,7 @@ func (this *TimerManager) Interval(duraction time.Duration, handler func()) erro
 	return nil
 }
 
-func (this *TimerManager) Tick(duraction time.Duration, handler func()) error {
+func (this *timerImplement) Tick(duraction time.Duration, handler func()) error {
 	//带有延后属性的定时器
 	go func() {
 		tickChan := time.Tick(duraction)

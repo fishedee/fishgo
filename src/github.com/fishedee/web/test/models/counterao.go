@@ -1,11 +1,12 @@
 package test
 
 import (
+	. "github.com/fishedee/web"
 	"sync/atomic"
 )
 
 type CounterAoModel struct {
-	BaseModel
+	Model
 	totalInt int32
 }
 

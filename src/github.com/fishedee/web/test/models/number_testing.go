@@ -1,11 +1,12 @@
 package test
 
 import (
+	. "github.com/fishedee/web"
 	"github.com/fishedee/web/test/models/number"
 )
 
 type InnerTest struct {
-	BaseTest
+	Test
 	NumberAoTest number.NumberAoTest
 }
 

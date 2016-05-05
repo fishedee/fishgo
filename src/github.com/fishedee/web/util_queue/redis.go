@@ -1,4 +1,4 @@
-package beego_queue
+package util_queue
 
 import (
 	"github.com/garyburd/redigo/redis"
@@ -81,7 +81,7 @@ func newRedisPool(configSavePath string) (*redis.Pool, error) {
 	}
 	return poollist, poollist.Get().Err()
 }
-func NewRedisQueue(config BeegoQueueStoreConfig) (BeegoQueueStoreInterface, error) {
+func NewRedisQueue(config QueueStoreConfig) (QueueStoreInterface, error) {
 	redisPool, err := newRedisPool(config.SavePath)
 	if err != nil {
 		return nil, err
@@ -127,7 +127,7 @@ func (this *RedisQueueStore) consumeData(topicId string, timeout int) (interface
 	return data, nil
 }
 
-func (this *RedisQueueStore) Consume(topicId string, listener BeegoQueueListener) error {
+func (this *RedisQueueStore) Consume(topicId string, listener QueueListener) error {
 	go func() {
 		for {
 			data, err := this.consumeData(topicId, 10)

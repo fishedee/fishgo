@@ -1,10 +1,9 @@
-package util
+package web
 
 import (
 	"database/sql"
 	"errors"
 	"fmt"
-	. "github.com/fishedee/util"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/go-xorm/core"
 	"github.com/go-xorm/xorm"
@@ -54,7 +53,13 @@ type DatabaseSession interface {
 	Count(bean interface{}) (int64, error)
 }
 
-type DatabaseManagerConfig struct {
+type Database interface {
+	DatabaseSession
+	NewSession() DatabaseSession
+	UpdateBatch(rowsSlicePtr interface{}, indexColName string) (int64, error)
+}
+
+type DatabaseConfig struct {
 	Driver        string
 	Host          string
 	Port          int
@@ -65,20 +70,75 @@ type DatabaseManagerConfig struct {
 	MaxConnection int
 }
 
-type DatabaseManager struct {
+type databaseImplement struct {
 	*xorm.Engine
-	config DatabaseManagerConfig
+	config DatabaseConfig
+}
+
+func NewDatabase(config DatabaseConfig) (Database, error) {
+	if config.Driver == "" {
+		return nil, nil
+	}
+	dblink := fmt.Sprintf(
+		"%s:%s@tcp(%s:%d)/%s?charset=utf8",
+		config.User,
+		config.Passowrd,
+		config.Host,
+		config.Port,
+		config.Database,
+	)
+	tempDb, err := xorm.NewEngine(config.Driver, dblink)
+	if err != nil {
+		return nil, err
+	}
+
+	tempDb.SetTableMapper(&tableMapper{})
+	tempDb.SetColumnMapper(&columnMapper{})
+	if config.Debug {
+		tempDb.ShowSQL(true)
+	}
+	if config.MaxConnection > 0 {
+		tempDb.SetMaxOpenConns(config.MaxConnection)
+	}
+	tempDb.Ping()
+	return &databaseImplement{
+		Engine: tempDb,
+		config: config,
+	}, nil
+}
+
+func NewDatabaseFromConfig(configName string) (Database, error) {
+	dbdirver := globalBasic.Config.GetString(configName + "dirver")
+	dbhost := globalBasic.Config.GetString(configName + "host")
+	dbport := globalBasic.Config.GetString(configName + "port")
+	dbuser := globalBasic.Config.GetString(configName + "user")
+	dbpassword := globalBasic.Config.GetString(configName + "password")
+	dbdatabase := globalBasic.Config.GetString(configName + "database")
+	dbmaxconnection := globalBasic.Config.GetString(configName + "maxconnection")
+	dbdebug := globalBasic.Config.GetString(configName + "debug")
+
+	config := DatabaseConfig{}
+	config.Driver = dbdirver
+	config.Host = dbhost
+	config.Port, _ = strconv.Atoi(dbport)
+	config.User = dbuser
+	config.Passowrd = dbpassword
+	config.Database = dbdatabase
+	config.Debug, _ = strconv.ParseBool(dbdebug)
+	config.MaxConnection, _ = strconv.Atoi(dbmaxconnection)
+
+	return NewDatabase(config)
 }
 
 type zeroable interface {
 	IsZero() bool
 }
 
-func (this *DatabaseManager) rValue(bean interface{}) reflect.Value {
+func (this *databaseImplement) rValue(bean interface{}) reflect.Value {
 	return reflect.Indirect(reflect.ValueOf(bean))
 }
 
-func (this *DatabaseManager) isZero(k interface{}) bool {
+func (this *databaseImplement) isZero(k interface{}) bool {
 	switch k.(type) {
 	case int:
 		return k.(int) == 0
@@ -114,7 +174,7 @@ func (this *DatabaseManager) isZero(k interface{}) bool {
 	return false
 }
 
-func (this *DatabaseManager) value2Interface(fieldValue reflect.Value) (interface{}, error) {
+func (this *databaseImplement) value2Interface(fieldValue reflect.Value) (interface{}, error) {
 	fieldType := fieldValue.Type()
 	fieldTypeKind := fieldType.Kind()
 	switch fieldTypeKind {
@@ -145,7 +205,7 @@ type tableName interface {
 	TableName() string
 }
 
-func (this *DatabaseManager) autoMapType(v reflect.Value) *core.Table {
+func (this *databaseImplement) autoMapType(v reflect.Value) *core.Table {
 	t := v.Type()
 	table := core.NewEmptyTable()
 	if tb, ok := v.Interface().(tableName); ok {
@@ -175,10 +235,119 @@ func (this *DatabaseManager) autoMapType(v reflect.Value) *core.Table {
 	return table
 }
 
-func (this *DatabaseManager) Alias(alias string) DatabaseSession {
+func (this *databaseImplement) NewSession() DatabaseSession {
+	return this.NewSession()
+}
+
+func (this *databaseImplement) Sql(querystring string, args ...interface{}) DatabaseSession {
+	return this.Sql(querystring, args...)
+}
+
+func (this *databaseImplement) NoAutoTime() DatabaseSession {
+	return this.NoAutoTime()
+}
+
+func (this *databaseImplement) NoAutoCondition(no ...bool) DatabaseSession {
+	return this.NoAutoCondition(no...)
+}
+
+func (this *databaseImplement) Cascade(trueOrFalse ...bool) DatabaseSession {
+	return this.Cascade(trueOrFalse...)
+}
+
+func (this *databaseImplement) Where(querystring string, args ...interface{}) DatabaseSession {
+	return this.Where(querystring, args...)
+}
+
+func (this *databaseImplement) Id(id interface{}) DatabaseSession {
+	return this.Id(id)
+}
+
+func (this *databaseImplement) Distinct(columns ...string) DatabaseSession {
+	return this.Distinct(columns...)
+}
+
+func (this *databaseImplement) Select(str string) DatabaseSession {
+	return this.Select(str)
+}
+
+func (this *databaseImplement) Cols(columns ...string) DatabaseSession {
+	return this.Cols(columns...)
+}
+
+func (this *databaseImplement) AllCols() DatabaseSession {
+	return this.AllCols()
+}
+
+func (this *databaseImplement) MustCols(columns ...string) DatabaseSession {
+	return this.MustCols(columns...)
+}
+
+func (this *databaseImplement) UseBool(columns ...string) DatabaseSession {
+	return this.UseBool(columns...)
+}
+
+func (this *databaseImplement) Omit(columns ...string) DatabaseSession {
+	return this.Omit(columns...)
+}
+
+func (this *databaseImplement) Nullable(columns ...string) DatabaseSession {
+	return this.Nullable(columns...)
+}
+
+func (this *databaseImplement) In(column string, args ...interface{}) DatabaseSession {
+	return this.In(column, args...)
+}
+
+func (this *databaseImplement) Incr(column string, args ...interface{}) DatabaseSession {
+	return this.Incr(column, args...)
+}
+
+func (this *databaseImplement) Decr(column string, args ...interface{}) DatabaseSession {
+	return this.Decr(column, args...)
+}
+
+func (this *databaseImplement) SetExpr(column string, expression string) DatabaseSession {
+	return this.SetExpr(column, expression)
+}
+
+func (this *databaseImplement) Table(tableNameOrBean interface{}) DatabaseSession {
+	return this.Table(tableNameOrBean)
+}
+
+func (this *databaseImplement) Alias(alias string) DatabaseSession {
 	return this.Alias(alias)
 }
-func (this *DatabaseManager) UpdateBatch(rowsSlicePtr interface{}, indexColName string) (int64, error) {
+
+func (this *databaseImplement) Limit(limit int, start ...int) DatabaseSession {
+	return this.Limit(limit, start...)
+}
+
+func (this *databaseImplement) Desc(colNames ...string) DatabaseSession {
+	return this.Desc(colNames...)
+}
+
+func (this *databaseImplement) Asc(colNames ...string) DatabaseSession {
+	return this.Asc(colNames...)
+}
+
+func (this *databaseImplement) OrderBy(order string) DatabaseSession {
+	return this.OrderBy(order)
+}
+
+func (this *databaseImplement) Join(join_operator string, tablename interface{}, condition string, args ...interface{}) DatabaseSession {
+	return this.Join(join_operator, tablename, condition, args...)
+}
+
+func (this *databaseImplement) GroupBy(keys string) DatabaseSession {
+	return this.GroupBy(keys)
+}
+
+func (this *databaseImplement) Having(conditions string) DatabaseSession {
+	return this.Having(conditions)
+}
+
+func (this *databaseImplement) UpdateBatch(rowsSlicePtr interface{}, indexColName string) (int64, error) {
 	sliceValue := reflect.Indirect(reflect.ValueOf(rowsSlicePtr))
 	if sliceValue.Kind() != reflect.Slice {
 		return 0, errors.New("needs a pointer to a slice")
@@ -296,86 +465,6 @@ func (this *DatabaseManager) UpdateBatch(rowsSlicePtr interface{}, indexColName 
 		return 0, err
 	}
 	return res.RowsAffected()
-}
-
-var newDatabaseManagerMemory *MemoryFunc
-var newDatabaseManagerFromConfigMemory *MemoryFunc
-
-func init() {
-	var err error
-	newDatabaseManagerMemory, err = NewMemoryFunc(newDatabaseManager, MemoryFuncCacheNormal)
-	if err != nil {
-		panic(err)
-	}
-	newDatabaseManagerFromConfigMemory, err = NewMemoryFunc(newDatabaseManagerFromConfig, MemoryFuncCacheNormal)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func newDatabaseManager(config DatabaseManagerConfig) (*DatabaseManager, error) {
-	if config.Driver == "" {
-		return nil, nil
-	}
-	dblink := fmt.Sprintf(
-		"%s:%s@tcp(%s:%d)/%s?charset=utf8",
-		config.User,
-		config.Passowrd,
-		config.Host,
-		config.Port,
-		config.Database,
-	)
-	tempDb, err := xorm.NewEngine(config.Driver, dblink)
-	if err != nil {
-		return nil, err
-	}
-
-	tempDb.SetTableMapper(&tableMapper{})
-	tempDb.SetColumnMapper(&columnMapper{})
-	if config.Debug {
-		tempDb.ShowSQL(true)
-	}
-	if config.MaxConnection > 0 {
-		tempDb.SetMaxOpenConns(config.MaxConnection)
-	}
-	tempDb.Ping()
-	return &DatabaseManager{
-		Engine: tempDb,
-		config: config,
-	}, nil
-}
-
-func NewDatabaseManager(config DatabaseManagerConfig) (*DatabaseManager, error) {
-	result, err := newDatabaseManagerMemory.Call(config)
-	return result.(*DatabaseManager), err
-}
-
-func newDatabaseManagerFromConfig(configName string) (*DatabaseManager, error) {
-	dbdirver := globalBasic.Config.String(configName + "dirver")
-	dbhost := globalBasic.Config.String(configName + "host")
-	dbport := globalBasic.Config.String(configName + "port")
-	dbuser := globalBasic.Config.String(configName + "user")
-	dbpassword := globalBasic.Config.String(configName + "password")
-	dbdatabase := globalBasic.Config.String(configName + "database")
-	dbmaxconnection := globalBasic.Config.String(configName + "maxconnection")
-	dbdebug := globalBasic.Config.String(configName + "debug")
-
-	config := DatabaseManagerConfig{}
-	config.Driver = dbdirver
-	config.Host = dbhost
-	config.Port, _ = strconv.Atoi(dbport)
-	config.User = dbuser
-	config.Passowrd = dbpassword
-	config.Database = dbdatabase
-	config.Debug, _ = strconv.ParseBool(dbdebug)
-	config.MaxConnection, _ = strconv.Atoi(dbmaxconnection)
-
-	return NewDatabaseManager(config)
-}
-
-func NewDatabaseManagerFromConfig(configName string) (*DatabaseManager, error) {
-	result, err := newDatabaseManagerFromConfigMemory.Call(configName)
-	return result.(*DatabaseManager), err
 }
 
 type tableMapper struct {

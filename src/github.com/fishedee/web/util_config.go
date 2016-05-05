@@ -8,6 +8,18 @@ import (
 	"strconv"
 )
 
+type Config interface {
+	GetString(key string) string
+	GetFloat(key string) float64
+	GetInt(key string) int
+	GetBool(key string) bool
+}
+
+type configImplement struct {
+	runMode  string
+	configer config.Configer
+}
+
 func checkFileExist(path string) bool {
 	_, err := os.Stat(path)
 	if err != nil {
@@ -22,14 +34,14 @@ func findAppConfPath(file string) (string, bool, error) {
 	if err != nil {
 		return "", false, err
 	}
-	appPath := workingDir + file
+	appPath := workingDir + "/" + file
 	if checkFileExist(appPath) {
 		return appPath, true, nil
 	}
 
 	for workingDir != "/" {
 		workingDir = path.Dir(workingDir)
-		appPath := workingDir + file
+		appPath := workingDir + "/" + file
 		if checkFileExist(appPath) {
 			return appPath, false, nil
 		}
@@ -37,14 +49,14 @@ func findAppConfPath(file string) (string, bool, error) {
 	return "", false, errors.New("can't not find conf")
 }
 
-func NewConfigManager(file string) (*ConfigManager, error) {
+func NewConfig(file string) (Config, error) {
 	appConfigPath, isCurrentDir, err := findAppConfPath(file)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	configer, err := config.NewConfig("ini", appConfigPath)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	var runMode string
@@ -58,38 +70,33 @@ func NewConfigManager(file string) (*ConfigManager, error) {
 		runMode = "dev"
 	}
 
-	return &ConfigManager{
+	return &configImplement{
 		runMode:  runMode,
 		configer: configer,
 	}, nil
 }
 
-type ConfigManager struct {
-	runMode  string
-	configer config.Configer
-}
-
-func (this *ConfigManager) Get(key string) string {
-	if v := configer.String(this.runMode + "::" + key); v != "" {
+func (this *configImplement) GetString(key string) string {
+	if v := this.configer.String(this.runMode + "::" + key); v != "" {
 		return v
 	}
-	return configer.String(key)
+	return this.configer.String(key)
 }
 
-func (this *ConfigManager) GetFloat(key string) float64 {
-	v := this.Get(key)
+func (this *configImplement) GetFloat(key string) float64 {
+	v := this.GetString(key)
 	vF, _ := strconv.ParseFloat(v, 64)
 	return vF
 }
 
-func (this *ConfigManager) GetInt(key string) int {
-	v := this.Get(key)
+func (this *configImplement) GetInt(key string) int {
+	v := this.GetString(key)
 	vI, _ := strconv.ParseInt(v, 10, 64)
 	return int(vI)
 }
 
-func (this *ConfigManager) GetBool(key string) bool {
-	v := this.Get(key)
+func (this *configImplement) GetBool(key string) bool {
+	v := this.GetString(key)
 	vB, _ := strconv.ParseBool(v)
 	return bool(vB)
 }

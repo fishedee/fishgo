@@ -12,13 +12,14 @@ import (
 
 type ControllerInterface interface {
 	ModelInterface
-	Init(ControllerInterface, http.Request, http.ResponseWriter, *testing.T)
+	InitEmpty(ControllerInterface, *testing.T)
+	Init(ControllerInterface, *http.Request, http.ResponseWriter, *testing.T)
 	AutoRender(interface{}, string)
 }
 
 type Controller struct {
 	*Basic
-	appController interface{}
+	appController ControllerInterface
 	inputData     interface{}
 }
 
@@ -50,10 +51,10 @@ func (this *Controller) InitEmpty(target ControllerInterface, t *testing.T) {
 		panic(err)
 	}
 	response := &memoryResponseWriter{}
-	this.Init(target, request, response, nil)
+	this.Init(target, request, response, t)
 }
 
-func (this *Controller) Init(target ControllerInterface, request http.Request, response http.ResponseWriter, t *testing.T) {
+func (this *Controller) Init(target ControllerInterface, request *http.Request, response http.ResponseWriter, t *testing.T) {
 	this.appController = target
 	this.Basic = initBasic(request, response, t)
 	initModel(this.appController)
@@ -112,14 +113,14 @@ func (this *Controller) Check(requireStruct interface{}) {
 }
 
 func (this *Controller) CheckGet(requireStruct interface{}) {
-	if this.Ctx.Request.Method() != "GET" {
+	if this.Ctx.Request.Method != "GET" {
 		language.Throw(1, "请求Method不是Get方法")
 	}
 	this.Check(requireStruct)
 }
 
 func (this *Controller) CheckPost(requireStruct interface{}) {
-	if this.Ctx.Request.Method() != "POST" {
+	if this.Ctx.Request.Method != "POST" {
 		language.Throw(1, "请求Method不是POST方法")
 	}
 	this.Check(requireStruct)

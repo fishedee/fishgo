@@ -241,7 +241,7 @@ func generateSingleTestFileContent(data []ParserInfo) (string, error) {
 		)`
 	packageFunc := "\ntype testFishGenStruct struct{}\n" +
 		"func Test" + strings.ToUpper(packageName[0:1]) + packageName[1:] + "(t *testing.T){\n" +
-		"RunBeegoValidateTest(t,&testFishGenStruct{})\n" +
+		"RunTest(t,&testFishGenStruct{})\n" +
 		"}\n"
 
 	return packageInfo + packageImport + packageFunc, nil

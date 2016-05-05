@@ -1,10 +1,9 @@
-package util
+package web
 
 import (
 	"encoding/json"
 	"github.com/astaxie/beego/session"
-	. "github.com/fishedee/util"
-	_ "github.com/fishedee/util_session"
+	_ "github.com/fishedee/web/util_session"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -12,7 +11,20 @@ import (
 	"time"
 )
 
-type SessionManagerConfig struct {
+type SessionStore interface {
+	Set(key, value interface{}) error
+	Get(key interface{}) interface{}
+	Delete(key interface{}) error
+	SessionID() string
+	SessionRelease(w http.ResponseWriter)
+	Flush() error
+}
+
+type Session interface {
+	SessionStart(w http.ResponseWriter, r *http.Request) (session SessionStore, err error)
+}
+
+type SessionConfig struct {
 	Driver          string `json:driver`
 	CookieName      string `json:"cookieName"`
 	EnableSetCookie bool   `json:"enableSetCookie,omitempty"`
@@ -24,27 +36,12 @@ type SessionManagerConfig struct {
 	SessionIdLength int    `json:"sessionIdLength"`
 }
 
-type SessionManager struct {
+type sessionImplement struct {
 	*session.Manager
-	config SessionManagerConfig
+	config SessionConfig
 }
 
-var newSessionManagerMemory *MemoryFunc
-var newSessionManagerFromConfigMemory *MemoryFunc
-
-func init() {
-	var err error
-	newSessionManagerMemory, err = NewMemoryFunc(newSessionManager, MemoryFuncCacheNormal)
-	if err != nil {
-		panic(err)
-	}
-	newSessionManagerFromConfigMemory, err = NewMemoryFunc(newSessionManagerFromConfig, MemoryFuncCacheNormal)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func newSessionManager(config SessionManagerConfig) (*SessionManager, error) {
+func NewSession(config SessionConfig) (Session, error) {
 	if config.Driver == "" {
 		return nil, nil
 	}
@@ -68,28 +65,23 @@ func newSessionManager(config SessionManagerConfig) (*SessionManager, error) {
 	}
 	go sessionManager.GC()
 
-	return &SessionManager{
+	return &sessionImplement{
 		Manager: sessionManager,
 		config:  config,
 	}, nil
 }
 
-func NewSessionManager(config SessionManagerConfig) (*SessionManager, error) {
-	result, err := newSessionManagerMemory.Call(config)
-	return result.(*SessionManager), err
-}
+func NewSessionFromConfig(configName string) (Session, error) {
+	sessiondirver := globalBasic.Config.GetString(configName + "driver")
+	sessionname := globalBasic.Config.GetString(configName + "name")
+	sessiongclifttime := globalBasic.Config.GetString(configName + "gclifttime")
+	sessioncookielifetime := globalBasic.Config.GetString(configName + "cookielifetime")
+	sessionsavepath := globalBasic.Config.GetString(configName + "savepath")
+	sessionsecure := globalBasic.Config.GetString(configName + "secure")
+	sessiondomain := globalBasic.Config.GetString(configName + "domain")
+	sessionlength := globalBasic.Config.GetString(configName + "length")
 
-func newSessionManagerFromConfig(configName string) (*SessionManager, error) {
-	sessiondirver := globalBasic.Config.String(configName + "driver")
-	sessionname := globalBasic.Config.String(configName + "name")
-	sessiongclifttime := globalBasic.Config.String(configName + "gclifttime")
-	sessioncookielifetime := globalBasic.Config.String(configName + "cookielifetime")
-	sessionsavepath := globalBasic.Config.String(configName + "savepath")
-	sessionsecure := globalBasic.Config.String(configName + "secure")
-	sessiondomain := globalBasic.Config.String(configName + "domain")
-	sessionlength := globalBasic.Config.String(configName + "length")
-
-	sessionlink := SessionManagerConfig{}
+	sessionlink := SessionConfig{}
 	sessionlink.Driver = sessiondirver
 	sessionlink.CookieName = sessionname
 	sessionlink.EnableSetCookie = true
@@ -100,15 +92,10 @@ func newSessionManagerFromConfig(configName string) (*SessionManager, error) {
 	sessionlink.Domain = sessiondomain
 	sessionlink.SessionIdLength, _ = strconv.Atoi(sessionlength)
 
-	return NewSessionManager(sessionlink)
+	return NewSession(sessionlink)
 }
 
-func NewSessionManagerFromConfig(configName string) (*SessionManager, error) {
-	result, err := newSessionManagerFromConfigMemory.Call(configName)
-	return result.(*SessionManager), err
-}
-
-func (manager *SessionManager) SessionStart(w http.ResponseWriter, r *http.Request) (session session.Store, err error) {
+func (manager *sessionImplement) SessionStart(w http.ResponseWriter, r *http.Request) (session SessionStore, err error) {
 	result, errOrgin := manager.Manager.SessionStart(w, r)
 	if errOrgin != nil {
 		return result, errOrgin

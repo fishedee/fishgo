@@ -1,7 +1,11 @@
 package number
 
+import (
+	. "github.com/fishedee/web"
+)
+
 type NumberAoTest struct {
-	BaseTest
+	Test
 	NumberAo NumberAoModel
 }
 

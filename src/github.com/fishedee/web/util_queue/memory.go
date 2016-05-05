@@ -1,4 +1,4 @@
-package beego_queue
+package util_queue
 
 import (
 	"errors"
@@ -6,7 +6,7 @@ import (
 )
 
 type MemoryQueuePushPopStore struct {
-	listener BeegoQueueListener
+	listener QueueListener
 }
 
 type MemoryQueueStore struct {
@@ -14,7 +14,7 @@ type MemoryQueueStore struct {
 	mutex           sync.Mutex
 }
 
-func NewMemoryQueue(BeegoQueueStoreConfig) (BeegoQueueStoreInterface, error) {
+func NewMemoryQueue(QueueStoreConfig) (QueueStoreInterface, error) {
 	result := &MemoryQueueStore{}
 	result.mapPushPopStore = map[string]MemoryQueuePushPopStore{}
 	return NewBasicQueue(result), nil
@@ -31,7 +31,7 @@ func (this *MemoryQueueStore) Produce(topicId string, data interface{}) error {
 	return nil
 }
 
-func (this *MemoryQueueStore) Consume(topicId string, listener BeegoQueueListener) error {
+func (this *MemoryQueueStore) Consume(topicId string, listener QueueListener) error {
 	this.mutex.Lock()
 	this.mapPushPopStore[topicId] = MemoryQueuePushPopStore{
 		listener: listener,
