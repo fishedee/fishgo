@@ -82,19 +82,21 @@ func (this *Test) Benchmark(number int, concurrency int, handler func(), testCas
 }
 
 func (this *Test) AssertEqual(left interface{}, right interface{}, testCase ...interface{}) {
+	t := this.Ctx.GetRawTesting().(*testing.T)
 	errorString, isEqual := DeepEqual(left, right)
 	if isEqual {
 		return
 	}
 	traceInfo := this.getTraceLineNumber(1)
 	if len(testCase) == 0 {
-		this.Ctx.Testing.Errorf("%v: assertEqual Fail! %v", traceInfo, errorString)
+		t.Errorf("%v: assertEqual Fail! %v", traceInfo, errorString)
 	} else {
-		this.Ctx.Testing.Errorf("%v:%v: assertEqual Fail! %v", traceInfo, testCase[0], errorString)
+		t.Errorf("%v:%v: assertEqual Fail! %v", traceInfo, testCase[0], errorString)
 	}
 }
 
 func (this *Test) AssertError(left Exception, rightCode int, rightMessage string, testCase ...interface{}) {
+	t := this.Ctx.GetRawTesting().(*testing.T)
 	errorString := ""
 	if left.GetCode() != rightCode {
 		errorString = fmt.Sprintf("assertError Code Fail! %v != %+v ", left.GetCode(), rightCode)
@@ -107,9 +109,9 @@ func (this *Test) AssertError(left Exception, rightCode int, rightMessage string
 	}
 	traceInfo := this.getTraceLineNumber(1)
 	if len(testCase) == 0 {
-		this.Ctx.Testing.Errorf("%v: %v", traceInfo, errorString)
+		t.Errorf("%v: %v", traceInfo, errorString)
 	} else {
-		this.Ctx.Testing.Errorf("%v:%v: %v", traceInfo, testCase[0], errorString)
+		t.Errorf("%v:%v: %v", traceInfo, testCase[0], errorString)
 	}
 
 }
@@ -136,7 +138,7 @@ func (this *Test) RandomString(length int) string {
 }
 
 func (this *Test) RequestReset() {
-	this.initEmpty(this.appController, this.Ctx.Testing)
+	this.initEmpty(this.appController, this.Ctx.GetRawTesting())
 }
 
 var testMap map[string][]TestInterface

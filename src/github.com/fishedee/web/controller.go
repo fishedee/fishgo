@@ -3,13 +3,12 @@ package web
 import (
 	"bytes"
 	"net/http"
-	"testing"
 )
 
 type ControllerInterface interface {
 	ModelInterface
-	initEmpty(ControllerInterface, *testing.T)
-	init(ControllerInterface, *http.Request, http.ResponseWriter, *testing.T)
+	initEmpty(ControllerInterface, interface{})
+	init(ControllerInterface, interface{}, interface{}, interface{})
 	AutoRender(interface{}, string)
 }
 
@@ -40,7 +39,7 @@ func (this *memoryResponseWriter) WriteHeader(headerCode int) {
 	this.headerCode = headerCode
 }
 
-func (this *Controller) initEmpty(target ControllerInterface, t *testing.T) {
+func (this *Controller) initEmpty(target ControllerInterface, t interface{}) {
 	request, err := http.NewRequest("get", "/", bytes.NewReader([]byte("")))
 	if err != nil {
 		panic(err)
@@ -49,7 +48,7 @@ func (this *Controller) initEmpty(target ControllerInterface, t *testing.T) {
 	this.init(target, request, response, t)
 }
 
-func (this *Controller) init(target ControllerInterface, request *http.Request, response http.ResponseWriter, t *testing.T) {
+func (this *Controller) init(target ControllerInterface, request interface{}, response interface{}, t interface{}) {
 	this.appController = target
 	this.Basic = initBasic(request, response, t)
 	initModel(this.appController)

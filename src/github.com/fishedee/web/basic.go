@@ -1,10 +1,5 @@
 package web
 
-import (
-	"net/http"
-	"testing"
-)
-
 type Basic struct {
 	Ctx      Context
 	Config   Configure
@@ -79,10 +74,13 @@ func init() {
 		panic(err)
 	}
 }
-func initBasic(request *http.Request, response http.ResponseWriter, t *testing.T) *Basic {
+func initBasic(request interface{}, response interface{}, t interface{}) *Basic {
 	result := globalBasic
 	result.Ctx = NewContext(request, response, t)
 	result.Log = result.Log.WithContextAndMonitor(result.Ctx, result.Monitor)
+	if result.Session != nil {
+		result.Session = result.Session.WithContext(result.Ctx)
+	}
 	if result.Timer != nil {
 		result.Timer = result.Timer.WithLog(result.Log)
 	}

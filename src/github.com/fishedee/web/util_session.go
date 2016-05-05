@@ -16,12 +16,13 @@ type SessionStore interface {
 	Get(key interface{}) interface{}
 	Delete(key interface{}) error
 	SessionID() string
-	SessionRelease(w http.ResponseWriter)
+	SessionRelease()
 	Flush() error
 }
 
 type Session interface {
-	SessionStart(w http.ResponseWriter, r *http.Request) (session SessionStore, err error)
+	WithContext(ctx Context) Session
+	SessionStart() (session SessionStore, err error)
 }
 
 type SessionConfig struct {
@@ -39,6 +40,12 @@ type SessionConfig struct {
 type sessionImplement struct {
 	*session.Manager
 	config SessionConfig
+	ctx    Context
+}
+
+type sessionStoreImplement struct {
+	session.Store
+	responseWriter http.ResponseWriter
 }
 
 func NewSession(config SessionConfig) (Session, error) {
@@ -95,26 +102,43 @@ func NewSessionFromConfig(configName string) (Session, error) {
 	return NewSession(sessionlink)
 }
 
-func (manager *sessionImplement) SessionStart(w http.ResponseWriter, r *http.Request) (session SessionStore, err error) {
+func newSessionStoreImplement(store session.Store, responseWriter http.ResponseWriter) SessionStore {
+	result := sessionStoreImplement{
+		Store:          store,
+		responseWriter: responseWriter,
+	}
+	return &result
+}
+
+func (manager *sessionImplement) WithContext(ctx Context) Session {
+	result := *manager
+	result.ctx = ctx
+	return &result
+}
+
+func (manager *sessionImplement) SessionStart() (session SessionStore, err error) {
+	w := manager.ctx.GetRawResponseWriter().(http.ResponseWriter)
+	r := manager.ctx.GetRawRequest().(*http.Request)
+
 	result, errOrgin := manager.Manager.SessionStart(w, r)
 	if errOrgin != nil {
-		return result, errOrgin
+		return newSessionStoreImplement(result, w), errOrgin
 	}
 	//获取当前的cookie值
 	cookie, err := r.Cookie(manager.config.CookieName)
 	if err != nil || cookie.Value == "" {
-		return result, errOrgin
+		return newSessionStoreImplement(result, w), errOrgin
 	}
 	sid, err := url.QueryUnescape(cookie.Value)
 	if err != nil {
-		return result, errOrgin
+		return newSessionStoreImplement(result, w), errOrgin
 	}
 
 	//补充延续session时间的逻辑
 	cookieValue := w.Header().Get("Set-Cookie")
 	cookieName := manager.config.CookieName
 	if strings.Index(cookieValue, cookieName) != -1 {
-		return result, err
+		return newSessionStoreImplement(result, w), err
 	}
 	cookie = &http.Cookie{
 		Name:     manager.config.CookieName,
@@ -131,5 +155,9 @@ func (manager *sessionImplement) SessionStart(w http.ResponseWriter, r *http.Req
 	if manager.config.EnableSetCookie {
 		http.SetCookie(w, cookie)
 	}
-	return result, errOrgin
+	return newSessionStoreImplement(result, w), errOrgin
+}
+
+func (this *sessionStoreImplement) SessionRelease() {
+	this.Store.SessionRelease(this.responseWriter)
 }

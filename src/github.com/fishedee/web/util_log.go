@@ -108,18 +108,7 @@ func NewLogFromConfig(configName string) (Log, error) {
 }
 
 func (this *logImplement) WithContextAndMonitor(ctx Context, monitor Monitor) Log {
-	logPrefix := ""
-	if ctx.Request == nil {
-		logPrefix = " 0.0.0.0 * "
-	} else {
-		ip := ctx.Request.RemoteAddr
-		url := ctx.Request.RequestURI
-		realIP := ctx.Request.Header.Get("X-Real-Ip")
-		if ip == "127.0.0.1" && realIP != "" {
-			ip = realIP
-		}
-		logPrefix = fmt.Sprintf(" %s %s ", ip, url)
-	}
+	logPrefix := ctx.GetRemoteAddr()
 	newLogManager := *this
 	newLogManager.logPrefix = logPrefix
 	newLogManager.monitor = monitor

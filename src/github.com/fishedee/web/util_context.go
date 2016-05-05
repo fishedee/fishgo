@@ -7,33 +7,67 @@ import (
 	"github.com/fishedee/language"
 	"io/ioutil"
 	"mime"
-	"mime/multipart"
 	"net/http"
 	"strconv"
 	"strings"
 	"testing"
 )
 
-type Context struct {
-	Request        *http.Request
-	ResponseWriter http.ResponseWriter
-	Testing        *testing.T
+type Context interface {
+	//输入参数
+	GetParam(key string) string
+	GetParamToStruct(requireStruct interface{})
+	GetUrlParamToStruct(requireStruct interface{})
+	GetFormParamToStruct(requireStruct interface{})
+	GetFile(key string) ([]byte, string, error)
+	GetCookie(key string) string
+
+	//元信息
+	GetProxy() []string
+	GetMethod() string
+	GetScheme() string
+	GetHost() string
+	GetPort() int
+	GetSite() string
+	GetRemoteAddr() string
+	GetRemoteIP() string
+	GetRemotePort() int
+	GetUserAgent() string
+	GetHeader(key string) string
+	IsUpload() bool
+
+	//输出数据
+	Write(data []byte)
+	WriteHeader(key string, value string)
+	WriteStatus(code int)
+	WriteMimeHeader(mime string, title string)
+
+	//危险操作
+	GetRawRequest() interface{}
+	GetRawResponseWriter() interface{}
+	GetRawTesting() interface{}
+}
+
+type contextImplement struct {
+	request        *http.Request
+	responseWriter http.ResponseWriter
+	testing        *testing.T
 	inputData      map[string]interface{}
 }
 
-func NewContext(request *http.Request, response http.ResponseWriter, t *testing.T) Context {
-	result := Context{
-		Request:        request,
-		ResponseWriter: response,
-		Testing:        t,
+func NewContext(request interface{}, response interface{}, t interface{}) Context {
+	result := contextImplement{
+		request:        request.(*http.Request),
+		responseWriter: response.(http.ResponseWriter),
+		testing:        t.(*testing.T),
 	}
 	result.parseInput()
-	return result
+	return &result
 }
 
-func (this *Context) parseInput() {
+func (this *contextImplement) parseInput() {
 	//取出get数据
-	request := this.Request
+	request := this.request
 	queryInput := request.URL.RawQuery
 
 	//取出post数据
@@ -44,8 +78,8 @@ func (this *Context) parseInput() {
 	}
 	ct, _, err := mime.ParseMediaType(ct)
 	if ct == "application/x-www-form-urlencoded" {
-		byteArray, _ := ioutil.ReadAll(this.Request.Body)
-		this.Request.Body = ioutil.NopCloser(bytes.NewReader(byteArray))
+		byteArray, _ := ioutil.ReadAll(this.request.Body)
+		this.request.Body = ioutil.NopCloser(bytes.NewReader(byteArray))
 		postInput = string(byteArray)
 	}
 
@@ -58,7 +92,7 @@ func (this *Context) parseInput() {
 	}
 }
 
-func (this *Context) GetParam(key string) string {
+func (this *contextImplement) GetParam(key string) string {
 	result, isExist := this.inputData[key]
 	if !isExist {
 		return ""
@@ -66,7 +100,7 @@ func (this *Context) GetParam(key string) string {
 	return fmt.Sprintf("%v", result)
 }
 
-func (this *Context) GetParamToStruct(requireStruct interface{}) {
+func (this *contextImplement) GetParamToStruct(requireStruct interface{}) {
 	//导出到struct
 	err := language.MapToArray(this.inputData, requireStruct, "url")
 	if err != nil {
@@ -74,67 +108,77 @@ func (this *Context) GetParamToStruct(requireStruct interface{}) {
 	}
 }
 
-func (this *Context) GetUrlParamToStruct(requireStruct interface{}) {
-	if this.Request.Method != "GET" {
+func (this *contextImplement) GetUrlParamToStruct(requireStruct interface{}) {
+	if this.GetMethod() != "GET" {
 		language.Throw(1, "请求Method不是Get方法")
 	}
 	this.GetParamToStruct(requireStruct)
 }
 
-func (this *Context) GetFormParamToStruct(requireStruct interface{}) {
-	if this.Request.Method != "POST" {
+func (this *contextImplement) GetFormParamToStruct(requireStruct interface{}) {
+	if this.GetMethod() != "POST" {
 		language.Throw(1, "请求Method不是POST方法")
 	}
 	this.GetParamToStruct(requireStruct)
 }
 
-func (this *Context) GetFile(key string) (multipart.File, *multipart.FileHeader, error) {
-	return this.Request.FormFile(key)
+func (this *contextImplement) GetFile(key string) ([]byte, string, error) {
+	file, fileHeader, err := this.request.FormFile(key)
+	if err != nil {
+		return nil, "", err
+	}
+	defer file.Close()
+
+	data, err := ioutil.ReadAll(file)
+	if err != nil {
+		return nil, "", err
+	}
+	return data, fileHeader.Filename, nil
 }
 
-func (this *Context) GetCookie(key string) string {
-	ck, err := this.Request.Cookie(key)
+func (this *contextImplement) GetCookie(key string) string {
+	ck, err := this.request.Cookie(key)
 	if err != nil {
 		return ""
 	}
 	return ck.Value
 }
 
-func (this *Context) GetProxy() []string {
-	if ips := this.Request.Header.Get("X-Forwarded-For"); ips != "" {
+func (this *contextImplement) GetProxy() []string {
+	if ips := this.request.Header.Get("X-Forwarded-For"); ips != "" {
 		return strings.Split(ips, ",")
 	}
 	return []string{}
 }
 
-func (this *Context) GetMethod() string {
-	return this.Request.Method
+func (this *contextImplement) GetMethod() string {
+	return this.request.Method
 }
 
-func (this *Context) GetScheme() string {
-	if this.Request.URL.Scheme != "" {
-		return this.Request.URL.Scheme
+func (this *contextImplement) GetScheme() string {
+	if this.request.URL.Scheme != "" {
+		return this.request.URL.Scheme
 	}
-	if this.Request.TLS == nil {
+	if this.request.TLS == nil {
 		return "http"
 	}
 	return "https"
 }
 
-func (this *Context) GetHost() string {
-	if this.Request.Host != "" {
-		hostParts := strings.Split(this.Request.Host, ":")
+func (this *contextImplement) GetHost() string {
+	if this.request.Host != "" {
+		hostParts := strings.Split(this.request.Host, ":")
 		if len(hostParts) > 0 {
 			return hostParts[0]
 		}
-		return this.Request.Host
+		return this.request.Host
 	}
 	return "localhost"
 }
 
-func (this *Context) GetPort() int {
-	if this.Request.Host != "" {
-		hostParts := strings.Split(this.Request.Host, ":")
+func (this *contextImplement) GetPort() int {
+	if this.request.Host != "" {
+		hostParts := strings.Split(this.request.Host, ":")
 		if len(hostParts) > 1 {
 			port, err := strconv.Atoi(hostParts[1])
 			if err != nil {
@@ -147,19 +191,19 @@ func (this *Context) GetPort() int {
 	return 80
 }
 
-func (this *Context) GetSite() string {
-	return this.GetScheme() + "://" + this.Request.Host
+func (this *contextImplement) GetSite() string {
+	return this.GetScheme() + "://" + this.request.Host
 }
 
-func (this *Context) GetRemoteAddr() string {
+func (this *contextImplement) GetRemoteAddr() string {
 	ips := this.GetProxy()
 	if len(ips) > 0 && ips[0] != "" {
 		return ips[0]
 	}
-	return this.Request.RemoteAddr
+	return this.request.RemoteAddr
 }
 
-func (this *Context) GetRemoteIP() string {
+func (this *contextImplement) GetRemoteIP() string {
 	addr := this.GetRemoteAddr()
 	ip := strings.Split(addr, ":")
 	if len(ip) > 0 {
@@ -170,7 +214,7 @@ func (this *Context) GetRemoteIP() string {
 	return "127.0.0.1"
 }
 
-func (this *Context) GetRemotePort() int {
+func (this *contextImplement) GetRemotePort() int {
 	addr := this.GetRemoteAddr()
 	ip := strings.Split(addr, ":")
 	if len(ip) > 1 {
@@ -183,35 +227,35 @@ func (this *Context) GetRemotePort() int {
 	return 80
 }
 
-func (this *Context) GetUserAgent() string {
-	return this.Request.Header.Get("User-Agent")
+func (this *contextImplement) GetUserAgent() string {
+	return this.request.Header.Get("User-Agent")
 }
 
-func (this *Context) GetHeader(key string) string {
-	return this.Request.Header.Get(key)
+func (this *contextImplement) GetHeader(key string) string {
+	return this.request.Header.Get(key)
 }
 
-func (this *Context) IsUpload() bool {
-	return strings.Contains(this.Request.Header.Get("Content-Type"), "multipart/form-data")
+func (this *contextImplement) IsUpload() bool {
+	return strings.Contains(this.request.Header.Get("Content-Type"), "multipart/form-data")
 }
 
-func (this *Context) Write(data []byte) {
-	writer := this.ResponseWriter
+func (this *contextImplement) Write(data []byte) {
+	writer := this.responseWriter
 	writer.Write(data)
 }
 
-func (this *Context) WriteHeader(key string, value string) {
-	writer := this.ResponseWriter
+func (this *contextImplement) WriteHeader(key string, value string) {
+	writer := this.responseWriter
 	writer.Header().Set(key, value)
 }
 
-func (this *Context) WriteStatus(code int) {
-	writer := this.ResponseWriter
+func (this *contextImplement) WriteStatus(code int) {
+	writer := this.responseWriter
 	writer.WriteHeader(code)
 }
 
-func (this *Context) WriteMimeHeader(mime string, title string) {
-	writer := this.ResponseWriter
+func (this *contextImplement) WriteMimeHeader(mime string, title string) {
+	writer := this.responseWriter
 	writerHeader := writer.Header()
 	if mime == "json" {
 		writerHeader.Set("Content-Type", "application/x-javascript; charset=utf-8")
@@ -242,4 +286,16 @@ func (this *Context) WriteMimeHeader(mime string, title string) {
 	} else {
 		panic("invalid mime [" + mime + "]")
 	}
+}
+
+func (this *contextImplement) GetRawRequest() interface{} {
+	return this.request
+}
+
+func (this *contextImplement) GetRawResponseWriter() interface{} {
+	return this.responseWriter
+}
+
+func (this *contextImplement) GetRawTesting() interface{} {
+	return this.testing
 }
