@@ -56,6 +56,9 @@ type contextImplement struct {
 }
 
 func NewContext(request interface{}, response interface{}, t interface{}) Context {
+	if t == nil {
+		t = (*testing.T)(nil)
+	}
 	result := contextImplement{
 		request:        request.(*http.Request),
 		responseWriter: response.(http.ResponseWriter),

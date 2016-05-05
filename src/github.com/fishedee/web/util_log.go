@@ -142,7 +142,7 @@ func (this *logImplement) getLogFormat(format string, v []interface{}) string {
 			}
 		}
 	}
-	return fmt.Sprintf(this.logPrefix+this.getTraceLineNumber(2)+" "+format, v...)
+	return fmt.Sprintf(this.logPrefix+" "+this.getTraceLineNumber(2)+" "+format, v...)
 }
 
 func (this *logImplement) Emergency(format string, v ...interface{}) {

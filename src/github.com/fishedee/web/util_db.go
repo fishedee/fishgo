@@ -14,7 +14,6 @@ import (
 )
 
 type DatabaseCommon interface {
-	Close() error
 	Sql(querystring string, args ...interface{}) DatabaseSession
 	NoAutoTime() DatabaseSession
 	NoAutoCondition(no ...bool) DatabaseSession
@@ -55,6 +54,7 @@ type DatabaseCommon interface {
 
 type DatabaseSession interface {
 	DatabaseCommon
+	Close()
 	And(querystring string, args ...interface{}) DatabaseSession
 	Or(querystring string, args ...interface{}) DatabaseSession
 	ForUpdate() DatabaseSession
@@ -64,6 +64,7 @@ type DatabaseSession interface {
 
 type Database interface {
 	DatabaseCommon
+	Close() error
 	NewSession() DatabaseSession
 	UpdateBatch(rowsSlicePtr interface{}, indexColName string) (int64, error)
 }
@@ -248,116 +249,120 @@ func (this *databaseImplement) autoMapType(v reflect.Value) *core.Table {
 	return table
 }
 
+func newDatabaseSession(sess *xorm.Session) DatabaseSession {
+	return &databaseSessionImplement{Session: sess}
+}
+
 func (this *databaseImplement) NewSession() DatabaseSession {
-	return this.NewSession()
+	return newDatabaseSession(this.Engine.NewSession())
 }
 
 func (this *databaseImplement) Sql(querystring string, args ...interface{}) DatabaseSession {
-	return this.Sql(querystring, args...)
+	return newDatabaseSession(this.Engine.Sql(querystring, args...))
 }
 
 func (this *databaseImplement) NoAutoTime() DatabaseSession {
-	return this.NoAutoTime()
+	return newDatabaseSession(this.Engine.NoAutoTime())
 }
 
 func (this *databaseImplement) NoAutoCondition(no ...bool) DatabaseSession {
-	return this.NoAutoCondition(no...)
+	return newDatabaseSession(this.Engine.NoAutoCondition(no...))
 }
 
 func (this *databaseImplement) Cascade(trueOrFalse ...bool) DatabaseSession {
-	return this.Cascade(trueOrFalse...)
+	return newDatabaseSession(this.Engine.Cascade(trueOrFalse...))
 }
 
 func (this *databaseImplement) Where(querystring string, args ...interface{}) DatabaseSession {
-	return this.Where(querystring, args...)
+	return newDatabaseSession(this.Engine.Where(querystring, args...))
 }
 
 func (this *databaseImplement) Id(id interface{}) DatabaseSession {
-	return this.Id(id)
+	return newDatabaseSession(this.Engine.Id(id))
 }
 
 func (this *databaseImplement) Distinct(columns ...string) DatabaseSession {
-	return this.Distinct(columns...)
+	return newDatabaseSession(this.Engine.Distinct(columns...))
 }
 
 func (this *databaseImplement) Select(str string) DatabaseSession {
-	return this.Select(str)
+	return newDatabaseSession(this.Engine.Select(str))
 }
 
 func (this *databaseImplement) Cols(columns ...string) DatabaseSession {
-	return this.Cols(columns...)
+	return newDatabaseSession(this.Engine.Cols(columns...))
 }
 
 func (this *databaseImplement) AllCols() DatabaseSession {
-	return this.AllCols()
+	return newDatabaseSession(this.Engine.AllCols())
 }
 
 func (this *databaseImplement) MustCols(columns ...string) DatabaseSession {
-	return this.MustCols(columns...)
+	return newDatabaseSession(this.Engine.MustCols(columns...))
 }
 
 func (this *databaseImplement) UseBool(columns ...string) DatabaseSession {
-	return this.UseBool(columns...)
+	return newDatabaseSession(this.Engine.UseBool(columns...))
 }
 
 func (this *databaseImplement) Omit(columns ...string) DatabaseSession {
-	return this.Omit(columns...)
+	return newDatabaseSession(this.Engine.Omit(columns...))
 }
 
 func (this *databaseImplement) Nullable(columns ...string) DatabaseSession {
-	return this.Nullable(columns...)
+	return newDatabaseSession(this.Engine.Nullable(columns...))
 }
 
 func (this *databaseImplement) In(column string, args ...interface{}) DatabaseSession {
-	return this.In(column, args...)
+	return newDatabaseSession(this.Engine.In(column, args...))
 }
 
 func (this *databaseImplement) Incr(column string, args ...interface{}) DatabaseSession {
-	return this.Incr(column, args...)
+	return newDatabaseSession(this.Engine.Incr(column, args...))
 }
 
 func (this *databaseImplement) Decr(column string, args ...interface{}) DatabaseSession {
-	return this.Decr(column, args...)
+	return newDatabaseSession(this.Engine.Decr(column, args...))
 }
 
 func (this *databaseImplement) SetExpr(column string, expression string) DatabaseSession {
-	return this.SetExpr(column, expression)
+	return newDatabaseSession(this.Engine.SetExpr(column, expression))
 }
 
 func (this *databaseImplement) Table(tableNameOrBean interface{}) DatabaseSession {
-	return this.Table(tableNameOrBean)
+	return newDatabaseSession(this.Engine.Table(tableNameOrBean))
 }
 
 func (this *databaseImplement) Alias(alias string) DatabaseSession {
-	return this.Alias(alias)
+	return newDatabaseSession(this.Engine.Alias(alias))
 }
 
 func (this *databaseImplement) Limit(limit int, start ...int) DatabaseSession {
-	return this.Limit(limit, start...)
+	return newDatabaseSession(this.Engine.Limit(limit, start...))
 }
 
 func (this *databaseImplement) Desc(colNames ...string) DatabaseSession {
-	return this.Desc(colNames...)
+	return newDatabaseSession(this.Engine.Desc(colNames...))
 }
 
 func (this *databaseImplement) Asc(colNames ...string) DatabaseSession {
-	return this.Asc(colNames...)
+	return newDatabaseSession(this.Engine.Asc(colNames...))
 }
 
 func (this *databaseImplement) OrderBy(order string) DatabaseSession {
-	return this.OrderBy(order)
+	return newDatabaseSession(this.Engine.OrderBy(order))
 }
 
 func (this *databaseImplement) Join(join_operator string, tablename interface{}, condition string, args ...interface{}) DatabaseSession {
-	return this.Join(join_operator, tablename, condition, args...)
+	return newDatabaseSession(this.Engine.Join(join_operator, tablename, condition, args...))
 }
 
 func (this *databaseImplement) GroupBy(keys string) DatabaseSession {
-	return this.GroupBy(keys)
+	return newDatabaseSession(this.Engine.GroupBy(keys))
 }
 
 func (this *databaseImplement) Having(conditions string) DatabaseSession {
-	return this.Having(conditions)
+	return newDatabaseSession(this.Engine.Having(conditions))
 }
 
 func (this *databaseImplement) UpdateBatch(rowsSlicePtr interface{}, indexColName string) (int64, error) {
@@ -511,4 +516,124 @@ func (this *columnMapper) Obj2Table(name string) string {
 func (this *columnMapper) Table2Obj(in string) string {
 	fmt.Println("Obj2Table4 " + in)
 	return in
+}
+
+func (this *databaseSessionImplement) Sql(querystring string, args ...interface{}) DatabaseSession {
+	return newDatabaseSession(this.Session.Sql(querystring, args...))
+}
+
+func (this *databaseSessionImplement) NoAutoTime() DatabaseSession {
+	return newDatabaseSession(this.Session.NoAutoTime())
+}
+
+func (this *databaseSessionImplement) NoAutoCondition(no ...bool) DatabaseSession {
+	return newDatabaseSession(this.Session.NoAutoCondition(no...))
+}
+
+func (this *databaseSessionImplement) Cascade(trueOrFalse ...bool) DatabaseSession {
+	return newDatabaseSession(this.Session.Cascade(trueOrFalse...))
+}
+
+func (this *databaseSessionImplement) Where(querystring string, args ...interface{}) DatabaseSession {
+	return newDatabaseSession(this.Session.Where(querystring, args...))
+}
+
+func (this *databaseSessionImplement) Id(id interface{}) DatabaseSession {
+	return newDatabaseSession(this.Session.Id(id))
+}
+
+func (this *databaseSessionImplement) Distinct(columns ...string) DatabaseSession {
+	return newDatabaseSession(this.Session.Distinct(columns...))
+}
+
+func (this *databaseSessionImplement) Select(str string) DatabaseSession {
+	return newDatabaseSession(this.Session.Select(str))
+}
+
+func (this *databaseSessionImplement) Cols(columns ...string) DatabaseSession {
+	return newDatabaseSession(this.Session.Cols(columns...))
+}
+
+func (this *databaseSessionImplement) AllCols() DatabaseSession {
+	return newDatabaseSession(this.Session.AllCols())
+}
+
+func (this *databaseSessionImplement) MustCols(columns ...string) DatabaseSession {
+	return newDatabaseSession(this.Session.MustCols(columns...))
+}
+
+func (this *databaseSessionImplement) UseBool(columns ...string) DatabaseSession {
+	return newDatabaseSession(this.Session.UseBool(columns...))
+}
+
+func (this *databaseSessionImplement) Omit(columns ...string) DatabaseSession {
+	return newDatabaseSession(this.Session.Omit(columns...))
+}
+
+func (this *databaseSessionImplement) Nullable(columns ...string) DatabaseSession {
+	return newDatabaseSession(this.Session.Nullable(columns...))
+}
+
+func (this *databaseSessionImplement) In(column string, args ...interface{}) DatabaseSession {
+	return newDatabaseSession(this.Session.In(column, args...))
+}
+
+func (this *databaseSessionImplement) Incr(column string, args ...interface{}) DatabaseSession {
+	return newDatabaseSession(this.Session.Incr(column, args...))
+}
+
+func (this *databaseSessionImplement) Decr(column string, args ...interface{}) DatabaseSession {
+	return newDatabaseSession(this.Session.Decr(column, args...))
+}
+
+func (this *databaseSessionImplement) SetExpr(column string, expression string) DatabaseSession {
+	return newDatabaseSession(this.Session.SetExpr(column, expression))
+}
+
+func (this *databaseSessionImplement) Table(tableNameOrBean interface{}) DatabaseSession {
+	return newDatabaseSession(this.Session.Table(tableNameOrBean))
+}
+
+func (this *databaseSessionImplement) Alias(alias string) DatabaseSession {
+	return newDatabaseSession(this.Session.Alias(alias))
+}
+
+func (this *databaseSessionImplement) Limit(limit int, start ...int) DatabaseSession {
+	return newDatabaseSession(this.Session.Limit(limit, start...))
+}
+
+func (this *databaseSessionImplement) Desc(colNames ...string) DatabaseSession {
+	return newDatabaseSession(this.Session.Desc(colNames...))
+}
+
+func (this *databaseSessionImplement) Asc(colNames ...string) DatabaseSession {
+	return newDatabaseSession(this.Session.Asc(colNames...))
+}
+
+func (this *databaseSessionImplement) OrderBy(order string) DatabaseSession {
+	return newDatabaseSession(this.Session.OrderBy(order))
+}
+
+func (this *databaseSessionImplement) Join(join_operator string, tablename interface{}, condition string, args ...interface{}) DatabaseSession {
+	return newDatabaseSession(this.Session.Join(join_operator, tablename, condition, args...))
+}
+
+func (this *databaseSessionImplement) GroupBy(keys string) DatabaseSession {
+	return newDatabaseSession(this.Session.GroupBy(keys))
+}
+
+func (this *databaseSessionImplement) Having(conditions string) DatabaseSession {
+	return newDatabaseSession(this.Session.Having(conditions))
+}
+
+func (this *databaseSessionImplement) And(querystring string, args ...interface{}) DatabaseSession {
+	return newDatabaseSession(this.Session.And(querystring, args...))
+}
+
+func (this *databaseSessionImplement) Or(querystring string, args ...interface{}) DatabaseSession {
+	return newDatabaseSession(this.Session.Or(querystring, args...))
+}
+
+func (this *databaseSessionImplement) ForUpdate() DatabaseSession {
+	return newDatabaseSession(this.Session.ForUpdate())
 }
