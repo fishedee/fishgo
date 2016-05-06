@@ -5,6 +5,9 @@ import (
 )
 
 func Build(argv []string) (string, error) {
+	//处理参数
+	buildAll := getBuildAll(argv)
+
 	//读取配置
 	err := modules.InitConfig()
 	if err != nil {

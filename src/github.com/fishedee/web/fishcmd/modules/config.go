@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"runtime"
 	"strings"
 )
 
@@ -11,6 +12,7 @@ var appName string
 var goPath string
 var goPathSrc string
 var goPathBin string
+var goPathPkg string
 var workingDir string
 var appAllDirectory []string
 
@@ -30,6 +32,11 @@ func InitConfig() error {
 	goPathBin = goPath + "/bin"
 	if IsExistDir(goPathBin) == false {
 		return fmt.Errorf("$GOPATH/bin [%v] is not exist", goPathBin)
+	}
+
+	goPathPkg = goPath + "/pkg/" + runtime.GOOS + "_" + runtime.GOARCH
+	if IsExistDir(goPathPkg) == false {
+		return fmt.Errorf("$GOPATH/pkg [%v] is not exist", goPathPkg)
 	}
 
 	workingDir, err = os.Getwd()
@@ -102,6 +109,10 @@ func GetWorkginDir() string {
 
 func GetGoPathSrc() string {
 	return goPathSrc
+}
+
+func GetGoPathPkg() string {
+	return goPathPkg
 }
 
 func GetGoPathBin() string {
