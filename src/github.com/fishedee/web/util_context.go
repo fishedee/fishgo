@@ -35,6 +35,7 @@ type Context interface {
 	GetUserAgent() string
 	GetHeader(key string) string
 	IsUpload() bool
+	IsLocal() bool
 
 	//输出数据
 	Write(data []byte)
@@ -240,6 +241,10 @@ func (this *contextImplement) GetHeader(key string) string {
 
 func (this *contextImplement) IsUpload() bool {
 	return strings.Contains(this.request.Header.Get("Content-Type"), "multipart/form-data")
+}
+
+func (this *contextImplement) IsLocal() bool {
+	return this.GetRemoteIP() == "127.0.0.1"
 }
 
 func (this *contextImplement) Write(data []byte) {
