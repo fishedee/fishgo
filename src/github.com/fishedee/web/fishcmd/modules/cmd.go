@@ -18,7 +18,11 @@ func runCmd(isSync bool, name string, args ...string) (*os.Process, []byte, erro
 		cmd.Stderr = os.Stdout
 	}
 	cmd.Args = append([]string{name}, args...)
-	cmd.Env = append(os.Environ(), "GOGC=off")
+	if name == "go" {
+		cmd.Env = append(os.Environ(), "GOGC=off")
+	} else {
+		cmd.Env = os.Environ()
+	}
 	if isSync {
 		err := cmd.Run()
 		return cmd.Process, buf.Bytes(), err

@@ -3,6 +3,7 @@ package modules
 import (
 	"github.com/howeyc/fsnotify"
 	"os"
+	"path"
 	"strings"
 	"time"
 )
@@ -57,8 +58,10 @@ func RunWatcher() error {
 		return err
 	}
 	for path, _ := range watchFile {
+		Log.Debug("Watch Directory %v", path)
 		err = watcher.Watch(path)
 		if err != nil {
+			panic(err)
 			return err
 		}
 	}
@@ -70,7 +73,7 @@ func RunWatcher() error {
 				continue
 			}
 
-			if checkIfWatchExt(fileName) {
+			if checkIfWatchExt(fileName) == false {
 				continue
 			}
 
@@ -84,9 +87,11 @@ func RunWatcher() error {
 			}
 			eventTime[fileName] = mt
 
-			callback := watchFile[fileName]
+			Log.Debug("File Change %v", fileName)
+			fileDirectory := path.Dir(fileName)
+			callback := watchFile[fileDirectory]
 			if callback != nil {
-				callback(fileName)
+				callback(fileDirectory)
 			}
 
 		case err := <-watcher.Error:

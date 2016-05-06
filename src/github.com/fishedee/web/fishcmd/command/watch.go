@@ -5,13 +5,15 @@ import (
 )
 
 func Watch(argv []string) (string, error) {
-	appName := "server"
-	if len(argv) != 0 {
-		appName = argv[0]
+	//读取配置
+	err := modules.InitConfig()
+	if err != nil {
+		return "", err
 	}
+	appName := modules.GetAppName()
 
 	//初始运行
-	mainPackage, subPackageInfo, err := buildAll(appName)
+	err = buildAll(appName)
 	if err != nil {
 		return "", err
 	}
@@ -21,22 +23,9 @@ func Watch(argv []string) (string, error) {
 	}
 
 	//设置watch的文件
-	err = modules.Watch([]string{mainPackage}, func(singlePackage string) {
-		err := buildSubPackage(singlePackage)
-		if err != nil {
-			return
-		}
-
-		err = run(appName)
-		if err != nil {
-			return
-		}
-	})
-	if err != nil {
-		return "", err
-	}
-	err = modules.Watch(subPackageInfo, func(singlePackage string) {
-		err := buildMainPackage(singlePackage, appName)
+	allFile := modules.GetAppAllDirectory()
+	err = modules.Watch(allFile, func(singlePackage string) {
+		err := buildAll(appName)
 		if err != nil {
 			return
 		}
