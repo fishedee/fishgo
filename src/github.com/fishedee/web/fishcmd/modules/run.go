@@ -1,18 +1,18 @@
 package modules
 
 import (
-	"os"
+	"os/exec"
 )
 
 var (
-	process *os.Process
+	cmd *exec.Cmd
 )
 
 func RunPackage(packageName string) error {
 	var err error
-	if process != nil {
-		process.Kill()
+	if cmd != nil && cmd.Process != nil {
+		cmd.Process.Kill()
 	}
-	process, err = runCmdAsync("./" + packageName)
+	cmd, err = runCmdAsync("./" + packageName)
 	return err
 }

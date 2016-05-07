@@ -11,8 +11,9 @@ import (
 type WatchCallback func(string)
 
 var (
-	watchFile = map[string]WatchCallback{}
-	eventTime = map[string]time.Time{}
+	watchFile     = map[string]bool{}
+	watchCallback WatchCallback
+	eventTime     = map[string]time.Time{}
 )
 
 func checkTMPFile(name string) bool {
@@ -47,8 +48,9 @@ func getFileModTime(path string) (time.Time, error) {
 
 func Watch(paths []string, callback WatchCallback) error {
 	for _, path := range paths {
-		watchFile[path] = callback
+		watchFile[path] = true
 	}
+	watchCallback = callback
 	return nil
 }
 
@@ -65,8 +67,17 @@ func RunWatcher() error {
 			return err
 		}
 	}
+	changeDirectory := ""
+	newTimer := time.NewTimer(time.Second)
 	for {
 		select {
+		case _ = <-newTimer.C:
+			if changeDirectory != "" {
+				watchCallback(changeDirectory)
+				changeDirectory = ""
+			}
+			newTimer.Reset(time.Second)
+
 		case e := <-watcher.Event:
 			fileName := e.Name
 			if checkTMPFile(fileName) {
@@ -88,11 +99,8 @@ func RunWatcher() error {
 			eventTime[fileName] = mt
 
 			Log.Debug("File Change %v", fileName)
-			fileDirectory := path.Dir(fileName)
-			callback := watchFile[fileDirectory]
-			if callback != nil {
-				callback(fileDirectory)
-			}
+			changeDirectory = path.Dir(fileName)
+			newTimer.Reset(time.Second)
 
 		case err := <-watcher.Error:
 			Log.Error("%v", err.Error())
