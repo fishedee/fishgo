@@ -4,12 +4,12 @@ import (
 	. "github.com/fishedee/web"
 )
 
-type CounterAoTest struct {
+type counterAoTest struct {
 	Test
-	CounterAo CounterAoModel
+	counterAo CounterAoModel
 }
 
-func (this *CounterAoTest) TestBasic() {
+func (this *counterAoTest) TestBasic() {
 	total := 1000000
 
 	testCase := []func(){
@@ -31,8 +31,4 @@ func (this *CounterAoTest) TestBasic() {
 		})
 		this.AssertEqual(this.CounterAo.Get(), total, singleTestCaseIndex)
 	}
-}
-
-func init() {
-	InitTest(&CounterAoTest{})
 }

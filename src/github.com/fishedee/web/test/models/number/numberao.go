@@ -4,10 +4,10 @@ import (
 	. "github.com/fishedee/web"
 )
 
-type NumberAoModel struct {
+type numberAoModel struct {
 	Model
 }
 
-func (this *NumberAoModel) Add(left int, right int) int {
+func (this *numberAoModel) Add(left int, right int) int {
 	return left + right
 }

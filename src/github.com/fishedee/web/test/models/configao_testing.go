@@ -5,19 +5,19 @@ import (
 	"time"
 )
 
-type ConfigAoTest struct {
+type configAoTest struct {
 	Test
-	ConfigAo ConfigAoModel
+	configAo ConfigAoModel
 }
 
-func (this *ConfigAoTest) testBasicEmpty(data []string) {
+func (this *configAoTest) testBasicEmpty(data []string) {
 	for _, singleTestCase := range data {
-		data := this.ConfigAo.Get(singleTestCase)
+		data := this.configAo.Get(singleTestCase)
 		this.AssertEqual(data, "")
 	}
 }
 
-func (this *ConfigAoTest) TestBasic() {
+func (this *configAoTest) TestBasic() {
 	testCase := []struct {
 		origin string
 		target string
@@ -34,26 +34,26 @@ func (this *ConfigAoTest) TestBasic() {
 
 	//清空
 	for _, singleTestCase := range testCase {
-		data := this.ConfigAo.Get(singleTestCase.origin)
+		data := this.configAo.Get(singleTestCase.origin)
 		this.AssertEqual(data, "")
 	}
 	this.testBasicEmpty(noTestCase)
 
 	//设置
 	for _, singleTestCase := range testCase {
-		this.ConfigAo.Set(singleTestCase.origin, singleTestCase.target)
+		this.configAo.Set(singleTestCase.origin, singleTestCase.target)
 	}
 	this.testBasicEmpty(noTestCase)
 
 	//获取
 	for _, singleTestCase := range testCase {
-		data := this.ConfigAo.Get(singleTestCase.origin)
+		data := this.configAo.Get(singleTestCase.origin)
 		this.AssertEqual(data, singleTestCase.target)
 	}
 	this.testBasicEmpty(noTestCase)
 }
 
-func (this *ConfigAoTest) TestStruct() {
+func (this *configAoTest) TestStruct() {
 	this.Log.Debug("This is a log %v", "123")
 	this.Log.Debug("This is a log %v", ConfigData{})
 	//struct中的time.Time字段不比较
@@ -83,5 +83,5 @@ func (this *ConfigAoTest) TestStruct() {
 }
 
 func init() {
-	InitTest(&ConfigAoTest{})
+	InitTest(&configAoTest{})
 }

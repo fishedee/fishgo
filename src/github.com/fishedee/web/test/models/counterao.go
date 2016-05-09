@@ -5,23 +5,23 @@ import (
 	"sync/atomic"
 )
 
-type CounterAoModel struct {
+type counterAoModel struct {
 	Model
 	totalInt int32
 }
 
-func (this *CounterAoModel) Incr() {
+func (this *counterAoModel) Incr() {
 	this.totalInt++
 }
 
-func (this *CounterAoModel) IncrAtomic() {
+func (this *counterAoModel) IncrAtomic() {
 	atomic.AddInt32(&this.totalInt, 1)
 }
 
-func (this *CounterAoModel) Reset() {
+func (this *counterAoModel) Reset() {
 	this.totalInt = 0
 }
 
-func (this *CounterAoModel) Get() int {
+func (this *counterAoModel) Get() int {
 	return (int)(this.totalInt)
 }

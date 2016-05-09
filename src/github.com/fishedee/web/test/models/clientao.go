@@ -6,11 +6,11 @@ import (
 	"strconv"
 )
 
-type ClientLoginAoModel struct {
+type clientLoginAoModel struct {
 	Model
 }
 
-func (this *ClientLoginAoModel) IsLogin() bool {
+func (this *clientLoginAoModel) IsLogin() bool {
 	sess, err := this.Session.SessionStart(this.Ctx.ResponseWriter, this.Ctx.Request)
 	if err != nil {
 		panic("session启动失败")
@@ -27,7 +27,7 @@ func (this *ClientLoginAoModel) IsLogin() bool {
 	}
 }
 
-func (this *ClientLoginAoModel) Logout() {
+func (this *clientLoginAoModel) Logout() {
 	sess, err := this.Session.SessionStart(this.Ctx.ResponseWriter, this.Ctx.Request)
 	if err != nil {
 		panic("session启动失败！")
@@ -37,7 +37,7 @@ func (this *ClientLoginAoModel) Logout() {
 	sess.Set("clientId", 0)
 }
 
-func (this *ClientLoginAoModel) Login(name string, password string) bool {
+func (this *clientLoginAoModel) Login(name string, password string) bool {
 	if name != "fish" || password != "123" {
 		return false
 	}

@@ -4,7 +4,7 @@ import (
 	"github.com/astaxie/beego"
 )
 
-//go:generate fishgen ^./models/.*(ao|db)\.go$
+//go:generate fishgen -force ^.*(ao|_testing|controller)\.go$
 func main() {
 	beego.Run()
 }

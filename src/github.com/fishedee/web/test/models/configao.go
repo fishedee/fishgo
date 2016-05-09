@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-type ConfigAoModel struct {
+type configAoModel struct {
 	Model
 	dataStruct map[string]ConfigData
 }
@@ -16,16 +16,16 @@ type ConfigData struct {
 	ModifyTime time.Time
 }
 
-func (this *ConfigAoModel) Set(key string, value string) {
+func (this *configAoModel) Set(key string, value string) {
 	this.Cache.Set(key, value, time.Hour*24)
 }
 
-func (this *ConfigAoModel) Get(key string) string {
+func (this *configAoModel) Get(key string) string {
 	data, _ := this.Cache.Get(key)
 	return data
 }
 
-func (this *ConfigAoModel) SetStruct(key string, value ConfigData) {
+func (this *configAoModel) SetStruct(key string, value ConfigData) {
 	if this.dataStruct == nil {
 		this.dataStruct = map[string]ConfigData{}
 	}
@@ -34,6 +34,6 @@ func (this *ConfigAoModel) SetStruct(key string, value ConfigData) {
 	this.dataStruct[key] = value
 }
 
-func (this *ConfigAoModel) GetStruct(key string) ConfigData {
+func (this *configAoModel) GetStruct(key string) ConfigData {
 	return this.dataStruct[key]
 }

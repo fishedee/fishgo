@@ -4,11 +4,11 @@ import (
 	. "github.com/fishedee/web"
 )
 
-type BaseAoModel struct {
+type baseAoModel struct {
 	Model
-	ConfigAo ConfigAoModel
+	configAo ConfigAoModel
 }
 
-type ExtendAoModel struct {
-	BaseAoModel
+type extendAoModel struct {
+	baseAoModel
 }

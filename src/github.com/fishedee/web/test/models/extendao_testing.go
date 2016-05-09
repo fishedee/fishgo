@@ -4,17 +4,13 @@ import (
 	. "github.com/fishedee/web"
 )
 
-type ExtendAoTest struct {
+type extendAoTest struct {
 	Test
-	ExtendAo ExtendAoModel
+	extendAo ExtendAoModel
 }
 
-func (this *ExtendAoTest) TestBasic() {
-	configAo := this.ExtendAo.BaseAoModel.ConfigAo
+func (this *extendAoTest) TestBasic() {
+	configAo := this.extendAo.BaseAoModel.ConfigAo
 	configAo.Set("mm1", "mm2")
 	this.AssertEqual("mm2", configAo.Get("mm1"))
-}
-
-func init() {
-	InitTest(&ExtendAoTest{})
 }

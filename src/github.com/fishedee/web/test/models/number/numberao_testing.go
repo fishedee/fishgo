@@ -4,12 +4,12 @@ import (
 	. "github.com/fishedee/web"
 )
 
-type NumberAoTest struct {
+type numberAoTest struct {
 	Test
-	NumberAo NumberAoModel
+	numberAo NumberAoModel
 }
 
-func (this *NumberAoTest) TestBasic() {
+func (this *numberAoTest) TestBasic() {
 	testCase := []struct {
 		origin  int
 		origin2 int
@@ -27,11 +27,7 @@ func (this *NumberAoTest) TestBasic() {
 	}
 
 	for singleTestCaseIndex, singleTestCase := range testCase {
-		target := this.NumberAo.Add(singleTestCase.origin, singleTestCase.origin2)
+		target := this.numberAo.Add(singleTestCase.origin, singleTestCase.origin2)
 		this.AssertEqual(target, singleTestCase.target, singleTestCaseIndex)
 	}
-}
-
-func init() {
-	InitTest(&NumberAoTest{})
 }

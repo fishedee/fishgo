@@ -188,7 +188,16 @@ func parserSingleFile(filename string, source interface{}) (ParserInfo, error) {
 		if singleObject.Kind != ast.Typ {
 			continue
 		}
+		typeSpec := singleObject.Decl.(*ast.TypeSpec)
 		declType[name] = true
+		structType, isStruct := typeSpec.Type.(*ast.StructType)
+		if isStruct {
+			getFieldListType(structType.Fields, useType)
+		}
+		interfaceType, isInterface := typeSpec.Type.(*ast.InterfaceType)
+		if isInterface {
+			getFieldListType(interfaceType.Methods, useType)
+		}
 	}
 	result.useType = mapToArray(useType)
 	result.declType = mapToArray(declType)

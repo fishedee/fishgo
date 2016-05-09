@@ -5,15 +5,11 @@ import (
 	"github.com/fishedee/web/test/models/number"
 )
 
-type InnerTest struct {
+type innerTest struct {
 	Test
-	NumberAoTest number.NumberAoTest
+	numberAoTest number.NumberAoTest
 }
 
-func (this *InnerTest) TestBasic() {
-	this.NumberAoTest.TestBasic()
-}
-
-func init() {
-	InitTest(&InnerTest{})
+func (this *innerTest) TestBasic() {
+	this.numberAoTest.TestBasic()
 }
