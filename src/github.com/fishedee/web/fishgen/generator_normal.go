@@ -149,13 +149,17 @@ func generateSingleFileInit(data []ParserInfo) (string, error) {
 	result := "func init(){\n"
 	for _, singleParseInfo := range data {
 		for _, singleStruct := range singleParseInfo.declType {
+			var funName string
 			if isPublicStructController(singleStruct) {
-				result += "InitController(" + firstUpper(singleStruct) + "(&" + singleStruct + "{}))\n"
+				funName = "InitController"
 			} else if isPublicStructModel(singleStruct) {
-				result += "InitModel(" + firstUpper(singleStruct) + "(&" + singleStruct + "{}))\n"
+				funName = "InitModel"
 			} else if isPublicStructTest(singleStruct) {
-				result += "InitTest(" + firstUpper(singleStruct) + "(&" + singleStruct + "{}))\n"
+				funName = "InitTest"
+			} else {
+				continue
 			}
+			result += funName + "(" + firstUpper(singleStruct) + "(&" + singleStruct + "{}))\n"
 		}
 	}
 	result += "}\n"
@@ -195,13 +199,6 @@ func generateSingleFileInterface(data []ParserInfo) (string, error) {
 				continue
 			}
 			singleResult := "type " + firstUpper(singleStruct) + " interface{\n"
-			if isPublicStructController(singleStruct) {
-				singleResult += "ControllerInterface\n"
-			} else if isPublicStructModel(singleStruct) {
-				singleResult += "ModelInterface\n"
-			} else if isPublicStructTest(singleStruct) {
-				singleResult += "TestInterface\n"
-			}
 			for _, singleFun := range structInterface[singleStruct] {
 				singleResult += singleFun + "\n"
 			}

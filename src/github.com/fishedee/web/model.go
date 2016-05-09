@@ -16,7 +16,7 @@ func init() {
 
 type ModelInterface interface {
 	SetAppController(controller ControllerInterface)
-	GetBasic() *Basic
+	GetBasic() interface{}
 }
 
 type Model struct {
@@ -26,10 +26,10 @@ type Model struct {
 
 func (this *Model) SetAppController(controller ControllerInterface) {
 	this.appController = controller
-	this.Basic = controller.GetBasic()
+	this.Basic = controller.GetBasic().(*Basic)
 }
 
-func (this *Model) GetBasic() *Basic {
+func (this *Model) GetBasic() interface{} {
 	return this.Basic
 }
 
@@ -92,4 +92,7 @@ func initModelInner(model ModelInterface, controller ControllerInterface) {
 }
 func initModel(controller ControllerInterface) {
 	initModelInner(controller, controller)
+}
+
+func InitModel(model interface{}) {
 }

@@ -131,13 +131,38 @@ func getFieldListType(fieldList *ast.FieldList, useType map[string]bool) []Field
 	return result
 }
 
+func checkExprStmtUse(expr ast.Expr, useType map[string]bool) {
+	callExpr, isCall := expr.(*ast.CallExpr)
+	if isCall {
+		checkExprStmtUse(callExpr.Fun, useType)
+		return
+	}
+	indentExpr, isIdent := expr.(*ast.Ident)
+	if isIdent {
+		useType[indentExpr.Name] = true
+		return
+	}
+}
+
+func checkStmtUse(stmt ast.Stmt, useType map[string]bool) {
+	exprStmt, isExpr := stmt.(*ast.ExprStmt)
+	if isExpr {
+		checkExprStmtUse(exprStmt.X, useType)
+		return
+	}
+}
+
 func getFunction(funcDecl *ast.FuncDecl, useType map[string]bool) FunctionInfo {
-	return FunctionInfo{
+	functionInfo := FunctionInfo{
 		name:     funcDecl.Name.Name,
 		receiver: getFieldListType(funcDecl.Recv, useType),
 		params:   getFieldListType(funcDecl.Type.Params, useType),
 		results:  getFieldListType(funcDecl.Type.Results, useType),
 	}
+	for _, singleStmt := range funcDecl.Body.List {
+		checkStmtUse(singleStmt, useType)
+	}
+	return functionInfo
 }
 
 func getImport(imporDecl *ast.ImportSpec) ImportInfo {
@@ -171,19 +196,22 @@ func parserSingleFile(filename string, source interface{}) (ParserInfo, error) {
 	result.dir = path.Dir(filename)
 	result.file = path.Base(filename)
 	useType := map[string]bool{}
+	declType := map[string]bool{}
 	for _, singleDecl := range f.Decls {
 		singleFuncDecl, ok := singleDecl.(*ast.FuncDecl)
 		if !ok {
 			continue
 		}
 		singleFuncInfo := getFunction(singleFuncDecl, useType)
+		if len(singleFuncInfo.receiver) == 0 && isPublicFunction(singleFuncInfo.name) {
+			declType[singleFuncInfo.name] = true
+		}
 		result.functions = append(result.functions, singleFuncInfo)
 	}
 	for _, singleImport := range f.Imports {
 		singleImportInfo := getImport(singleImport)
 		result.imports = append(result.imports, singleImportInfo)
 	}
-	declType := map[string]bool{}
 	for name, singleObject := range f.Scope.Objects {
 		if singleObject.Kind != ast.Typ {
 			continue

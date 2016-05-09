@@ -9,7 +9,7 @@ type clientAoTest struct {
 	clientAo ClientLoginAoModel
 }
 
-func (this *ClientAoTest) TestBasic() {
+func (this *clientAoTest) TestBasic() {
 	//没有登录
 	this.AssertEqual(this.clientAo.IsLogin(), false)
 

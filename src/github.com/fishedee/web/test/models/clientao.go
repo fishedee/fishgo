@@ -11,11 +11,11 @@ type clientLoginAoModel struct {
 }
 
 func (this *clientLoginAoModel) IsLogin() bool {
-	sess, err := this.Session.SessionStart(this.Ctx.ResponseWriter, this.Ctx.Request)
+	sess, err := this.Session.SessionStart()
 	if err != nil {
 		panic("session启动失败")
 	}
-	defer sess.SessionRelease(this.Ctx.ResponseWriter)
+	defer sess.SessionRelease()
 
 	clientId := sess.Get("clientId")
 	clientIdString := fmt.Sprintf("%v", clientId)
@@ -28,11 +28,11 @@ func (this *clientLoginAoModel) IsLogin() bool {
 }
 
 func (this *clientLoginAoModel) Logout() {
-	sess, err := this.Session.SessionStart(this.Ctx.ResponseWriter, this.Ctx.Request)
+	sess, err := this.Session.SessionStart()
 	if err != nil {
 		panic("session启动失败！")
 	}
-	defer sess.SessionRelease(this.Ctx.ResponseWriter)
+	defer sess.SessionRelease()
 
 	sess.Set("clientId", 0)
 }
@@ -41,11 +41,11 @@ func (this *clientLoginAoModel) Login(name string, password string) bool {
 	if name != "fish" || password != "123" {
 		return false
 	}
-	sess, err := this.Session.SessionStart(this.Ctx.ResponseWriter, this.Ctx.Request)
+	sess, err := this.Session.SessionStart()
 	if err != nil {
 		panic("session启动失败！")
 	}
-	defer sess.SessionRelease(this.Ctx.ResponseWriter)
+	defer sess.SessionRelease()
 
 	sess.Set("clientId", 10001)
 	return true

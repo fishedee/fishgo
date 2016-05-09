@@ -59,10 +59,10 @@ func (this *Controller) SetAppController(controller ControllerInterface) {
 		return
 	}
 	this.appController = controller
-	this.Basic = controller.GetBasic()
+	this.Basic = controller.GetBasic().(*Basic)
 }
 
-func (this *Controller) GetBasic() *Basic {
+func (this *Controller) GetBasic() interface{} {
 	return this.Basic
 }
 
@@ -92,4 +92,7 @@ func (this *Controller) WriteHeader(key string, value string) {
 
 func (this *Controller) WriteMimeHeader(mime string, title string) {
 	this.Ctx.WriteMimeHeader(mime, title)
+}
+
+func InitController(controller interface{}) {
 }

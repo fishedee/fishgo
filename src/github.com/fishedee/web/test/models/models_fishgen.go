@@ -6,7 +6,6 @@ import (
 )
 
 type ClientLoginAoModel interface {
-	ModelInterface
 	IsLogin() (_fishgen1 bool)
 	IsLogin_WithError() (_fishgen1 bool, _fishgenErr Exception)
 	Logout()
@@ -16,11 +15,10 @@ type ClientLoginAoModel interface {
 }
 
 type ClientAoTest interface {
-	TestInterface
+	TestBasic()
 }
 
 type ConfigAoModel interface {
-	ModelInterface
 	Set(key string, value string)
 	Set_WithError(key string, value string) (_fishgenErr Exception)
 	Get(key string) (_fishgen1 string)
@@ -32,13 +30,11 @@ type ConfigAoModel interface {
 }
 
 type ConfigAoTest interface {
-	TestInterface
 	TestBasic()
 	TestStruct()
 }
 
 type CounterAoModel interface {
-	ModelInterface
 	Incr()
 	Incr_WithError() (_fishgenErr Exception)
 	IncrAtomic()
@@ -50,25 +46,20 @@ type CounterAoModel interface {
 }
 
 type CounterAoTest interface {
-	TestInterface
 	TestBasic()
 }
 
 type BaseAoModel interface {
-	ModelInterface
 }
 
 type ExtendAoModel interface {
-	ModelInterface
 }
 
 type ExtendAoTest interface {
-	TestInterface
 	TestBasic()
 }
 
 type InnerTest interface {
-	TestInterface
 	TestBasic()
 }
 

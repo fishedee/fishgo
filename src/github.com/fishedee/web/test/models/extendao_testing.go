@@ -6,11 +6,11 @@ import (
 
 type extendAoTest struct {
 	Test
-	extendAo ExtendAoModel
+	extendAo extendAoModel
 }
 
 func (this *extendAoTest) TestBasic() {
-	configAo := this.extendAo.BaseAoModel.ConfigAo
+	configAo := this.extendAo.baseAoModel.configAo
 	configAo.Set("mm1", "mm2")
 	this.AssertEqual("mm2", configAo.Get("mm1"))
 }

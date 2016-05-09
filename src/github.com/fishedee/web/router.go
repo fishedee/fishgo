@@ -90,7 +90,7 @@ func (this *handlerType) runRequest(controller reflect.Value, method methodInfo,
 	urlMethod := request.Method
 	target := controller.Interface().(ControllerInterface)
 	defer language.CatchCrash(func(exception language.Exception) {
-		target.GetBasic().Log.Critical("Buiness Crash Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
+		target.GetBasic().(*Basic).Log.Critical("Buiness Crash Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
 		response.WriteHeader(500)
 		response.Write([]byte("server internal error"))
 	})
@@ -112,7 +112,7 @@ func (this *handlerType) runRequest(controller reflect.Value, method methodInfo,
 
 func (this *handlerType) runRequestBusiness(target ControllerInterface, method reflect.Value, arguments []reflect.Value) (result []reflect.Value) {
 	defer language.Catch(func(exception language.Exception) {
-		target.GetBasic().Log.Error("Buiness Error Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
+		target.GetBasic().(*Basic).Log.Error("Buiness Error Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
 		result = []reflect.Value{reflect.ValueOf(exception)}
 	})
 	result = method.Call(arguments)

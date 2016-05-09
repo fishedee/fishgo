@@ -13,22 +13,22 @@ func (this *counterAoTest) TestBasic() {
 	total := 1000000
 
 	testCase := []func(){
-		this.CounterAo.Incr, //并行累加会失败
-		this.CounterAo.IncrAtomic,
+		this.counterAo.Incr, //并行累加会失败
+		this.counterAo.IncrAtomic,
 	}
 	for singleTestCaseIndex, singleTestCase := range testCase {
 		//普通累加
-		this.CounterAo.Reset()
+		this.counterAo.Reset()
 		for i := 0; i != total; i++ {
 			singleTestCase()
 		}
-		this.AssertEqual(this.CounterAo.Get(), total, singleTestCaseIndex)
+		this.AssertEqual(this.counterAo.Get(), total, singleTestCaseIndex)
 
 		//并行累加
-		this.CounterAo.Reset()
+		this.counterAo.Reset()
 		this.Concurrent(total, 4, func() {
 			singleTestCase()
 		})
-		this.AssertEqual(this.CounterAo.Get(), total, singleTestCaseIndex)
+		this.AssertEqual(this.counterAo.Get(), total, singleTestCaseIndex)
 	}
 }

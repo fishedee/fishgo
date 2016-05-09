@@ -6,13 +6,11 @@ import (
 )
 
 type NumberAoModel interface {
-	ModelInterface
 	Add(left int, right int) (_fishgen1 int)
 	Add_WithError(left int, right int) (_fishgen1 int, _fishgenErr Exception)
 }
 
 type NumberAoTest interface {
-	TestInterface
 	TestBasic()
 }
 

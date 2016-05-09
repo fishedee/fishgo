@@ -60,22 +60,22 @@ func (this *configAoTest) TestStruct() {
 	data1 := ConfigData{
 		Data: "123",
 	}
-	this.ConfigAo.SetStruct("test1", data1)
-	this.AssertEqual(this.ConfigAo.GetStruct("test1"), data1)
+	this.configAo.SetStruct("test1", data1)
+	this.AssertEqual(this.configAo.GetStruct("test1"), data1)
 
 	data2 := ConfigData{
 		Data:       "123",
 		CreateTime: time.Now().AddDate(0, -1, 0),
 		ModifyTime: time.Now().AddDate(0, -1, 0),
 	}
-	this.AssertEqual(this.ConfigAo.GetStruct("test1"), data2)
+	this.AssertEqual(this.configAo.GetStruct("test1"), data2)
 	this.AssertEqual(data1, data2)
 
 	//struct中的非time.Time字段会比较
 	data3 := ConfigData{
 		Data: "789",
 	}
-	this.AssertEqual(this.ConfigAo.GetStruct("test1"), data3)
+	this.AssertEqual(this.configAo.GetStruct("test1"), data3)
 
 	//struct里面的数组与映射nil与非nil比较
 	this.AssertEqual([]int(nil), []int{})
