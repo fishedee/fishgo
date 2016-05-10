@@ -7,9 +7,9 @@ import (
 
 type innerTest struct {
 	Test
-	numberAoTest number.NumberAoTest
+	NumberAoTest number.NumberAoTest
 }
 
 func (this *innerTest) TestBasic() {
-	this.numberAoTest.TestBasic()
+	this.NumberAoTest.TestBasic()
 }

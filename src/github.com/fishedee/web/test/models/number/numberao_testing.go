@@ -6,7 +6,7 @@ import (
 
 type numberAoTest struct {
 	Test
-	numberAo NumberAoModel
+	NumberAo NumberAoModel
 }
 
 func (this *numberAoTest) TestBasic() {
@@ -25,9 +25,8 @@ func (this *numberAoTest) TestBasic() {
 		{-1, 3, 2},
 		{2, -3, -1},
 	}
-
 	for singleTestCaseIndex, singleTestCase := range testCase {
-		target := this.numberAo.Add(singleTestCase.origin, singleTestCase.origin2)
+		target := this.NumberAo.Add(singleTestCase.origin, singleTestCase.origin2)
 		this.AssertEqual(target, singleTestCase.target, singleTestCaseIndex)
 	}
 }

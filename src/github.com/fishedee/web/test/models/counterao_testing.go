@@ -6,29 +6,29 @@ import (
 
 type counterAoTest struct {
 	Test
-	counterAo CounterAoModel
+	CounterAo CounterAoModel
 }
 
 func (this *counterAoTest) TestBasic() {
 	total := 1000000
 
 	testCase := []func(){
-		this.counterAo.Incr, //并行累加会失败
-		this.counterAo.IncrAtomic,
+		this.CounterAo.Incr, //并行累加会失败
+		this.CounterAo.IncrAtomic,
 	}
 	for singleTestCaseIndex, singleTestCase := range testCase {
 		//普通累加
-		this.counterAo.Reset()
+		this.CounterAo.Reset()
 		for i := 0; i != total; i++ {
 			singleTestCase()
 		}
-		this.AssertEqual(this.counterAo.Get(), total, singleTestCaseIndex)
+		this.AssertEqual(this.CounterAo.Get(), total, singleTestCaseIndex)
 
 		//并行累加
-		this.counterAo.Reset()
+		this.CounterAo.Reset()
 		this.Concurrent(total, 4, func() {
 			singleTestCase()
 		})
-		this.AssertEqual(this.counterAo.Get(), total, singleTestCaseIndex)
+		this.AssertEqual(this.CounterAo.Get(), total, singleTestCaseIndex)
 	}
 }

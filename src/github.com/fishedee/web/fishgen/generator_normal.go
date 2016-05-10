@@ -147,6 +147,7 @@ func generateSingleFileFunction(data []ParserInfo) (string, error) {
 func generateSingleFileInit(data []ParserInfo) (string, error) {
 	//生成init
 	result := "func init(){\n"
+	initIndex := 0
 	for _, singleParseInfo := range data {
 		for _, singleStruct := range singleParseInfo.declType {
 			var funName string
@@ -159,7 +160,8 @@ func generateSingleFileInit(data []ParserInfo) (string, error) {
 			} else {
 				continue
 			}
-			result += funName + "(" + firstUpper(singleStruct) + "(&" + singleStruct + "{}))\n"
+			result += fmt.Sprintf("v%v := %v(&%v{})\n%v(&v%v)\n", initIndex, firstUpper(singleStruct), singleStruct, funName, initIndex)
+			initIndex++
 		}
 	}
 	result += "}\n"

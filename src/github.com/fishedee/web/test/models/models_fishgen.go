@@ -49,16 +49,6 @@ type CounterAoTest interface {
 	TestBasic()
 }
 
-type BaseAoModel interface {
-}
-
-type ExtendAoModel interface {
-}
-
-type ExtendAoTest interface {
-	TestBasic()
-}
-
 type InnerTest interface {
 	TestBasic()
 }
@@ -152,14 +142,18 @@ func (this *counterAoModel) Get_WithError() (_fishgen1 int, _fishgenErr Exceptio
 }
 
 func init() {
-	InitModel(ClientLoginAoModel(&clientLoginAoModel{}))
-	InitTest(ClientAoTest(&clientAoTest{}))
-	InitModel(ConfigAoModel(&configAoModel{}))
-	InitTest(ConfigAoTest(&configAoTest{}))
-	InitModel(CounterAoModel(&counterAoModel{}))
-	InitTest(CounterAoTest(&counterAoTest{}))
-	InitModel(BaseAoModel(&baseAoModel{}))
-	InitModel(ExtendAoModel(&extendAoModel{}))
-	InitTest(ExtendAoTest(&extendAoTest{}))
-	InitTest(InnerTest(&innerTest{}))
+	v0 := ClientLoginAoModel(&clientLoginAoModel{})
+	InitModel(&v0)
+	v1 := ClientAoTest(&clientAoTest{})
+	InitTest(&v1)
+	v2 := ConfigAoModel(&configAoModel{})
+	InitModel(&v2)
+	v3 := ConfigAoTest(&configAoTest{})
+	InitTest(&v3)
+	v4 := CounterAoModel(&counterAoModel{})
+	InitModel(&v4)
+	v5 := CounterAoTest(&counterAoTest{})
+	InitTest(&v5)
+	v6 := InnerTest(&innerTest{})
+	InitTest(&v6)
 }

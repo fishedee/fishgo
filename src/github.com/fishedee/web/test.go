@@ -15,10 +15,6 @@ import (
 	"time"
 )
 
-type TestInterface interface {
-	ControllerInterface
-}
-
 type Test struct {
 	Controller
 }
@@ -138,20 +134,24 @@ func (this *Test) RandomString(length int) string {
 }
 
 func (this *Test) RequestReset() {
-	this.initEmpty(this.appController, this.Ctx.GetRawTesting())
+	*this.Basic = *initLocalBasic(this.Ctx.GetRawTesting())
 }
 
-var testMap map[string][]TestInterface
+var testMap map[string][]reflect.Type
 var testMapInit bool
 
 func init() {
-	testMap = map[string][]TestInterface{}
+	testMap = map[string][]reflect.Type{}
 	testMapInit = false
 }
 
-func runSingleTest(t *testing.T, test TestInterface) {
+func runSingleTest(t *testing.T, iocType reflect.Type) error {
 	//初始化test
-	test.initEmpty(test, t)
+	basic := initLocalBasic(t)
+	testValue, err := newIocInstanse(iocType, basic)
+	if err != nil {
+		return err
+	}
 
 	isBenchTest := false
 	for _, singleArgv := range os.Args {
@@ -161,8 +161,7 @@ func runSingleTest(t *testing.T, test TestInterface) {
 	}
 
 	//遍历test，执行测试
-	testType := reflect.TypeOf(test)
-	testValue := reflect.ValueOf(test)
+	testType := testValue.Type()
 	testMethodNum := testType.NumMethod()
 	for i := 0; i != testMethodNum; i++ {
 		singleValueMethodType := testType.Method(i)
@@ -179,6 +178,7 @@ func runSingleTest(t *testing.T, test TestInterface) {
 		//执行测试
 		singleValueMethodType.Func.Call([]reflect.Value{testValue})
 	}
+	return nil
 }
 
 func RunTest(t *testing.T, data interface{}) {
@@ -194,12 +194,19 @@ func RunTest(t *testing.T, data interface{}) {
 
 	//遍历测试
 	for _, singleTest := range testMap[pkgPath] {
-		runSingleTest(t, singleTest)
+		err := runSingleTest(t, singleTest)
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 
 func InitTest(test interface{}) {
-	//FIXME
-	//pkgPath := reflect.TypeOf(test).Elem().PkgPath()
-	//testMap[pkgPath] = append(testMap[pkgPath], test)
+	testType := reflect.TypeOf(test).Elem()
+	pkgPath := testType.PkgPath()
+	testMap[pkgPath] = append(testMap[pkgPath], testType)
+	err := addIocTarget(test)
+	if err != nil {
+		panic(err)
+	}
 }

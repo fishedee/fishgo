@@ -1,5 +1,10 @@
 package web
 
+import (
+	"bytes"
+	"net/http"
+)
+
 type Basic struct {
 	Ctx      Context
 	Config   Configure
@@ -74,6 +79,7 @@ func init() {
 		panic(err)
 	}
 }
+
 func initBasic(request interface{}, response interface{}, t interface{}) *Basic {
 	result := globalBasic
 	result.Ctx = NewContext(request, response, t)
@@ -91,4 +97,34 @@ func initBasic(request interface{}, response interface{}, t interface{}) *Basic 
 		result.Cache = result.Cache.WithLog(result.Log)
 	}
 	return &result
+}
+
+type memoryResponseWriter struct {
+	header     http.Header
+	headerCode int
+	data       []byte
+}
+
+func (this *memoryResponseWriter) Header() http.Header {
+	if this.header == nil {
+		this.header = http.Header{}
+	}
+	return this.header
+}
+
+func (this *memoryResponseWriter) Write(in []byte) (int, error) {
+	this.data = append(this.data, in...)
+	return len(this.data), nil
+}
+
+func (this *memoryResponseWriter) WriteHeader(headerCode int) {
+	this.headerCode = headerCode
+}
+func initLocalBasic(t interface{}) *Basic {
+	request, err := http.NewRequest("get", "/", bytes.NewReader([]byte("")))
+	if err != nil {
+		panic(err)
+	}
+	response := &memoryResponseWriter{}
+	return initBasic(request, response, t)
 }

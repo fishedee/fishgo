@@ -23,6 +23,8 @@ func (this *numberAoModel) Add_WithError(left int, right int) (_fishgen1 int, _f
 }
 
 func init() {
-	InitModel(NumberAoModel(&numberAoModel{}))
-	InitTest(NumberAoTest(&numberAoTest{}))
+	v0 := NumberAoModel(&numberAoModel{})
+	InitModel(&v0)
+	v1 := NumberAoTest(&numberAoTest{})
+	InitTest(&v1)
 }

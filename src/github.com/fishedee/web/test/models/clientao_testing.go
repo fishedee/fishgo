@@ -6,30 +6,30 @@ import (
 
 type clientAoTest struct {
 	Test
-	clientAo ClientLoginAoModel
+	ClientAo ClientLoginAoModel
 }
 
 func (this *clientAoTest) TestBasic() {
 	//没有登录
-	this.AssertEqual(this.clientAo.IsLogin(), false)
+	this.AssertEqual(this.ClientAo.IsLogin(), false)
 
 	//错误登录
-	this.clientAo.Login("fish", "123dd")
-	this.AssertEqual(this.clientAo.IsLogin(), false)
+	this.ClientAo.Login("fish", "123dd")
+	this.AssertEqual(this.ClientAo.IsLogin(), false)
 
 	//正确登录
-	this.clientAo.Login("fish", "123")
-	this.AssertEqual(this.clientAo.IsLogin(), true)
+	this.ClientAo.Login("fish", "123")
+	this.AssertEqual(this.ClientAo.IsLogin(), true)
 
 	//登出
-	this.clientAo.Logout()
-	this.AssertEqual(this.clientAo.IsLogin(), false)
+	this.ClientAo.Logout()
+	this.AssertEqual(this.ClientAo.IsLogin(), false)
 
 	//reset用法
-	this.clientAo.Login("fish", "123")
-	this.AssertEqual(this.clientAo.IsLogin(), true)
+	this.ClientAo.Login("fish", "123")
+	this.AssertEqual(this.ClientAo.IsLogin(), true)
 	this.RequestReset()
-	this.AssertEqual(this.clientAo.IsLogin(), false)
-	this.clientAo.Login("fish", "123")
-	this.AssertEqual(this.clientAo.IsLogin(), true)
+	this.AssertEqual(this.ClientAo.IsLogin(), false)
+	this.ClientAo.Login("fish", "123")
+	this.AssertEqual(this.ClientAo.IsLogin(), true)
 }

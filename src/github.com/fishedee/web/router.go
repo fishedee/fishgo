@@ -12,7 +12,7 @@ import (
 type methodInfo struct {
 	viewName       string
 	controllerType reflect.Type
-	methodType     reflect.Method
+	methodIndex    int
 }
 
 type handlerType struct {
@@ -43,11 +43,14 @@ func (this *handlerType) isPublic(name string) bool {
 	}
 }
 
-func (this *handlerType) addRoute(namespace string, target ControllerInterface) {
+func (this *handlerType) addRoute(namespace string, target interface{}) {
 	if this.routerControllerMethod == nil {
 		this.routerControllerMethod = map[string]methodInfo{}
 	}
 	controllerType := reflect.TypeOf(target)
+	if controllerType.Elem().Kind() == reflect.Interface {
+		controllerType = controllerType.Elem()
+	}
 	numMethod := controllerType.NumMethod()
 	for i := 0; i != numMethod; i++ {
 		singleMethod := controllerType.Method(i)
@@ -65,7 +68,7 @@ func (this *handlerType) addRoute(namespace string, target ControllerInterface) 
 		this.routerControllerMethod[url] = methodInfo{
 			viewName:       this.firstLowerName(methodName[1]),
 			controllerType: controllerType.Elem(),
-			methodType:     singleMethod,
+			methodIndex:    i,
 		}
 	}
 }
@@ -82,23 +85,26 @@ func (this *handlerType) handleRequest(request *http.Request, response http.Resp
 	}
 
 	//执行路由
-	controller := reflect.New(method.controllerType)
-	this.runRequest(controller, method, request, response)
+	this.runRequest(method, request, response)
 }
 
-func (this *handlerType) runRequest(controller reflect.Value, method methodInfo, request *http.Request, response http.ResponseWriter) {
+func (this *handlerType) runRequest(method methodInfo, request *http.Request, response http.ResponseWriter) {
 	urlMethod := request.Method
-	target := controller.Interface().(ControllerInterface)
+	basic := initBasic(request, response, nil)
 	defer language.CatchCrash(func(exception language.Exception) {
-		target.GetBasic().(*Basic).Log.Critical("Buiness Crash Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
+		basic.Log.Critical("Buiness Crash Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
 		response.WriteHeader(500)
 		response.Write([]byte("server internal error"))
 	})
-	target.init(target, request, response, nil)
+	target, err := newIocInstanse(method.controllerType, basic)
+	if err != nil {
+		panic(err)
+	}
+
 	var controllerResult interface{}
 	if urlMethod == "GET" || urlMethod == "POST" ||
 		urlMethod == "DELETE" || urlMethod == "PUT" {
-		result := this.runRequestBusiness(target, method.methodType.Func, []reflect.Value{controller})
+		result := this.runRequestBusiness(basic, target, method.methodIndex)
 		if len(result) >= 1 {
 			controllerResult = result[0].Interface()
 		} else {
@@ -107,21 +113,21 @@ func (this *handlerType) runRequest(controller reflect.Value, method methodInfo,
 	} else {
 		controllerResult = nil
 	}
-	target.AutoRender(controllerResult, method.viewName)
+	target.Interface().(ControllerInterface).AutoRender(controllerResult, method.viewName)
 }
 
-func (this *handlerType) runRequestBusiness(target ControllerInterface, method reflect.Value, arguments []reflect.Value) (result []reflect.Value) {
+func (this *handlerType) runRequestBusiness(basic *Basic, target reflect.Value, methodIndex int) (result []reflect.Value) {
 	defer language.Catch(func(exception language.Exception) {
-		target.GetBasic().(*Basic).Log.Error("Buiness Error Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
+		basic.Log.Error("Buiness Error Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
 		result = []reflect.Value{reflect.ValueOf(exception)}
 	})
-	result = method.Call(arguments)
+	result = target.Method(methodIndex).Call(nil)
 	return
 }
 
 var handler handlerType
 
-func InitRoute(namespace string, target ControllerInterface) {
+func InitRoute(namespace string, target interface{}) {
 	handler.addRoute(namespace, target)
 }
 

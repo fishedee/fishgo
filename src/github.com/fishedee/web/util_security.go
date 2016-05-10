@@ -16,6 +16,9 @@ type SecurityConfig struct {
 
 func NewSecurity(config SecurityConfig) (Security, error) {
 	var netConfig string
+	if len(config.IpWhite) == 0 {
+		return nil, nil
+	}
 	if runtime.GOOS == "darwin" {
 		netConfig = "en0"
 	} else {
@@ -27,7 +30,7 @@ func NewSecurity(config SecurityConfig) (Security, error) {
 	}
 
 	ipStr := ip.IP.String()
-	if len(config.IpWhite) != 0 && ArrayIn(config.IpWhite, ipStr) == -1 {
+	if ArrayIn(config.IpWhite, ipStr) == -1 {
 		return nil, errors.New("当前IP: " + ipStr + "不在IP白名单中: " + Implode(config.IpWhite, ","))
 	}
 
