@@ -94,7 +94,7 @@ func NewDatabase(config DatabaseConfig) (Database, error) {
 		return nil, nil
 	}
 	dblink := fmt.Sprintf(
-		"%s:%s@tcp(%s:%d)/%s?charset=utf8",
+		"%s:%s@tcp(%s:%d)/%s?charset=utf8&loc=Local",
 		config.User,
 		config.Passowrd,
 		config.Host,
