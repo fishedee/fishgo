@@ -56,15 +56,15 @@ func generateSingleFileImport(data []ParserInfo, source string) (string, error) 
 
 	//建立导入符号的映射
 	nameImport := map[string]ImportInfo{}
-	nameImport["ControllerInterface"] = ImportInfo{
+	nameImport["InitController"] = ImportInfo{
 		name: ".",
 		path: "github.com/fishedee/web",
 	}
-	nameImport["ModelInterface"] = ImportInfo{
+	nameImport["InitModel"] = ImportInfo{
 		name: ".",
 		path: "github.com/fishedee/web",
 	}
-	nameImport["TestInterface"] = ImportInfo{
+	nameImport["InitTest"] = ImportInfo{
 		name: ".",
 		path: "github.com/fishedee/web",
 	}

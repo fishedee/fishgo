@@ -15,20 +15,15 @@ func Watch(argv []string) (string, error) {
 	}
 	appName := modules.GetAppName()
 
-	//初始运行
-	err = buildAll(appName)
-	if err != nil {
-		return "", err
-	}
-	err = run(appName)
-	if err != nil {
-		return "", err
-	}
-
 	//设置watch的文件
 	allFile := modules.GetAppAllDirectory()
 	err = modules.Watch(allFile, func(singlePackage string) {
-		err := buildAll(appName)
+		err := modules.GeneratePackage("./...")
+		if err != nil {
+			return
+		}
+
+		err = buildAll(appName)
 		if err != nil {
 			return
 		}

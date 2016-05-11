@@ -16,6 +16,11 @@ func Build(argv []string) (string, error) {
 	appName := modules.GetAppName()
 
 	//安装
+	err = modules.GeneratePackage("./...")
+	if err != nil {
+		return "", err
+	}
+
 	err = buildAll(appName)
 	if err != nil {
 		return "", err
