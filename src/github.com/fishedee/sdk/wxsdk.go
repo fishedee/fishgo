@@ -5,15 +5,16 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
-	. "github.com/fishedee/encoding"
-	. "github.com/fishedee/language"
-	. "github.com/fishedee/util"
 	"io"
 	"math/rand"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
+
+	. "github.com/fishedee/encoding"
+	. "github.com/fishedee/language"
+	. "github.com/fishedee/util"
 )
 
 type WxSdk struct {
@@ -47,7 +48,7 @@ type WxSdkUserInfo struct {
 	Country       string `json:"country"`
 	HeadImgUrl    string `json:"headimgurl"`
 	SubscribeTime int    `json:"subscribe_time"`
-	Unionid       string `json:"unionid"`
+	UnionId       string `json:"unionid"`
 	Remark        string `json:"remark"`
 	GroupId       int    `json:"groupid"`
 }
@@ -86,6 +87,13 @@ type WxSdkReceiveMessage struct {
 	Title       string
 	Description string
 	Url         string
+	//事件消息
+	Event     string
+	EventKey  string
+	Ticket    string
+	Latitude  float64
+	Longitude float64
+	Precision float64
 }
 
 type WxSdkSendImageMessage struct {
@@ -152,7 +160,7 @@ type WxSdkOauthUserInfo struct {
 	Country    string   `json:"country"`
 	HeadImgUrl string   `json:"headimgurl"`
 	Privilege  []string `json:"privilege"`
-	Unionid    string   `json:"unionid"`
+	UnionId    string   `json:"unionid"`
 }
 
 type WxSdkJsConfig struct {
@@ -366,6 +374,18 @@ func (this *WxSdk) SendMessage(message WxSdkSendMessage) ([]byte, error) {
 	body := this.generateXml(data)
 	result := []byte("<xml>" + body + "</xml>")
 	return result, nil
+}
+
+func (this *WxSdk) SendPairMessage(requestUrl *url.URL) ([]byte, error) {
+	var input struct {
+		EchoStr string `url:"echostr"`
+	}
+	queryString := requestUrl.RawQuery
+	err := DecodeUrlQuery([]byte(queryString), &input)
+	if err != nil {
+		return nil, err
+	}
+	return []byte(input.EchoStr), nil
 }
 
 //菜单接口

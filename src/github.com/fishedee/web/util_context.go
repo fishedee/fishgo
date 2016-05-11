@@ -3,18 +3,22 @@ package web
 import (
 	"bytes"
 	"fmt"
-	"github.com/fishedee/encoding"
-	"github.com/fishedee/language"
 	"io/ioutil"
 	"mime"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/fishedee/encoding"
+	"github.com/fishedee/language"
 )
 
 type Context interface {
 	//输入参数
+	GetUrl() *url.URL
+	GetBody() ([]byte, error)
 	GetParam(key string) string
 	GetParamToStruct(requireStruct interface{})
 	GetUrlParamToStruct(requireStruct interface{})
@@ -82,7 +86,10 @@ func (this *contextImplement) parseInput() {
 	}
 	ct, _, err := mime.ParseMediaType(ct)
 	if ct == "application/x-www-form-urlencoded" {
-		byteArray, _ := ioutil.ReadAll(this.request.Body)
+		byteArray, err := ioutil.ReadAll(this.request.Body)
+		if err != nil {
+			panic(err)
+		}
 		this.request.Body = ioutil.NopCloser(bytes.NewReader(byteArray))
 		postInput = string(byteArray)
 	}
@@ -94,6 +101,18 @@ func (this *contextImplement) parseInput() {
 	if err != nil {
 		language.Throw(1, err.Error())
 	}
+}
+
+func (this *contextImplement) GetUrl() *url.URL {
+	return this.request.URL
+}
+
+func (this *contextImplement) GetBody() ([]byte, error) {
+	byteArray, err := ioutil.ReadAll(this.request.Body)
+	if err != nil {
+		return nil, err
+	}
+	return byteArray, nil
 }
 
 func (this *contextImplement) GetParam(key string) string {
