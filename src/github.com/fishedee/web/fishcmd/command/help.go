@@ -11,10 +11,10 @@ Usage:
 The commands are:
 	
 	clean		Clean a go application
-	build		Build a go application
-		-fast 	Build fast more and more
-	watch		AutoBuild a go application when dictory file change
-		-fast 	Build fast more and more
+	run		Run a go application
+		--watch	AutoRun a go application when dictory file change
+	test 		Test a go application
+		--watch	AutoTest a go application when dictory file change
 	version		FishCmd version
 	help		FishCmd help
 

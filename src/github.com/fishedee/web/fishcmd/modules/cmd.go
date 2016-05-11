@@ -7,10 +7,10 @@ import (
 	"os/exec"
 )
 
-func runCmd(isSync bool, name string, args ...string) (*exec.Cmd, []byte, error) {
+func runCmd(isSync bool, stdOutput bool, name string, args ...string) (*exec.Cmd, []byte, error) {
 	var buf = bytes.NewBuffer([]byte(""))
 	cmd := exec.Command(name)
-	if isSync {
+	if stdOutput == false {
 		cmd.Stdout = buf
 		cmd.Stderr = buf
 	} else {
@@ -33,14 +33,19 @@ func runCmd(isSync bool, name string, args ...string) (*exec.Cmd, []byte, error)
 }
 
 func runCmdSync(name string, args ...string) ([]byte, error) {
-	_, data, err := runCmd(true, name, args...)
+	_, data, err := runCmd(true, false, name, args...)
 	if err != nil {
 		return nil, errors.New(string(data))
 	}
 	return data, nil
 }
 
+func runCmdSyncAndStdOutput(name string, args ...string) (*exec.Cmd, error) {
+	cmd, _, err := runCmd(true, true, name, args...)
+	return cmd, err
+}
+
 func runCmdAsync(name string, args ...string) (*exec.Cmd, error) {
-	cmd, _, err := runCmd(false, name, args...)
+	cmd, _, err := runCmd(false, true, name, args...)
 	return cmd, err
 }

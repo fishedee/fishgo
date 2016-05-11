@@ -1,5 +1,5 @@
 package command
 
 func Clean(argv []string) (string, error) {
-	return `I am is a clean`, nil
+	return `Sorry I have not implement clean,please contact fishedee if you need`, nil
 }

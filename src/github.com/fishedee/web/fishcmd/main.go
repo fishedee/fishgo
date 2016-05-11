@@ -23,8 +23,8 @@ func main() {
 	}{
 		{"help", command.Help},
 		{"version", command.Version},
-		{"build", command.Build},
-		{"watch", command.Watch},
+		{"run", command.Run},
+		{"test", command.Test},
 	}
 
 	var singleCommandHandler commandHandlerType

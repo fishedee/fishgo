@@ -16,6 +16,9 @@ type SecurityConfig struct {
 
 func NewSecurity(config SecurityConfig) (Security, error) {
 	var netConfig string
+	if len(config.IpWhite) == 0 {
+		return nil, nil
+	}
 	if runtime.GOOS == "darwin" {
 		netConfig = "en0"
 	} else {

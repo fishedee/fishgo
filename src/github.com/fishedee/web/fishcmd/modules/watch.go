@@ -69,6 +69,7 @@ func RunWatcher() error {
 	}
 	changeDirectory := ""
 	newTimer := time.NewTimer(time.Second)
+	watchCallback(".")
 	for {
 		select {
 		case _ = <-newTimer.C:
