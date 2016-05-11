@@ -47,10 +47,8 @@ func (this *handlerType) addRoute(namespace string, target interface{}) {
 	if this.routerControllerMethod == nil {
 		this.routerControllerMethod = map[string]methodInfo{}
 	}
-	controllerType := reflect.TypeOf(target)
-	if controllerType.Elem().Kind() == reflect.Interface {
-		controllerType = controllerType.Elem()
-	}
+	controllerValue := getIocRealTarget(target)
+	controllerType := controllerValue.Type()
 	numMethod := controllerType.NumMethod()
 	for i := 0; i != numMethod; i++ {
 		singleMethod := controllerType.Method(i)
@@ -67,7 +65,7 @@ func (this *handlerType) addRoute(namespace string, target interface{}) {
 		url := strings.ToLower(namespace + "/" + methodName[0])
 		this.routerControllerMethod[url] = methodInfo{
 			viewName:       this.firstLowerName(methodName[1]),
-			controllerType: controllerType.Elem(),
+			controllerType: controllerType,
 			methodIndex:    i,
 		}
 	}

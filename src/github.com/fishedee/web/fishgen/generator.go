@@ -29,6 +29,9 @@ func generateSingleFileTest(dirname string, data []ParserInfo) error {
 	if err != nil {
 		return err
 	}
+	if result == "" {
+		return nil
+	}
 
 	result, err = generateSingleFileFormat(filename, result)
 	if err != nil {

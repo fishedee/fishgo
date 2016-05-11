@@ -10,15 +10,41 @@ var (
 	basicType     = reflect.TypeOf(&Basic{})
 )
 
-func addIocTarget(target interface{}) error {
+func getIocPkgPath(target interface{}) string {
 	targetValue := reflect.ValueOf(target)
-	targetType := targetValue.Type().Elem()
-	if targetType.Kind() != reflect.Interface {
-		return errors.New("ioc need a interface")
+	for targetValue.Kind() == reflect.Ptr {
+		targetValue = targetValue.Elem()
 	}
-	instanseType := targetValue.Elem().Elem().Type().Elem()
-	mapInjectType[targetType] = instanseType
-	return nil
+	return targetValue.Type().PkgPath()
+}
+
+func getIocRealTarget(target interface{}) reflect.Value {
+	targetValue := reflect.ValueOf(target)
+	for targetValue.Kind() == reflect.Ptr {
+		targetValue = targetValue.Elem()
+	}
+	if targetValue.Kind() == reflect.Interface {
+		return targetValue
+	} else if targetValue.Kind() == reflect.Struct {
+		return targetValue.Addr()
+	} else {
+		return targetValue
+	}
+}
+
+func addIocTarget(target interface{}) error {
+	targetValue := getIocRealTarget(target)
+	if targetValue.Kind() == reflect.Interface {
+		instanseType := targetValue.Elem().Type().Elem()
+		mapInjectType[targetValue.Type()] = instanseType
+		return nil
+	} else if targetValue.Kind() == reflect.Ptr &&
+		targetValue.Elem().Kind() == reflect.Struct {
+		return nil
+	} else {
+		return errors.New("ioc need a *interface or *struct")
+	}
+
 }
 
 func injectIocTarget(target reflect.Value, basic reflect.Value) error {

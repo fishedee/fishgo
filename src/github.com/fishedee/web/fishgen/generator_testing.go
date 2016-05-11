@@ -3,7 +3,23 @@ package main
 import (
 	"strings"
 )
+
 func generateSingleTestFileContent(data []ParserInfo) (string, error) {
+	hasModel := false
+	for _, singleParseInfo := range data {
+		for _, singleStruct := range singleParseInfo.declType {
+			if isPublicStructModel(singleStruct) {
+				hasModel = true
+				break
+			}
+		}
+		if hasModel == true {
+			break
+		}
+	}
+	if hasModel == false {
+		return "", nil
+	}
 	packageName := data[0].packname
 	packageInfo := "package " + packageName + "\n"
 	packageImport := `

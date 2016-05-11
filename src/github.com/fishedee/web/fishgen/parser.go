@@ -88,6 +88,13 @@ func getFieldType(fieldType ast.Expr, useType map[string]bool) string {
 		data += "}"
 		return data
 	}
+	structType, ok := fieldType.(*ast.StructType)
+	if ok {
+		data := "struct{"
+		data += "\n" + getFieldListTypeString(structType.Fields, useType)
+		data += "}"
+		return data
+	}
 	panic(fmt.Sprintf("%#v unknown fieldType ", fieldType))
 }
 

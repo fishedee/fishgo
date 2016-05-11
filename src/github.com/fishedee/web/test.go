@@ -176,14 +176,14 @@ func runSingleTest(t *testing.T, iocType reflect.Type) error {
 			}
 		}
 		//执行测试
-		singleValueMethodType.Func.Call([]reflect.Value{testValue})
+		testValue.Method(i).Call(nil)
 	}
 	return nil
 }
 
 func RunTest(t *testing.T, data interface{}) {
 	//获取package
-	pkgPath := reflect.TypeOf(data).Elem().PkgPath()
+	pkgPath := getIocPkgPath(data)
 
 	//初始化runtime
 	if testMapInit == false {
@@ -202,9 +202,9 @@ func RunTest(t *testing.T, data interface{}) {
 }
 
 func InitTest(test interface{}) {
-	testType := reflect.TypeOf(test).Elem()
-	pkgPath := testType.PkgPath()
-	testMap[pkgPath] = append(testMap[pkgPath], testType)
+	testValue := getIocRealTarget(test)
+	pkgPath := getIocPkgPath(test)
+	testMap[pkgPath] = append(testMap[pkgPath], testValue.Type())
 	err := addIocTarget(test)
 	if err != nil {
 		panic(err)
