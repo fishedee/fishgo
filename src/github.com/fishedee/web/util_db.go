@@ -75,6 +75,7 @@ type DatabaseConfig struct {
 	Port          int
 	User          string
 	Passowrd      string
+	Charset       string
 	Database      string
 	Debug         bool
 	MaxConnection int
@@ -93,13 +94,17 @@ func NewDatabase(config DatabaseConfig) (Database, error) {
 	if config.Driver == "" {
 		return nil, nil
 	}
+	if config.Charset == "" {
+		config.Charset = "utf8"
+	}
 	dblink := fmt.Sprintf(
-		"%s:%s@tcp(%s:%d)/%s?charset=utf8&loc=Local",
+		"%s:%s@tcp(%s:%d)/%s?charset=%v&loc=Local",
 		config.User,
 		config.Passowrd,
 		config.Host,
 		config.Port,
 		config.Database,
+		config.Charset,
 	)
 	tempDb, err := xorm.NewEngine(config.Driver, dblink)
 	if err != nil {
@@ -128,6 +133,7 @@ func NewDatabaseFromConfig(configName string) (Database, error) {
 	dbuser := globalBasic.Config.GetString(configName + "user")
 	dbpassword := globalBasic.Config.GetString(configName + "password")
 	dbdatabase := globalBasic.Config.GetString(configName + "database")
+	dbcharset := globalBasic.Config.GetString(configName + "charset")
 	dbmaxconnection := globalBasic.Config.GetString(configName + "maxconnection")
 	dbdebug := globalBasic.Config.GetString(configName + "debug")
 
@@ -138,6 +144,7 @@ func NewDatabaseFromConfig(configName string) (Database, error) {
 	config.User = dbuser
 	config.Passowrd = dbpassword
 	config.Database = dbdatabase
+	config.Charset = dbcharset
 	config.Debug, _ = strconv.ParseBool(dbdebug)
 	config.MaxConnection, _ = strconv.Atoi(dbmaxconnection)
 
