@@ -195,3 +195,36 @@ func TestArrayShuffle(t *testing.T) {
 		AssertArrayEqual(t, singleTestCaseIndex, leftResult, rightResult)
 	}
 }
+
+func TestArraySlice(t *testing.T) {
+	testCase := []struct {
+		origin interface{}
+		begin  int
+		end    []int
+		target interface{}
+	}{
+		{[]int{}, 0, nil, []int{}},
+		{[]int{}, 0, []int{0}, []int{}},
+		{[]int{}, 0, []int{1}, []int{}},
+		{[]int{}, -1, []int{0}, []int{}},
+		{[]int{}, 0, []int{1}, []int{}},
+		{[]int{}, -1, []int{1}, []int{}},
+		{[]int{1, 2, 3}, 0, nil, []int{1, 2, 3}},
+		{[]int{1, 2, 3}, 0, []int{0}, []int{}},
+		{[]int{1, 2, 3}, 0, []int{1}, []int{1}},
+		{[]int{1, 2, 3}, 1, []int{3}, []int{2, 3}},
+		{[]int{1, 2, 3}, 1, nil, []int{2, 3}},
+		{[]int{1, 2, 3}, -5, []int{-10}, []int{}},
+		{[]int{1, 2, 3}, -5, []int{0}, []int{}},
+		{[]int{1, 2, 3}, -5, []int{2}, []int{1, 2}},
+		{[]int{1, 2, 3}, -5, []int{2}, []int{1, 2}},
+		{[]int{1, 2, 3}, 2, []int{4}, []int{3}},
+		{[]int{1, 2, 3}, 3, []int{4}, []int{}},
+		{[]int{1, 2, 3}, 10, []int{4}, []int{}},
+	}
+
+	for singleTestCaseIndex, singleTestCase := range testCase {
+		result := ArraySlice(singleTestCase.origin, singleTestCase.begin, singleTestCase.end...)
+		AssertArrayEqual(t, singleTestCaseIndex, singleTestCase.target, result)
+	}
+}

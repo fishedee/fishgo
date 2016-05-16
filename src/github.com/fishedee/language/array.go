@@ -210,3 +210,45 @@ func ArrayShuffle(data interface{}) interface{} {
 	}
 	return dataResult.Interface()
 }
+
+func ArraySlice(data interface{}, beginIndex int, endIndexArray ...int) interface{} {
+	//建立一份拷贝数据
+	dataValue := reflect.ValueOf(data)
+	dataType := dataValue.Type()
+	dataValueLen := dataValue.Len()
+
+	//计算size
+	endIndex := 0
+	if len(endIndexArray) >= 1 {
+		endIndex = endIndexArray[0]
+	} else {
+		endIndex = dataValueLen
+	}
+	size := 0
+	if beginIndex >= endIndex {
+		//逆向
+		size = 0
+	} else if endIndex <= 0 {
+		//在左边
+		size = 0
+	} else if beginIndex >= dataValueLen {
+		//在右边
+		size = 0
+	} else {
+		//有交集
+		if beginIndex <= 0 {
+			beginIndex = 0
+		}
+		if endIndex >= dataValueLen {
+			endIndex = dataValueLen
+		}
+		size = endIndex - beginIndex
+	}
+
+	//拷贝
+	dataResult := reflect.MakeSlice(dataType, size, size)
+	for i := 0; i != size; i++ {
+		dataResult.Index(i).Set(dataValue.Index(i + beginIndex))
+	}
+	return dataResult.Interface()
+}
