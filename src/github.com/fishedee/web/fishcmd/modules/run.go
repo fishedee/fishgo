@@ -13,6 +13,7 @@ func RunPackage(packageName string, isAsync bool) error {
 	if cmd != nil && cmd.Process != nil {
 		cmd.Process.Kill()
 	}
+	runCmdSync("pkill", "-9", packageName)
 	if isAsync {
 		cmd, err = runCmdAsync("./" + packageName)
 		return err
