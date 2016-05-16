@@ -76,6 +76,7 @@ type DatabaseConfig struct {
 	User          string
 	Passowrd      string
 	Charset       string
+	Collation     string
 	Database      string
 	Debug         bool
 	MaxConnection int
@@ -97,14 +98,18 @@ func NewDatabase(config DatabaseConfig) (Database, error) {
 	if config.Charset == "" {
 		config.Charset = "utf8"
 	}
+	if config.Collation == "" {
+		config.Collation = "utf8_general_ci"
+	}
 	dblink := fmt.Sprintf(
-		"%s:%s@tcp(%s:%d)/%s?charset=%v&loc=Local",
+		"%s:%s@tcp(%s:%d)/%s?charset=%v&collation=%v&loc=Local",
 		config.User,
 		config.Passowrd,
 		config.Host,
 		config.Port,
 		config.Database,
 		config.Charset,
+		config.Collation,
 	)
 	tempDb, err := xorm.NewEngine(config.Driver, dblink)
 	if err != nil {
@@ -134,6 +139,7 @@ func NewDatabaseFromConfig(configName string) (Database, error) {
 	dbpassword := globalBasic.Config.GetString(configName + "password")
 	dbdatabase := globalBasic.Config.GetString(configName + "database")
 	dbcharset := globalBasic.Config.GetString(configName + "charset")
+	dbcollation := globalBasic.Config.GetString(configName + "collation")
 	dbmaxconnection := globalBasic.Config.GetString(configName + "maxconnection")
 	dbdebug := globalBasic.Config.GetString(configName + "debug")
 
@@ -145,6 +151,7 @@ func NewDatabaseFromConfig(configName string) (Database, error) {
 	config.Passowrd = dbpassword
 	config.Database = dbdatabase
 	config.Charset = dbcharset
+	config.Collation = dbcollation
 	config.Debug, _ = strconv.ParseBool(dbdebug)
 	config.MaxConnection, _ = strconv.Atoi(dbmaxconnection)
 
