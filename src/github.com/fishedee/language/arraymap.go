@@ -375,21 +375,30 @@ func mapToStruct(dataValue reflect.Value, target reflect.Value, targetType array
 	}
 	dataTypeKey := dataType.Key()
 	for _, singleStructInfo := range targetType.field {
-		singleMapKey := reflect.New(dataTypeKey)
-		singleDataKey := reflect.ValueOf(singleStructInfo.name)
-		err := mapToArrayInner(singleDataKey, singleMapKey, tag)
-		if err != nil {
-			return err
-		}
+		if singleStructInfo.anonymous == true {
+			//FIXME 暂不考虑匿名结构体的覆盖问题
+			singleDataValue := target.FieldByIndex(singleStructInfo.index)
+			err := mapToArrayInner(dataValue, singleDataValue, tag)
+			if err != nil {
+				return errors.New(fmt.Sprintf("参数%s%s", singleStructInfo.name, err.Error()))
+			}
+		} else {
+			singleMapKey := reflect.New(dataTypeKey)
+			singleDataKey := reflect.ValueOf(singleStructInfo.name)
+			err := mapToArrayInner(singleDataKey, singleMapKey, tag)
+			if err != nil {
+				return err
+			}
 
-		singleDataValue := target.FieldByIndex(singleStructInfo.index)
-		singleMapResult := dataValue.MapIndex(singleMapKey.Elem())
-		if singleMapResult.IsValid() == false {
-			continue
-		}
-		err = mapToArrayInner(singleMapResult, singleDataValue, tag)
-		if err != nil {
-			return errors.New(fmt.Sprintf("参数%s%s", singleDataKey, err.Error()))
+			singleDataValue := target.FieldByIndex(singleStructInfo.index)
+			singleMapResult := dataValue.MapIndex(singleMapKey.Elem())
+			if singleMapResult.IsValid() == false {
+				continue
+			}
+			err = mapToArrayInner(singleMapResult, singleDataValue, tag)
+			if err != nil {
+				return errors.New(fmt.Sprintf("参数%s%s", singleDataKey, err.Error()))
+			}
 		}
 	}
 	return nil

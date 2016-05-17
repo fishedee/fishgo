@@ -294,13 +294,12 @@ func TestMapToArrayStruct(t *testing.T) {
 			"Forth":  "4",
 			"fifth":  "5",
 		}, struct {
-			First  string
-			Second int
-			Third  string `json:"Third"`
-			Forth  string `json:"Forth,omitempty"`
-			Fifth  string `json:"-"`
-			Sixth  int
-		}{"1", 2, "3", "4", "", 0}},
+			AnaymonusStruct
+			Third string `json:"Third"`
+			Forth string `json:"Forth,omitempty"`
+			Fifth string `json:"-"`
+			Sixth int
+		}{AnaymonusStruct{"1", "2"}, "3", "4", "", 0}},
 	}
 	for _, singleTestCase := range testCase {
 		origin := singleTestCase.origin
