@@ -97,6 +97,24 @@ func TestArrayToMapStruct(t *testing.T) {
 			"79":    "2",
 			"third": "3",
 		}},
+		{struct {
+			First string
+			AnaymonusStruct
+			Third string
+		}{"23", AnaymonusStruct{"1", "2"}, "3"}, map[string]interface{}{
+			"first":  "23",
+			"second": "2",
+			"third":  "3",
+		}},
+		{struct {
+			AnaymonusStruct
+			First string
+			Third string
+		}{AnaymonusStruct{"1", "2"}, "23", "3"}, map[string]interface{}{
+			"first":  "23",
+			"second": "2",
+			"third":  "3",
+		}},
 	}
 	for _, singleTestCase := range testCase {
 		data := ArrayToMap(singleTestCase.origin, "json")

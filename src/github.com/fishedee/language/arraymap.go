@@ -22,14 +22,18 @@ func combileMap(result map[string]interface{}, singleResultMap reflect.Value) {
 	}
 	singleResultMapKeys := singleResultMap.MapKeys()
 	for _, singleKey := range singleResultMapKeys {
-		result[fmt.Sprintf("%v", singleKey)] = singleResultMap.MapIndex(singleKey).Interface()
+		singleResultKey := fmt.Sprintf("%v", singleKey)
+		_, isExist := result[singleResultKey]
+		if isExist {
+			continue
+		}
+		result[singleResultKey] = singleResultMap.MapIndex(singleKey).Interface()
 	}
 }
 
 type arrayMappingStructInfo struct {
 	name      string
 	omitempty bool
-	num       int
 	anonymous bool
 	index     []int
 }
@@ -58,7 +62,8 @@ func getDataTagInfoInner(dataType reflect.Type, tag string) arrayMappingInfo {
 		} else {
 			//结构体类型
 			result.isTimeType = false
-			result.field = []arrayMappingStructInfo{}
+			anonymousField := []arrayMappingStructInfo{}
+			noanonymousField := []arrayMappingStructInfo{}
 			for i := 0; i != dataType.NumField(); i++ {
 				singleDataType := dataType.Field(i)
 				if singleDataType.PkgPath != "" && singleDataType.Anonymous == false {
@@ -82,11 +87,15 @@ func getDataTagInfoInner(dataType reflect.Type, tag string) arrayMappingInfo {
 				single := arrayMappingStructInfo{}
 				single.name = singleName
 				single.omitempty = omitempty
-				single.num = i
 				single.index = singleDataType.Index
 				single.anonymous = singleDataType.Anonymous
-				result.field = append(result.field, single)
+				if singleDataType.Anonymous {
+					anonymousField = append(anonymousField, single)
+				} else {
+					noanonymousField = append(noanonymousField, single)
+				}
 			}
+			result.field = append(noanonymousField, anonymousField...)
 		}
 	}
 	return result
@@ -132,7 +141,7 @@ func arrayToMapInner(dataValue reflect.Value, tag string) (reflect.Value, bool) 
 		} else if dataType.kind == TypeKind.STRUCT && dataType.isTimeType == false {
 			resultMap := map[string]interface{}{}
 			for _, singleType := range dataType.field {
-				singleResultMap, isEmptyValue := arrayToMapInner(dataValue.Field(singleType.num), tag)
+				singleResultMap, isEmptyValue := arrayToMapInner(dataValue.FieldByIndex(singleType.index), tag)
 				if singleType.anonymous == false {
 					if singleType.omitempty == true && isEmptyValue {
 						continue
