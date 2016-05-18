@@ -96,7 +96,6 @@ func (this *contextImplement) parseInput() {
 
 	//解析数据
 	input := queryInput + "&" + postInput
-	fmt.Println(input)
 	this.inputData = map[string]interface{}{}
 	err = encoding.DecodeUrlQuery([]byte(input), &this.inputData)
 	if err != nil {
@@ -127,12 +126,10 @@ func (this *contextImplement) GetParam(key string) string {
 
 func (this *contextImplement) GetParamToStruct(requireStruct interface{}) {
 	//导出到struct
-	fmt.Println(this.inputData)
 	err := language.MapToArray(this.inputData, requireStruct, "url")
 	if err != nil {
 		language.Throw(1, err.Error())
 	}
-	fmt.Printf("%#v\n", requireStruct)
 }
 
 func (this *contextImplement) GetUrlParamToStruct(requireStruct interface{}) {

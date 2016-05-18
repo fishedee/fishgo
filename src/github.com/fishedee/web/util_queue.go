@@ -12,12 +12,12 @@ import (
 
 type Queue interface {
 	WithLog(log Log) Queue
-	Produce(topicId string, data ...interface{}) error
-	Consume(topicId string, listener interface{}) error
-	ConsumeInPool(topicId string, listener interface{}, poolSize int) error
-	Publish(topicId string, data ...interface{}) error
-	Subscribe(topicId string, listener interface{}) error
-	SubscribeInPool(topicId string, listener interface{}, poolSize int) error
+	Produce(topicId string, data ...interface{})
+	Consume(topicId string, listener interface{})
+	ConsumeInPool(topicId string, listener interface{}, poolSize int)
+	Publish(topicId string, data ...interface{})
+	Subscribe(topicId string, listener interface{})
+	SubscribeInPool(topicId string, listener interface{}, poolSize int)
 }
 
 type QueueConfig struct {
@@ -25,12 +25,14 @@ type QueueConfig struct {
 	SavePrefix string
 	Driver     string
 	PoolSize   int
+	Debug      bool
 }
 
 type queueImplement struct {
 	store    QueueStoreInterface
 	Log      Log
 	poolSize int
+	debug    bool
 }
 
 func NewQueue(config QueueConfig) (Queue, error) {
@@ -44,6 +46,7 @@ func NewQueue(config QueueConfig) (Queue, error) {
 		return &queueImplement{
 			store:    queue,
 			poolSize: config.PoolSize,
+			debug:    config.Debug,
 		}, nil
 	} else if config.Driver == "redis" {
 		queue, err := NewRedisQueue(QueueStoreConfig{
@@ -56,6 +59,7 @@ func NewQueue(config QueueConfig) (Queue, error) {
 		return &queueImplement{
 			store:    queue,
 			poolSize: config.PoolSize,
+			debug:    config.Debug,
 		}, nil
 	} else {
 		return nil, errors.New("invalid memory config " + config.Driver)
@@ -68,12 +72,15 @@ func NewQueueFromConfig(configName string) (Queue, error) {
 	saveprefix := globalBasic.Config.GetString(configName + "saveprefix")
 	poolsizeStr := globalBasic.Config.GetString(configName + "poolsize")
 	poolsize, _ := strconv.Atoi(poolsizeStr)
+	debugStr := globalBasic.Config.GetString(configName + "debug")
+	debug, _ := strconv.ParseBool(debugStr)
 
 	queueConfig := QueueConfig{}
 	queueConfig.Driver = driver
 	queueConfig.SavePath = savepath
 	queueConfig.SavePrefix = saveprefix
 	queueConfig.PoolSize = poolsize
+	queueConfig.Debug = debug
 	return NewQueue(queueConfig)
 }
 
@@ -136,7 +143,7 @@ func (this *queueImplement) WrapPoolListener(listener QueueListener, poolSize in
 	}
 }
 
-func (this *queueImplement) WrapExceptionListener(listener interface{}) (QueueListener, error) {
+func (this *queueImplement) WrapExceptionListener(listener interface{}, topicId string, useplace string) (QueueListener, error) {
 	listenerType := reflect.TypeOf(listener)
 	listenerValue := reflect.ValueOf(listener)
 	if listenerType.Kind() != reflect.Func {
@@ -150,6 +157,9 @@ func (this *queueImplement) WrapExceptionListener(listener interface{}) (QueueLi
 		)
 	}
 	return func(data interface{}) (lastError error) {
+		if this.debug {
+			this.Log.Debug("[Queue %v] %v:%v", useplace, topicId, string(data.([]byte)))
+		}
 		defer CatchCrash(func(exception Exception) {
 			this.Log.Critical("QueueTask Crash Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
 			lastError = exception
@@ -171,64 +181,106 @@ func (this *queueImplement) WrapExceptionListener(listener interface{}) (QueueLi
 	}, nil
 }
 
-func (this *queueImplement) Produce(topicId string, data ...interface{}) error {
+func (this *queueImplement) Produce(topicId string, data ...interface{}) {
+	defer CatchCrash(func(exception Exception) {
+		this.Log.Critical("QueueTask Crash Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
+	})
 	dataResult, err := this.WrapData(data)
 	if err != nil {
-		return err
+		panic(err)
 	}
-	return this.store.Produce(topicId, dataResult)
+	err = this.store.Produce(topicId, dataResult)
+	if err != nil {
+		panic(err)
+	}
+	if this.debug {
+		this.Log.Debug("[Queue Produce] %v:%v", topicId, string(dataResult.([]byte)))
+	}
 }
 
-func (this *queueImplement) Consume(topicId string, listener interface{}) error {
-	listenerResult, err := this.WrapExceptionListener(listener)
+func (this *queueImplement) Consume(topicId string, listener interface{}) {
+	defer CatchCrash(func(exception Exception) {
+		this.Log.Critical("QueueTask Crash Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
+	})
+	listenerResult, err := this.WrapExceptionListener(listener, topicId, "Consume")
 	if err != nil {
-		return err
+		panic(err)
 	}
 	poolSize := 0
 	if this.poolSize != 0 {
 		poolSize = this.poolSize
 	}
-	return this.store.Consume(topicId, this.WrapPoolListener(listenerResult, poolSize))
+	err = this.store.Consume(topicId, this.WrapPoolListener(listenerResult, poolSize))
+	if err != nil {
+		panic(err)
+	}
 }
 
-func (this *queueImplement) ConsumeInPool(topicId string, listener interface{}, poolSize int) error {
-	listenerResult, err := this.WrapExceptionListener(listener)
+func (this *queueImplement) ConsumeInPool(topicId string, listener interface{}, poolSize int) {
+	defer CatchCrash(func(exception Exception) {
+		this.Log.Critical("QueueTask Crash Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
+	})
+	listenerResult, err := this.WrapExceptionListener(listener, topicId, "ConsumeInPool")
 	if err != nil {
-		return err
+		panic(err)
 	}
 	if this.poolSize != 0 {
 		poolSize = this.poolSize
 	}
-	return this.store.Consume(topicId, this.WrapPoolListener(listenerResult, poolSize))
+	err = this.store.Consume(topicId, this.WrapPoolListener(listenerResult, poolSize))
+	if err != nil {
+		panic(err)
+	}
 }
 
-func (this *queueImplement) Publish(topicId string, data ...interface{}) error {
+func (this *queueImplement) Publish(topicId string, data ...interface{}) {
+	defer CatchCrash(func(exception Exception) {
+		this.Log.Critical("QueueTask Crash Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
+	})
 	dataResult, err := this.WrapData(data)
 	if err != nil {
-		return err
+		panic(err)
 	}
-	return this.store.Publish(topicId, dataResult)
+	err = this.store.Publish(topicId, dataResult)
+	if err != nil {
+		panic(err)
+	}
+	if this.debug {
+		this.Log.Debug("[Queue Publish] %v:%v", topicId, string(dataResult.([]byte)))
+	}
 }
 
-func (this *queueImplement) Subscribe(topicId string, listener interface{}) error {
-	listenerResult, err := this.WrapExceptionListener(listener)
+func (this *queueImplement) Subscribe(topicId string, listener interface{}) {
+	defer CatchCrash(func(exception Exception) {
+		this.Log.Critical("QueueTask Crash Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
+	})
+	listenerResult, err := this.WrapExceptionListener(listener, topicId, "Subscribe")
 	if err != nil {
-		return err
+		panic(err)
 	}
 	poolSize := 0
 	if this.poolSize != 0 {
 		poolSize = this.poolSize
 	}
-	return this.store.Subscribe(topicId, this.WrapPoolListener(listenerResult, poolSize))
+	err = this.store.Subscribe(topicId, this.WrapPoolListener(listenerResult, poolSize))
+	if err != nil {
+		panic(err)
+	}
 }
 
-func (this *queueImplement) SubscribeInPool(topicId string, listener interface{}, poolSize int) error {
-	listenerResult, err := this.WrapExceptionListener(listener)
+func (this *queueImplement) SubscribeInPool(topicId string, listener interface{}, poolSize int) {
+	defer CatchCrash(func(exception Exception) {
+		this.Log.Critical("QueueTask Crash Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
+	})
+	listenerResult, err := this.WrapExceptionListener(listener, topicId, "SubscribeInPool")
 	if err != nil {
-		return err
+		panic(err)
 	}
 	if this.poolSize != 0 {
 		poolSize = this.poolSize
 	}
-	return this.store.Subscribe(topicId, this.WrapPoolListener(listenerResult, poolSize))
+	err = this.store.Subscribe(topicId, this.WrapPoolListener(listenerResult, poolSize))
+	if err != nil {
+		panic(err)
+	}
 }
