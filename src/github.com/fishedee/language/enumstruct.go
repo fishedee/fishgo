@@ -25,19 +25,25 @@ func InitEnumStruct(this interface{}) {
 
 	for i := 0; i != enumInfo.NumField(); i++ {
 		singleField := enumInfo.Field(i)
+		if singleField.PkgPath != "" || singleField.Anonymous {
+			continue
+		}
 
 		singleFieldName := singleField.Name
 		singleFieldTag := singleField.Tag.Get("enum")
 		singleFieldTagArray := strings.Split(singleFieldTag, ",")
 		if len(singleFieldTagArray) != 2 {
-			continue
+			panic("invalid enum " + enumInfo.String() + ":" + singleFieldName)
 		}
 
 		singleFieldTagValue, err := strconv.Atoi(singleFieldTagArray[0])
 		if err != nil {
-			panic(singleFieldName + ": " + singleFieldTag + " is not a integer")
+			panic("invalid enum " + enumInfo.String() + ":" + singleFieldName)
 		}
 		singleFieldTagSeeName := singleFieldTagArray[1]
+		if singleFieldTagSeeName == "" {
+			panic("invalid enum " + enumInfo.String() + ":" + singleFieldName)
+		}
 
 		result.names[singleFieldTagArray[0]] = singleFieldTagSeeName
 		result.datas = append(result.datas, EnumData{
@@ -106,15 +112,22 @@ func InitEnumStructString(this interface{}) {
 
 	for i := 0; i != enumInfo.NumField(); i++ {
 		singleField := enumInfo.Field(i)
+		if singleField.PkgPath != "" || singleField.Anonymous {
+			continue
+		}
+		singleFieldName := singleField.Name
 
 		singleFieldTag := singleField.Tag.Get("enum")
 		singleFieldTagArray := strings.Split(singleFieldTag, ",")
 		if len(singleFieldTagArray) != 2 {
-			continue
+			panic("invalid enum " + enumInfo.String() + ":" + singleFieldName)
 		}
 
 		singleFieldTagValue := singleFieldTagArray[0]
 		singleFieldTagSeeName := singleFieldTagArray[1]
+		if singleFieldTagValue == "" || singleFieldTagSeeName == "" {
+			panic("invalid enum " + enumInfo.String() + ":" + singleFieldName)
+		}
 
 		result.names[singleFieldTagValue] = singleFieldTagSeeName
 		result.datas = append(result.datas, EnumDataString{

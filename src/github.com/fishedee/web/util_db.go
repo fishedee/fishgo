@@ -4,13 +4,14 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	_ "github.com/go-sql-driver/mysql"
-	"github.com/go-xorm/core"
-	"github.com/go-xorm/xorm"
 	"reflect"
 	"strconv"
 	"strings"
 	"time"
+
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/go-xorm/core"
+	"github.com/go-xorm/xorm"
 )
 
 type DatabaseCommon interface {
@@ -60,6 +61,7 @@ type DatabaseSession interface {
 	ForUpdate() DatabaseSession
 	Begin() error
 	Commit() error
+	LastSQL() (string, []interface{})
 }
 
 type Database interface {
