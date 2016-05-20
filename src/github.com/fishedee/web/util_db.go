@@ -354,6 +354,10 @@ func (this *databaseImplement) Alias(alias string) DatabaseSession {
 }
 
 func (this *databaseImplement) Limit(limit int, start ...int) DatabaseSession {
+	//修复xorm的PageSize为0时，仍然不分页的问题
+	if limit == 0 {
+		start = []int{1}
+	}
 	return newDatabaseSession(this.Engine.Limit(limit, start...))
 }
 
@@ -615,6 +619,10 @@ func (this *databaseSessionImplement) Alias(alias string) DatabaseSession {
 }
 
 func (this *databaseSessionImplement) Limit(limit int, start ...int) DatabaseSession {
+	//修复xorm的PageSize为0时，仍然不分页的问题
+	if limit == 0 {
+		start = []int{1}
+	}
 	return newDatabaseSession(this.Session.Limit(limit, start...))
 }
 
