@@ -1,7 +1,6 @@
 package util_queue
 
 import (
-	"errors"
 	"sync"
 )
 
@@ -25,7 +24,7 @@ func (this *MemoryQueueStore) Produce(topicId string, data interface{}) error {
 	result, ok := this.mapPushPopStore[topicId]
 	this.mutex.Unlock()
 	if !ok {
-		return errors.New("empty listener")
+		return nil
 	}
 	result.listener(data)
 	return nil
