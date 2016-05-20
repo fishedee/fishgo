@@ -3,11 +3,29 @@ package util
 import (
 	"reflect"
 	"testing"
+
+	. "github.com/fishedee/crypto"
 )
 
 func assertCaptchaEqual(t *testing.T, left interface{}, right interface{}) {
 	if reflect.DeepEqual(left, right) == false {
 		t.Errorf("assert fail: %+v != %+v", left, right)
+	}
+}
+
+func TestCaptchaOutOfBound(t *testing.T) {
+	for i := 0; i != 1000; i++ {
+		word := CryptoRandDigit(4)
+		width := 100
+		height := 50
+		captcha, err := NewCaptchaFromDigit(word)
+		if err != nil {
+			panic(err)
+		}
+		_, err = captcha.GetBase64Image(width, height)
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 

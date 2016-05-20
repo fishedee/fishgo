@@ -28,4 +28,17 @@ func TestRand(t *testing.T) {
 			t.Errorf("invalid crypto rand", singleTestCase)
 		}
 	}
+
+	for _, singleTestCase := range testCase {
+		result := CryptoRandDigit(singleTestCase)
+		if len(result) != singleTestCase {
+			t.Errorf("assert false! %v != %v", len(result), singleTestCase)
+		}
+		for _, singleResult := range result {
+			if singleResult >= '0' && singleResult <= '9' {
+				continue
+			}
+			t.Errorf("invalid crypto rand digit", singleTestCase)
+		}
+	}
 }

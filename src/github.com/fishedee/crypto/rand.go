@@ -1,13 +1,24 @@
 package crypto
 
-import (
-	"crypto/rand"
-	"encoding/hex"
+import "crypto/rand"
+
+var (
+	randStr = []byte("0123456789abcdefghijklmnopqrstuvwxyz")
 )
 
-func CryptoRand(size int) string {
-	result := make([]byte, size/2+1)
+func generateRand(size int, targetLength byte) string {
+	result := make([]byte, size)
 	rand.Read(result)
-	resultStr := hex.EncodeToString(result)
-	return resultStr[0:size]
+	for singleIndex, singleByte := range result {
+		result[singleIndex] = randStr[singleByte%targetLength]
+	}
+	return string(result)
+}
+
+func CryptoRand(size int) string {
+	return generateRand(size, byte(len(randStr)))
+}
+
+func CryptoRandDigit(size int) string {
+	return generateRand(size, 10)
 }

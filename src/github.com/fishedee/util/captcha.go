@@ -3,6 +3,7 @@ package util
 import (
 	"bytes"
 	"errors"
+
 	"github.com/dchest/captcha"
 	. "github.com/fishedee/encoding"
 )
@@ -18,7 +19,7 @@ func NewCaptchaFromDigit(dataStr string) (*Captcha, error) {
 	var dataByte = []byte(dataStr)
 	var result []byte
 	for _, char := range dataByte {
-		if char < '0' && char > '9' {
+		if char < '0' || char > '9' {
 			return nil, errors.New("invalid dight char [" + dataStr + "]")
 		}
 		result = append(result, char-'0')
