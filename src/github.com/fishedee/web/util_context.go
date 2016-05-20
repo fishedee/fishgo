@@ -20,6 +20,7 @@ type Context interface {
 	GetUrl() *url.URL
 	GetBody() ([]byte, error)
 	GetParam(key string) string
+	SetParam(key string, data string)
 	GetParamToStruct(requireStruct interface{})
 	GetUrlParamToStruct(requireStruct interface{})
 	GetFormParamToStruct(requireStruct interface{})
@@ -123,6 +124,10 @@ func (this *contextImplement) GetParam(key string) string {
 	}
 
 	return this.request.FormValue(key)
+}
+
+func (this *contextImplement) SetParam(key string, data string) {
+	this.inputData[key] = data
 }
 
 func (this *contextImplement) GetParamToStruct(requireStruct interface{}) {
