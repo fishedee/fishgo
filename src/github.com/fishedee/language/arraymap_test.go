@@ -62,11 +62,14 @@ func TestArrayToMapStruct(t *testing.T) {
 			Fifth   string    `json:"Fifth,omitempty"`
 			Sixth   string    `json:"-"`
 			Seventh time.Time `json:"seventh,omitempty"`
-		}{"1", "2", "3", "4", "", "6", time.Time{}}, map[string]interface{}{
+			Eigth   string    `json:"->"`
+			Ninth   string    `json:"<-"`
+		}{"1", "2", "3", "4", "", "6", time.Time{}, "8", "9"}, map[string]interface{}{
 			"first":  "1",
 			"second": "2",
 			"Third":  "3",
 			"Forth":  "4",
+			"eigth":  "8",
 		}},
 		{struct {
 			First  string
@@ -293,18 +296,22 @@ func TestMapToArrayStruct(t *testing.T) {
 		target interface{}
 	}{
 		{map[string]interface{}{
-			"first":  "1",
-			"second": "2",
-			"Third":  "3",
-			"Forth":  "4",
-			"fifth":  "5",
+			"first":   "1",
+			"second":  "2",
+			"Third":   "3",
+			"Forth":   "4",
+			"fifth":   "5",
+			"sixth":   "6",
+			"seventh": "7",
 		}, struct {
-			First  string
-			Second int
-			Third  string `json:"Third"`
-			Forth  string `json:"Forth,omitempty"`
-			Fifth  string `json:"-"`
-		}{"1", 2, "3", "4", ""}},
+			First   string
+			Second  int
+			Third   string `json:"Third"`
+			Forth   string `json:"Forth,omitempty"`
+			Fifth   string `json:"-"`
+			Sixth   string `json:"->"`
+			Seventh string `json:"<-"`
+		}{"1", 2, "3", "4", "", "", "7"}},
 		{map[interface{}]interface{}{
 			"first":  "1",
 			"second": "2",

@@ -35,6 +35,8 @@ type arrayMappingStructInfo struct {
 	name      string
 	omitempty bool
 	anonymous bool
+	canRead   bool
+	canWrite  bool
 	index     []int
 }
 
@@ -71,22 +73,36 @@ func getDataTagInfoInner(dataType reflect.Type, tag string) arrayMappingInfo {
 				}
 				var singleName string
 				var omitempty bool
-				if singleDataType.Tag.Get(tag) != "" {
-					jsonTag := singleDataType.Tag.Get(tag)
-					jsonTagList := strings.Split(jsonTag, ",")
-					if jsonTagList[0] == "-" {
-						continue
-					}
-					if len(jsonTagList) >= 2 && jsonTagList[1] == "omitempty" {
+				var canRead bool
+				var canWrite bool
+				singleName = nameMapper(singleDataType.Name)
+				canRead = true
+				canWrite = true
+				omitempty = false
+
+				jsonTag := singleDataType.Tag.Get(tag)
+				jsonTagList := strings.Split(jsonTag, ",")
+				for singleTagIndex, singleTag := range jsonTagList {
+					if singleTag == "-" {
+						canRead = false
+						canWrite = false
+					} else if singleTag == "->" {
+						canRead = false
+						canWrite = true
+					} else if singleTag == "<-" {
+						canRead = true
+						canWrite = false
+					} else if singleTagIndex == 0 && singleTag != "" {
+						singleName = singleTag
+					} else if singleTagIndex == 1 && singleTag == "omitempty" {
 						omitempty = true
 					}
-					singleName = jsonTagList[0]
-				} else {
-					singleName = nameMapper(singleDataType.Name)
 				}
 				single := arrayMappingStructInfo{}
 				single.name = singleName
 				single.omitempty = omitempty
+				single.canRead = canRead
+				single.canWrite = canWrite
 				single.index = singleDataType.Index
 				single.anonymous = singleDataType.Anonymous
 				if singleDataType.Anonymous {
@@ -141,6 +157,9 @@ func arrayToMapInner(dataValue reflect.Value, tag string) (reflect.Value, bool) 
 		} else if dataType.kind == TypeKind.STRUCT && dataType.isTimeType == false {
 			resultMap := map[string]interface{}{}
 			for _, singleType := range dataType.field {
+				if singleType.canWrite == false {
+					continue
+				}
 				singleResultMap, isEmptyValue := arrayToMapInner(dataValue.FieldByIndex(singleType.index), tag)
 				if singleType.anonymous == false {
 					if singleType.omitempty == true && isEmptyValue {
@@ -384,6 +403,9 @@ func mapToStruct(dataValue reflect.Value, target reflect.Value, targetType array
 	}
 	dataTypeKey := dataType.Key()
 	for _, singleStructInfo := range targetType.field {
+		if singleStructInfo.canRead == false {
+			continue
+		}
 		if singleStructInfo.anonymous == true {
 			//FIXME 暂不考虑匿名结构体的覆盖问题
 			singleDataValue := target.FieldByIndex(singleStructInfo.index)

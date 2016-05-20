@@ -37,6 +37,7 @@ type Context interface {
 	GetRemoteIP() string
 	GetRemotePort() int
 	GetUserAgent() string
+	SetUserAgent(data string)
 	GetHeader(key string) string
 	IsUpload() bool
 	IsLocal() bool
@@ -253,6 +254,10 @@ func (this *contextImplement) GetRemotePort() int {
 
 func (this *contextImplement) GetUserAgent() string {
 	return this.request.Header.Get("User-Agent")
+}
+
+func (this *contextImplement) SetUserAgent(data string) {
+	this.request.Header.Set("User-Agent", data)
 }
 
 func (this *contextImplement) GetHeader(key string) string {
