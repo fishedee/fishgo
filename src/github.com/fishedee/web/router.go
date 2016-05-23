@@ -9,6 +9,10 @@ import (
 	"time"
 )
 
+type ControllerInterface interface {
+	AutoRender(interface{}, string)
+}
+
 type methodInfo struct {
 	viewName       string
 	controllerType reflect.Type
@@ -61,7 +65,12 @@ func (this *handlerType) addRoute(namespace string, target ControllerInterface) 
 		}
 		namespace := strings.Trim(namespace, "/")
 		methodName[0] = strings.Trim(methodName[0], "/")
-		url := strings.ToLower(namespace + "/" + methodName[0])
+		var url string
+		if namespace != "" {
+			url = strings.ToLower(namespace + "/" + methodName[0])
+		} else {
+			url = strings.ToLower(methodName[0])
+		}
 		this.routerControllerMethod[url] = methodInfo{
 			viewName:       this.firstLowerName(methodName[1]),
 			controllerType: controllerType.Elem(),
@@ -88,17 +97,18 @@ func (this *handlerType) handleRequest(request *http.Request, response http.Resp
 
 func (this *handlerType) runRequest(controller reflect.Value, method methodInfo, request *http.Request, response http.ResponseWriter) {
 	urlMethod := request.Method
+	basic := initBasic(request, response, nil)
 	target := controller.Interface().(ControllerInterface)
+	injectIoc(controller, basic)
 	defer language.CatchCrash(func(exception language.Exception) {
-		target.GetBasic().Log.Critical("Buiness Crash Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
+		basic.Log.Critical("Buiness Crash Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
 		response.WriteHeader(500)
 		response.Write([]byte("server internal error"))
 	})
-	target.init(target, request, response, nil)
 	var controllerResult interface{}
 	if urlMethod == "GET" || urlMethod == "POST" ||
 		urlMethod == "DELETE" || urlMethod == "PUT" {
-		result := this.runRequestBusiness(target, method.methodType.Func, []reflect.Value{controller})
+		result := this.runRequestBusiness(target, method.methodType.Func, []reflect.Value{controller}, basic)
 		if len(result) >= 1 {
 			controllerResult = result[0].Interface()
 		} else {
@@ -110,9 +120,9 @@ func (this *handlerType) runRequest(controller reflect.Value, method methodInfo,
 	target.AutoRender(controllerResult, method.viewName)
 }
 
-func (this *handlerType) runRequestBusiness(target ControllerInterface, method reflect.Value, arguments []reflect.Value) (result []reflect.Value) {
+func (this *handlerType) runRequestBusiness(target ControllerInterface, method reflect.Value, arguments []reflect.Value, basic *Basic) (result []reflect.Value) {
 	defer language.Catch(func(exception language.Exception) {
-		target.GetBasic().Log.Error("Buiness Error Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
+		basic.Log.Error("Buiness Error Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
 		result = []reflect.Value{reflect.ValueOf(exception)}
 	})
 	result = method.Call(arguments)

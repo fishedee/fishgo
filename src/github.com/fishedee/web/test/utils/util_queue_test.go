@@ -1,7 +1,7 @@
 package web
 
 import (
-	. "github.com/fishedee/web/util/beego_queue"
+	. "github.com/fishedee/web"
 	"reflect"
 	"strconv"
 	"testing"
@@ -13,8 +13,8 @@ func assertQueueEqual(t *testing.T, left interface{}, right interface{}, index i
 	}
 }
 
-func newQueueManagerForTest(t *testing.T, config QueueManagerConfig) *QueueManager {
-	manager, err := newQueueManager(config)
+func newQueueForTest(t *testing.T, config QueueConfig) Queue {
+	manager, err := NewQueue(config)
 	assertQueueEqual(t, err, nil, 0)
 	return manager
 }
@@ -68,19 +68,15 @@ func TestQueueBasic(t *testing.T) {
 		}},
 	}
 
-	testCaseDriver := []*QueueManager{
-		newQueueManagerForTest(t, QueueManagerConfig{
-			BeegoQueueStoreConfig: BeegoQueueStoreConfig{
-				SavePrefix: "queue:",
-			},
-			Driver: "memory",
+	testCaseDriver := []Queue{
+		newQueueForTest(t, QueueConfig{
+			SavePrefix: "queue:",
+			Driver:     "memory",
 		}),
-		newQueueManagerForTest(t, QueueManagerConfig{
-			BeegoQueueStoreConfig: BeegoQueueStoreConfig{
-				SavePath:   "127.0.0.1:6379,100,13420693396",
-				SavePrefix: "queue:",
-			},
-			Driver: "redis",
+		newQueueForTest(t, QueueConfig{
+			SavePath:   "127.0.0.1:6379,100,13420693396",
+			SavePrefix: "queue:",
+			Driver:     "redis",
 		}),
 	}
 
@@ -127,7 +123,7 @@ func TestQueueBasic(t *testing.T) {
 
 func TestQueueSync(t *testing.T) {
 	//ConsumeInPool配置Sync
-	manager := newQueueManagerForTest(t, QueueManagerConfig{
+	manager := newQueueForTest(t, QueueConfig{
 		Driver: "memory",
 	})
 	for i := 0; i != 100; i++ {
@@ -140,7 +136,7 @@ func TestQueueSync(t *testing.T) {
 	}
 
 	//ConsumeInPool配置Async
-	manager2 := newQueueManagerForTest(t, QueueManagerConfig{
+	manager2 := newQueueForTest(t, QueueConfig{
 		Driver: "memory",
 	})
 	var hasFalse bool
@@ -157,7 +153,7 @@ func TestQueueSync(t *testing.T) {
 	assertQueueEqual(t, hasFalse, true, 0)
 
 	//config配置Sync
-	manager3 := newQueueManagerForTest(t, QueueManagerConfig{
+	manager3 := newQueueForTest(t, QueueConfig{
 		Driver:   "memory",
 		PoolSize: 1,
 	})

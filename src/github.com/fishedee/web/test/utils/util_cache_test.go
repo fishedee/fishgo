@@ -1,6 +1,7 @@
 package web
 
 import (
+	. "github.com/fishedee/web"
 	"reflect"
 	"testing"
 	"time"
@@ -12,32 +13,32 @@ func assertCacheEqual(t *testing.T, left interface{}, right interface{}, index i
 	}
 }
 
-func newCacheManagerForTest(t *testing.T, config CacheManagerConfig) *CacheManager {
-	manager, err := newCacheManager(config)
+func newCacheForTest(t *testing.T, config CacheConfig) Cache {
+	manager, err := NewCache(config)
 	assertCacheEqual(t, err, nil, 0)
 	return manager
 }
 
-func getExistData(t *testing.T, cache *CacheManager, key string, index int) string {
+func getExistData(t *testing.T, cache Cache, key string, index int) string {
 	data, isOk := cache.Get(key)
 	assertCacheEqual(t, isOk, true, index)
 	return data
 }
 
-func getNoExistData(t *testing.T, cache *CacheManager, key string, index int) string {
+func getNoExistData(t *testing.T, cache Cache, key string, index int) string {
 	data, isOk := cache.Get(key)
 	assertCacheEqual(t, isOk, false, index)
 	return data
 }
 
 func TestCacheBasic(t *testing.T) {
-	testCaseDriver := []*CacheManager{
-		newCacheManagerForTest(t, CacheManagerConfig{
+	testCaseDriver := []Cache{
+		newCacheForTest(t, CacheConfig{
 			Driver:     "memory",
 			GcInterval: 1,
 			SavePrefix: "cache:",
 		}),
-		newCacheManagerForTest(t, CacheManagerConfig{
+		newCacheForTest(t, CacheConfig{
 			Driver:     "redis",
 			SavePath:   "127.0.0.1:6379,100,13420693396",
 			SavePrefix: "cache:",

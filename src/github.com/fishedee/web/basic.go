@@ -1,5 +1,13 @@
 package web
 
+import (
+	"bytes"
+	"math/rand"
+	"net/http"
+	"testing"
+	"time"
+)
+
 type Basic struct {
 	Ctx      Context
 	Config   Configure
@@ -20,6 +28,7 @@ type Basic struct {
 var globalBasic Basic
 
 func init() {
+	//初始化组件
 	var err error
 	globalBasic.Config, err = NewConfig("conf/app.conf")
 	if err != nil {
@@ -73,8 +82,43 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+
+	//初始化随机数
+	rand.Seed(time.Now().Unix())
 }
-func initBasic(request interface{}, response interface{}, t interface{}) *Basic {
+
+type memoryResponseWriter struct {
+	header     http.Header
+	headerCode int
+	data       []byte
+}
+
+func (this *memoryResponseWriter) Header() http.Header {
+	if this.header == nil {
+		this.header = http.Header{}
+	}
+	return this.header
+}
+
+func (this *memoryResponseWriter) Write(in []byte) (int, error) {
+	this.data = append(this.data, in...)
+	return len(this.data), nil
+}
+
+func (this *memoryResponseWriter) WriteHeader(headerCode int) {
+	this.headerCode = headerCode
+}
+
+func initEmptyBasic(t *testing.T) *Basic {
+	request, err := http.NewRequest("get", "/", bytes.NewReader([]byte("")))
+	if err != nil {
+		panic(err)
+	}
+	response := &memoryResponseWriter{}
+	return initBasic(request, response, t)
+}
+
+func initBasic(request *http.Request, response http.ResponseWriter, t *testing.T) *Basic {
 	result := globalBasic
 	result.Ctx = NewContext(request, response, t)
 	result.Log = result.Log.WithContextAndMonitor(result.Ctx, result.Monitor)

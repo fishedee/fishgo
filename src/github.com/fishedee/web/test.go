@@ -15,12 +15,8 @@ import (
 	"time"
 )
 
-type TestInterface interface {
-	ControllerInterface
-}
-
 type Test struct {
-	Controller
+	*Basic
 }
 
 func (this *Test) getTraceLineNumber(traceNumber int) string {
@@ -138,20 +134,20 @@ func (this *Test) RandomString(length int) string {
 }
 
 func (this *Test) RequestReset() {
-	this.initEmpty(this.appController, this.Ctx.GetRawTesting())
+	*this.Basic = *initEmptyBasic(this.Ctx.GetRawTesting().(*testing.T))
 }
 
-var testMap map[string][]TestInterface
-var testMapInit bool
-
-func init() {
-	testMap = map[string][]TestInterface{}
+var (
+	testMap     = map[string][]interface{}{}
 	testMapInit = false
-}
+)
 
-func runSingleTest(t *testing.T, test TestInterface) {
+func runSingleTest(t *testing.T, test interface{}) {
 	//初始化test
-	test.initEmpty(test, t)
+	testType := reflect.TypeOf(test)
+	testValue := reflect.ValueOf(test)
+	basic := initEmptyBasic(t)
+	injectIoc(testValue, basic)
 
 	isBenchTest := false
 	for _, singleArgv := range os.Args {
@@ -161,8 +157,6 @@ func runSingleTest(t *testing.T, test TestInterface) {
 	}
 
 	//遍历test，执行测试
-	testType := reflect.TypeOf(test)
-	testValue := reflect.ValueOf(test)
 	testMethodNum := testType.NumMethod()
 	for i := 0; i != testMethodNum; i++ {
 		singleValueMethodType := testType.Method(i)
@@ -188,7 +182,6 @@ func RunTest(t *testing.T, data interface{}) {
 	//初始化runtime
 	if testMapInit == false {
 		runtime.GOMAXPROCS(runtime.NumCPU() * 4)
-		rand.Seed(time.Now().Unix())
 		testMapInit = true
 	}
 
@@ -198,7 +191,7 @@ func RunTest(t *testing.T, data interface{}) {
 	}
 }
 
-func InitTest(test TestInterface) {
+func InitTest(test interface{}) {
 	pkgPath := reflect.TypeOf(test).Elem().PkgPath()
 	testMap[pkgPath] = append(testMap[pkgPath], test)
 }
