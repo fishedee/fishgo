@@ -142,3 +142,15 @@
 [submodule "src/github.com/k0kubun/pp"]
 	path = src/github.com/k0kubun/pp
 	url = git@github.com:k0kubun/pp.git
+[submodule "src/github.com/facebookgo/grace"]
+	path = src/github.com/facebookgo/grace
+	url = git@github.com:facebookgo/grace.git
+[submodule "src/github.com/facebookgo/httpdown"]
+	path = src/github.com/facebookgo/httpdown
+	url = git@github.com:facebookgo/httpdown.git
+[submodule "src/github.com/facebookgo/clock"]
+	path = src/github.com/facebookgo/clock
+	url = git@github.com:facebookgo/clock.git
+[submodule "src/github.com/facebookgo/stats"]
+	path = src/github.com/facebookgo/stats
+	url = git@github.com:facebookgo/stats.git

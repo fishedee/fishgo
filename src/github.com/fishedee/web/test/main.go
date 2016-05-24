@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/fishedee/web"
+	"time"
 )
 
 type testController struct {
@@ -10,6 +11,13 @@ type testController struct {
 
 func (this *testController) Doing_Json() interface{} {
 	return "Hello World"
+}
+
+func (this *testController) LongTask_Json() interface{} {
+	this.Log.Debug("task begin: %v", time.Now())
+	time.Sleep(time.Second * 5)
+	this.Log.Debug("task end: %v", time.Now())
+	return ""
 }
 
 func (this *testController) AutoRender(data interface{}, viewname string) {

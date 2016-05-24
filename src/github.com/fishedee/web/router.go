@@ -4,7 +4,6 @@ import (
 	"github.com/fishedee/language"
 	"net/http"
 	"reflect"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -136,15 +135,19 @@ func InitRoute(namespace string, target ControllerInterface) {
 }
 
 func Run() error {
+	//启动服务器
 	httpPort := globalBasic.Config.GetInt("httpport")
 	if httpPort == 0 {
 		httpPort = 8080
 	}
 	globalBasic.Log.Debug("Server is Running :%v", httpPort)
-	err := http.ListenAndServe(":"+strconv.Itoa(httpPort), &handler)
+	err := globalBasic.Grace.ListenAndServe(httpPort, &handler)
 	if err != nil {
 		globalBasic.Log.Error("Listen fail! " + err.Error())
 		return err
 	}
+
+	//删除收尾的资源
+	destroyBasic()
 	return nil
 }

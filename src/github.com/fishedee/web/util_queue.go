@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	. "github.com/fishedee/language"
+	. "github.com/fishedee/util"
 	. "github.com/fishedee/web/util_queue"
 	"reflect"
 	"strconv"
@@ -18,6 +19,7 @@ type Queue interface {
 	Publish(topicId string, data ...interface{})
 	Subscribe(topicId string, listener interface{})
 	SubscribeInPool(topicId string, listener interface{}, poolSize int)
+	Close()
 }
 
 type QueueConfig struct {
@@ -29,27 +31,31 @@ type QueueConfig struct {
 }
 
 type queueImplement struct {
-	store    QueueStoreInterface
-	Log      Log
-	poolSize int
-	debug    bool
+	store     QueueStoreInterface
+	Log       Log
+	poolSize  int
+	debug     bool
+	closeFunc *CloseFunc
 }
 
 func NewQueue(config QueueConfig) (Queue, error) {
 	if config.Driver == "" {
 		return nil, nil
 	} else if config.Driver == "memory" {
-		queue, err := NewMemoryQueue(QueueStoreConfig{})
+		closeFunc := NewCloseFunc()
+		queue, err := NewMemoryQueue(closeFunc, QueueStoreConfig{})
 		if err != nil {
 			return nil, err
 		}
 		return &queueImplement{
-			store:    queue,
-			poolSize: config.PoolSize,
-			debug:    config.Debug,
+			store:     queue,
+			poolSize:  config.PoolSize,
+			debug:     config.Debug,
+			closeFunc: closeFunc,
 		}, nil
 	} else if config.Driver == "redis" {
-		queue, err := NewRedisQueue(QueueStoreConfig{
+		closeFunc := NewCloseFunc()
+		queue, err := NewRedisQueue(closeFunc, QueueStoreConfig{
 			SavePath:   config.SavePath,
 			SavePrefix: config.SavePrefix,
 		})
@@ -57,9 +63,10 @@ func NewQueue(config QueueConfig) (Queue, error) {
 			return nil, err
 		}
 		return &queueImplement{
-			store:    queue,
-			poolSize: config.PoolSize,
-			debug:    config.Debug,
+			store:     queue,
+			poolSize:  config.PoolSize,
+			debug:     config.Debug,
+			closeFunc: closeFunc,
 		}, nil
 	} else {
 		return nil, errors.New("invalid memory config " + config.Driver)
@@ -124,19 +131,31 @@ func (this *queueImplement) WrapData(data []interface{}) (interface{}, error) {
 func (this *queueImplement) WrapPoolListener(listener QueueListener, poolSize int) QueueListener {
 	if poolSize <= 0 {
 		return func(data interface{}) (lastError error) {
-			go listener(data)
+			this.closeFunc.IncrCloseCounter()
+			go func() {
+				defer this.closeFunc.DecrCloseCounter()
+				listener(data)
+			}()
 			return nil
 		}
 	} else if poolSize == 1 {
-		return listener
+		return func(data interface{}) error {
+			this.closeFunc.IncrCloseCounter()
+			defer this.closeFunc.DecrCloseCounter()
+			return listener(data)
+		}
 	} else {
 		chanConsume := make(chan bool, poolSize)
 		for i := 0; i != poolSize; i++ {
 			chanConsume <- true
 		}
 		return func(data interface{}) (lastError error) {
+			this.closeFunc.IncrCloseCounter()
 			<-chanConsume
-			go listener(data)
+			go func() {
+				defer this.closeFunc.DecrCloseCounter()
+				listener(data)
+			}()
 			chanConsume <- true
 			return nil
 		}
@@ -283,4 +302,8 @@ func (this *queueImplement) SubscribeInPool(topicId string, listener interface{}
 	if err != nil {
 		panic(err)
 	}
+}
+
+func (this *queueImplement) Close() {
+	this.closeFunc.Close()
 }

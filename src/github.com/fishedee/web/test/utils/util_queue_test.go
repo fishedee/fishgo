@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strconv"
 	"testing"
+	"time"
 )
 
 func assertQueueEqual(t *testing.T, left interface{}, right interface{}, index int) {
@@ -164,5 +165,35 @@ func TestQueueSync(t *testing.T) {
 		})
 		manager3.Produce("queue", i)
 		assertQueueEqual(t, i, result, i)
+	}
+}
+
+func TestQueueClose(t *testing.T) {
+	//ConsumeInPool配置Sync
+	testCase := []struct {
+		Queue Queue
+		Data  int
+	}{
+		{newQueueForTest(t, QueueConfig{
+			Driver: "memory",
+		}), 123},
+		{newQueueForTest(t, QueueConfig{
+			SavePath:   "127.0.0.1:6379,100,13420693396",
+			SavePrefix: "queue:",
+			Driver:     "redis",
+		}), 456},
+	}
+	for singleTestCaseIndex, singleTestCase := range testCase {
+		var result int
+		inputEvent := make(chan bool)
+		singleTestCase.Queue.Consume("queue", func(data int) {
+			inputEvent <- true
+			time.Sleep(time.Second)
+			result = singleTestCase.Data
+		})
+		singleTestCase.Queue.Produce("queue", singleTestCase.Data)
+		<-inputEvent
+		singleTestCase.Queue.Close()
+		assertQueueEqual(t, result, singleTestCase.Data, singleTestCaseIndex)
 	}
 }

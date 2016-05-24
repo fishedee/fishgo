@@ -1,6 +1,7 @@
 package util_queue
 
 import (
+	. "github.com/fishedee/util"
 	"sync"
 )
 
@@ -13,7 +14,7 @@ type MemoryQueueStore struct {
 	mutex           sync.Mutex
 }
 
-func NewMemoryQueue(QueueStoreConfig) (QueueStoreInterface, error) {
+func NewMemoryQueue(closeFunc *CloseFunc, config QueueStoreConfig) (QueueStoreInterface, error) {
 	result := &MemoryQueueStore{}
 	result.mapPushPopStore = map[string]MemoryQueuePushPopStore{}
 	return NewBasicQueue(result), nil

@@ -1,6 +1,7 @@
 package util_queue
 
 import (
+	. "github.com/fishedee/util"
 	"github.com/garyburd/redigo/redis"
 	"strconv"
 	"strings"
@@ -81,7 +82,7 @@ func newRedisPool(configSavePath string) (*redis.Pool, error) {
 	}
 	return poollist, poollist.Get().Err()
 }
-func NewRedisQueue(config QueueStoreConfig) (QueueStoreInterface, error) {
+func NewRedisQueue(closeFunc *CloseFunc, config QueueStoreConfig) (QueueStoreInterface, error) {
 	redisPool, err := newRedisPool(config.SavePath)
 	if err != nil {
 		return nil, err
@@ -90,6 +91,9 @@ func NewRedisQueue(config QueueStoreConfig) (QueueStoreInterface, error) {
 		redisPool: redisPool,
 		prefix:    config.SavePrefix,
 	}
+	closeFunc.AddCloseHandler(func() {
+		redisPool.Close()
+	})
 	return NewBasicQueue(result), nil
 }
 

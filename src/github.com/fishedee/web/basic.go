@@ -23,6 +23,7 @@ type Basic struct {
 	Timer    Timer
 	Queue    Queue
 	Cache    Cache
+	Grace    Grace
 }
 
 var globalBasic Basic
@@ -31,6 +32,18 @@ func init() {
 	//初始化组件
 	var err error
 	globalBasic.Config, err = NewConfig("conf/app.conf")
+	if err != nil {
+		panic(err)
+	}
+	globalBasic.Log, err = NewLogFromConfig("log")
+	if err != nil {
+		panic(err)
+	}
+	globalBasic.Monitor, err = NewMonitorFromConfig("monitor")
+	if err != nil {
+		panic(err)
+	}
+	globalBasic.Grace, err = NewGraceFromConfig("grace")
 	if err != nil {
 		panic(err)
 	}
@@ -59,14 +72,6 @@ func init() {
 		panic(err)
 	}
 	globalBasic.DB5, err = NewDatabaseFromConfig("db5")
-	if err != nil {
-		panic(err)
-	}
-	globalBasic.Log, err = NewLogFromConfig("log")
-	if err != nil {
-		panic(err)
-	}
-	globalBasic.Monitor, err = NewMonitorFromConfig("monitor")
 	if err != nil {
 		panic(err)
 	}
@@ -135,4 +140,13 @@ func initBasic(request *http.Request, response http.ResponseWriter, t *testing.T
 		result.Cache = result.Cache.WithLog(result.Log)
 	}
 	return &result
+}
+
+func destroyBasic() {
+	if globalBasic.Timer != nil {
+		globalBasic.Timer.Close()
+	}
+	if globalBasic.Queue != nil {
+		globalBasic.Queue.Close()
+	}
 }
