@@ -134,7 +134,7 @@ func initBasic(request *http.Request, response http.ResponseWriter, t *testing.T
 		result.Timer = result.Timer.WithLog(result.Log)
 	}
 	if result.Queue != nil {
-		result.Queue = result.Queue.WithLog(result.Log)
+		result.Queue = result.Queue.WithLogAndContext(result.Log, result.Ctx)
 	}
 	if result.Cache != nil {
 		result.Cache = result.Cache.WithLog(result.Log)

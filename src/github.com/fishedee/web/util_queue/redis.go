@@ -136,7 +136,11 @@ func (this *RedisQueueStore) Consume(topicId string, listener QueueListener) err
 		for {
 			data, err := this.consumeData(topicId, 10)
 			if err != nil {
-				listener(err)
+				if strings.Index(err.Error(), "get on closed pool") != -1 {
+					return
+				} else {
+					listener(err)
+				}
 			}
 			if data == nil {
 				continue

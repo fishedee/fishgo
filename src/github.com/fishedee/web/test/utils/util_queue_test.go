@@ -2,11 +2,38 @@ package web
 
 import (
 	. "github.com/fishedee/web"
+	"net/http"
 	"reflect"
 	"strconv"
 	"testing"
 	"time"
 )
+
+type queueResponseWriter struct {
+	header     http.Header
+	headerCode int
+	data       []byte
+}
+
+func (this *queueResponseWriter) Header() http.Header {
+	if this.header == nil {
+		this.header = http.Header{}
+	}
+	return this.header
+}
+
+func (this *queueResponseWriter) Write(in []byte) (int, error) {
+	this.data = append(this.data, in...)
+	return len(this.data), nil
+}
+
+func (this *queueResponseWriter) WriteHeader(headerCode int) {
+	this.headerCode = headerCode
+}
+
+type queueModel struct {
+	Model
+}
 
 func assertQueueEqual(t *testing.T, left interface{}, right interface{}, index int) {
 	if reflect.DeepEqual(left, right) == false {
@@ -15,8 +42,16 @@ func assertQueueEqual(t *testing.T, left interface{}, right interface{}, index i
 }
 
 func newQueueForTest(t *testing.T, config QueueConfig) Queue {
+	request, err := http.NewRequest("GET", "http://www.baidu.com", nil)
+	assertQueueEqual(t, err, nil, 0)
+	ctx := NewContext(request, &queueResponseWriter{}, nil)
+	log, err := NewLog(LogConfig{
+		Driver: "console",
+	})
+	assertQueueEqual(t, err, nil, 0)
 	manager, err := NewQueue(config)
 	assertQueueEqual(t, err, nil, 0)
+	manager = manager.WithLogAndContext(log, ctx)
 	return manager
 }
 
@@ -42,29 +77,29 @@ func TestQueueBasic(t *testing.T) {
 		target interface{}
 	}{
 		//基础用例
-		{[]interface{}{}, func() {
+		{[]interface{}{}, func(this *queueModel) {
 			testCaseResultChannel <- []interface{}{}
 		}},
-		{[]interface{}{true}, func(data1 bool) {
+		{[]interface{}{true}, func(this *queueModel, data1 bool) {
 			testCaseResultChannel <- []interface{}{data1}
 		}},
-		{[]interface{}{1}, func(data1 int) {
+		{[]interface{}{1}, func(this *queueModel, data1 int) {
 			testCaseResultChannel <- []interface{}{data1}
 		}},
-		{[]interface{}{"a"}, func(data1 string) {
+		{[]interface{}{"a"}, func(this *queueModel, data1 string) {
 			testCaseResultChannel <- []interface{}{data1}
 		}},
-		{[]interface{}{testStructVal}, func(data1 testStruct) {
+		{[]interface{}{testStructVal}, func(this *queueModel, data1 testStruct) {
 			testCaseResultChannel <- []interface{}{data1}
 		}},
-		{[]interface{}{true, 1, "a", testStructVal}, func(data1 bool, data2 int, data3 string, data4 testStruct) {
+		{[]interface{}{true, 1, "a", testStructVal}, func(this *queueModel, data1 bool, data2 int, data3 string, data4 testStruct) {
 			testCaseResultChannel <- []interface{}{data1, data2, data3, data4}
 		}},
 		//多余参数
-		{[]interface{}{1, 1}, func(data1 int, data2 int) {
+		{[]interface{}{1, 1}, func(this *queueModel, data1 int, data2 int) {
 			testCaseResultChannel <- []interface{}{data1, data2}
 		}},
-		{[]interface{}{1, "aa"}, func(data1 int) {
+		{[]interface{}{1, "aa"}, func(this *queueModel, data1 int) {
 			testCaseResultChannel <- []interface{}{data1, "aa"}
 		}},
 	}
@@ -129,7 +164,7 @@ func TestQueueSync(t *testing.T) {
 	})
 	for i := 0; i != 100; i++ {
 		var result int
-		manager.ConsumeInPool("queue", func(data int) {
+		manager.ConsumeInPool("queue", func(this *queueModel, data int) {
 			result = data
 		}, 1)
 		manager.Produce("queue", i)
@@ -143,7 +178,7 @@ func TestQueueSync(t *testing.T) {
 	var hasFalse bool
 	for i := 0; i != 100; i++ {
 		var result int
-		manager2.Consume("queue", func(data int) {
+		manager2.Consume("queue", func(this *queueModel, data int) {
 			result = data
 		})
 		manager2.Produce("queue", i)
@@ -160,11 +195,62 @@ func TestQueueSync(t *testing.T) {
 	})
 	for i := 0; i != 100; i++ {
 		var result int
-		manager3.Consume("queue", func(data int) {
+		manager3.Consume("queue", func(this *queueModel, data int) {
 			result = data
 		})
 		manager3.Produce("queue", i)
 		assertQueueEqual(t, i, result, i)
+	}
+}
+
+func TestQueueCtx(t *testing.T) {
+	testCase := []struct {
+		method string
+		url    string
+		header http.Header
+	}{
+		{"GET", "http://www.baidu.com", map[string][]string{
+			"User-Agent": []string{"userAgent1"},
+			"Cookie":     []string{"123"},
+		}},
+		{"GET", "http://www.baidu.com?a=1&b=3", map[string][]string{
+			"UserAgent": []string{"userAgent1", "userAgent2"},
+			"Cookie":    []string{"123"},
+		}},
+		{"POST", "http://www.baidu.com", map[string][]string{
+			"UserAgent": []string{"userAgent1", "userAgent2"},
+			"Cookie":    []string{"123"},
+		}},
+		{"POST", "http://www.baidu.com?a=1&b=3", map[string][]string{
+			"UserAgent": []string{"userAgent1", "userAgent2"},
+			"Cookie":    []string{"123"},
+		}},
+	}
+
+	for singleTestCaseIndex, singleTestCase := range testCase {
+		request, err := http.NewRequest(singleTestCase.method, singleTestCase.url, nil)
+		request.Header = singleTestCase.header
+		assertQueueEqual(t, err, nil, 0)
+		ctx := NewContext(request, &queueResponseWriter{}, nil)
+		log, err := NewLog(LogConfig{
+			Driver: "console",
+		})
+		assertQueueEqual(t, err, nil, 0)
+		manager, err := NewQueue(QueueConfig{
+			SavePrefix: "queue:",
+			Driver:     "memory",
+		})
+		assertQueueEqual(t, err, nil, 0)
+		manager = manager.WithLogAndContext(log, ctx)
+
+		var result *http.Request
+		manager.ConsumeInPool("queue", func(this *queueModel) {
+			result = this.Ctx.GetRawRequest().(*http.Request)
+		}, 1)
+		manager.Produce("queue")
+		assertQueueEqual(t, result.Method, singleTestCase.method, singleTestCaseIndex)
+		assertQueueEqual(t, result.URL.String(), singleTestCase.url, singleTestCaseIndex)
+		assertQueueEqual(t, result.Header, singleTestCase.header, singleTestCaseIndex)
 	}
 }
 
@@ -186,7 +272,7 @@ func TestQueueClose(t *testing.T) {
 	for singleTestCaseIndex, singleTestCase := range testCase {
 		var result int
 		inputEvent := make(chan bool)
-		singleTestCase.Queue.Consume("queue", func(data int) {
+		singleTestCase.Queue.Consume("queue", func(this *queueModel, data int) {
 			inputEvent <- true
 			time.Sleep(time.Second)
 			result = singleTestCase.Data

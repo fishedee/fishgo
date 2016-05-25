@@ -12,7 +12,7 @@ import (
 )
 
 type Queue interface {
-	WithLog(log Log) Queue
+	WithLogAndContext(log Log, ctx Context) Queue
 	Produce(topicId string, data ...interface{})
 	Consume(topicId string, listener interface{})
 	ConsumeInPool(topicId string, listener interface{}, poolSize int)
@@ -33,6 +33,7 @@ type QueueConfig struct {
 type queueImplement struct {
 	store     QueueStoreInterface
 	Log       Log
+	Ctx       Context
 	poolSize  int
 	debug     bool
 	closeFunc *CloseFunc
@@ -91,13 +92,19 @@ func NewQueueFromConfig(configName string) (Queue, error) {
 	return NewQueue(queueConfig)
 }
 
-func (this *queueImplement) WithLog(log Log) Queue {
+func (this *queueImplement) WithLogAndContext(log Log, ctx Context) Queue {
 	newQueueManager := *this
 	newQueueManager.Log = log
+	newQueueManager.Ctx = ctx
 	return &newQueueManager
 }
 
 func (this *queueImplement) EncodeData(data []interface{}) ([]byte, error) {
+	ctxRequest, err := this.Ctx.SerializeRequest()
+	if err != nil {
+		return nil, err
+	}
+	data = append([]interface{}{ctxRequest}, data...)
 	dataByte, err := json.Marshal(data)
 	if err != nil {
 		return nil, err
@@ -106,16 +113,33 @@ func (this *queueImplement) EncodeData(data []interface{}) ([]byte, error) {
 }
 
 func (this *queueImplement) DecodeData(dataByte []byte, dataType []reflect.Type) ([]reflect.Value, error) {
+	//读取数据
 	result := []interface{}{}
-	for _, singleDataType := range dataType {
-		result = append(result, reflect.New(singleDataType).Interface())
+	var ctxResult ContextSerializeRequest
+	for singleDataIndex, singleDataType := range dataType {
+		if singleDataIndex == 0 {
+			result = append(result, &ctxResult)
+		} else {
+			result = append(result, reflect.New(singleDataType).Interface())
+		}
+
 	}
 	err := json.Unmarshal(dataByte, &result)
 	if err != nil {
 		return nil, errors.New(err.Error() + "," + string(dataByte))
 	}
+
+	//构建参数
+	basic := initEmptyBasic(nil)
+	target := reflect.New(dataType[0].Elem())
+	err = basic.Ctx.DeSerializeRequest(ctxResult)
+	if err != nil {
+		return nil, err
+	}
+	injectIoc(target, basic)
 	valueResult := []reflect.Value{}
-	for i := 0; i != len(dataType); i++ {
+	valueResult = append(valueResult, target)
+	for i := 1; i != len(dataType); i++ {
 		if i >= len(result) {
 			panic(fmt.Sprintf("call with %d argument function for %d argument", len(dataType), len(result)))
 		}
@@ -167,6 +191,12 @@ func (this *queueImplement) WrapExceptionListener(listener interface{}, topicId 
 	listenerValue := reflect.ValueOf(listener)
 	if listenerType.Kind() != reflect.Func {
 		return nil, errors.New("listener type is not a function")
+	}
+	if listenerType.NumIn() == 0 {
+		return nil, errors.New("listener should has at last a argument")
+	}
+	if listenerType.In(0).Kind() != reflect.Ptr {
+		return nil, errors.New("listener first argument is not a ptr")
 	}
 	listenerInType := []reflect.Type{}
 	for i := 0; i != listenerType.NumIn(); i++ {

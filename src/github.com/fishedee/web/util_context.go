@@ -15,6 +15,12 @@ import (
 	"github.com/fishedee/language"
 )
 
+type ContextSerializeRequest struct {
+	Method string
+	Url    string
+	Header map[string][]string
+}
+
 type Context interface {
 	//输入参数
 	GetUrl() *url.URL
@@ -53,13 +59,18 @@ type Context interface {
 	GetRawRequest() interface{}
 	GetRawResponseWriter() interface{}
 	GetRawTesting() interface{}
+
+	//序列化与反序列化
+	SerializeRequest() (ContextSerializeRequest, error)
+	DeSerializeRequest(ContextSerializeRequest) error
 }
 
 type contextImplement struct {
-	request        *http.Request
-	responseWriter http.ResponseWriter
-	testing        *testing.T
-	inputData      map[string]interface{}
+	request          *http.Request
+	responseWriter   http.ResponseWriter
+	testing          *testing.T
+	inputData        map[string]interface{}
+	serializeRequest *ContextSerializeRequest
 }
 
 func NewContext(request interface{}, response interface{}, t interface{}) Context {
@@ -336,4 +347,33 @@ func (this *contextImplement) GetRawResponseWriter() interface{} {
 
 func (this *contextImplement) GetRawTesting() interface{} {
 	return this.testing
+}
+
+func (this *contextImplement) SerializeRequest() (ContextSerializeRequest, error) {
+	//cache 序列化的数据
+	if this.serializeRequest != nil {
+		return *this.serializeRequest, nil
+	}
+
+	//生成序列化数据
+	request := this.request
+	result := &ContextSerializeRequest{}
+	result.Method = request.Method
+	result.Url = request.URL.String()
+	result.Header = request.Header
+	this.serializeRequest = result
+	return *result, nil
+}
+
+func (this *contextImplement) DeSerializeRequest(data ContextSerializeRequest) error {
+	//反序列化数据
+	newRequest, err := http.NewRequest(data.Method, data.Url, nil)
+	if err != nil {
+		return err
+	}
+	newRequest.Header = data.Header
+	this.request = newRequest
+	this.serializeRequest = &data
+	this.parseInput()
+	return nil
 }
