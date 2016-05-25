@@ -88,6 +88,12 @@ func getFieldType(fieldType ast.Expr, useType map[string]bool) string {
 		data += "}"
 		return data
 	}
+	chanType, ok := fieldType.(*ast.ChanType)
+	if ok {
+		data := "chan "
+		data += "\n" + getFieldType(chanType.Value, useType)
+		return data
+	}
 	panic(fmt.Sprintf("%#v unknown fieldType ", fieldType))
 }
 
