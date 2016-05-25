@@ -98,7 +98,8 @@ func (this *contextImplement) parseInput() {
 		ct = "application/octet-stream"
 	}
 	ct, _, err := mime.ParseMediaType(ct)
-	if ct == "application/x-www-form-urlencoded" {
+	if ct == "application/x-www-form-urlencoded" &&
+		this.request.Body != nil {
 		byteArray, err := ioutil.ReadAll(this.request.Body)
 		if err != nil {
 			panic(err)

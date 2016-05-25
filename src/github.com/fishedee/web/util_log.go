@@ -142,53 +142,54 @@ func (this *logImplement) getLogFormat(format string, v []interface{}) string {
 			}
 		}
 	}
-	return fmt.Sprintf(this.logPrefix+" "+this.getTraceLineNumber(2)+" "+format, v...)
+	v = append([]interface{}{this.logPrefix, this.getTraceLineNumber(2)}, v...)
+	return fmt.Sprintf("%s %s "+format, v...)
 }
 
 func (this *logImplement) Emergency(format string, v ...interface{}) {
-	this.BeeLogger.Emergency(this.getLogFormat(format, v))
+	this.BeeLogger.Emergency("%s", this.getLogFormat(format, v))
 }
 
 func (this *logImplement) Alert(format string, v ...interface{}) {
-	this.BeeLogger.Alert(this.getLogFormat(format, v))
+	this.BeeLogger.Alert("%s", this.getLogFormat(format, v))
 }
 
 func (this *logImplement) Critical(format string, v ...interface{}) {
 	if this.monitor != nil {
 		this.monitor.AscCriticalCount()
 	}
-	this.BeeLogger.Critical(this.getLogFormat(format, v))
+	this.BeeLogger.Critical("%s", this.getLogFormat(format, v))
 }
 
 func (this *logImplement) Error(format string, v ...interface{}) {
 	if this.monitor != nil {
 		this.monitor.AscErrorCount()
 	}
-	this.BeeLogger.Error(this.getLogFormat(format, v))
+	this.BeeLogger.Error("%s", this.getLogFormat(format, v))
 }
 
 func (this *logImplement) Warning(format string, v ...interface{}) {
-	this.BeeLogger.Warning(this.getLogFormat(format, v))
+	this.BeeLogger.Warning("%s", this.getLogFormat(format, v))
 }
 
 func (this *logImplement) Notice(format string, v ...interface{}) {
-	this.BeeLogger.Notice(this.getLogFormat(format, v))
+	this.BeeLogger.Notice("%s", this.getLogFormat(format, v))
 }
 
 func (this *logImplement) Informational(format string, v ...interface{}) {
-	this.BeeLogger.Informational(this.getLogFormat(format, v))
+	this.BeeLogger.Informational("%s", this.getLogFormat(format, v))
 }
 
 func (this *logImplement) Debug(format string, v ...interface{}) {
-	this.BeeLogger.Debug(this.getLogFormat(format, v))
+	this.BeeLogger.Debug("%s", this.getLogFormat(format, v))
 }
 
 func (this *logImplement) Warn(format string, v ...interface{}) {
-	this.BeeLogger.Warn(this.getLogFormat(format, v))
+	this.BeeLogger.Warn("%s", this.getLogFormat(format, v))
 }
 
 func (this *logImplement) Info(format string, v ...interface{}) {
-	this.BeeLogger.Info(this.getLogFormat(format, v))
+	this.BeeLogger.Info("%s", this.getLogFormat(format, v))
 }
 
 func (this *logImplement) Trace(format string, v ...interface{}) {
