@@ -130,7 +130,7 @@ func QueryJoin(leftData interface{}, rightData interface{}, joinPlace string, jo
 	leftDataType := leftDataValue.Type()
 	leftDataElemType := leftDataType.Elem()
 	leftDataValueLen := leftDataValue.Len()
-	leftDataJoinStruct, ok := leftDataElemType.FieldByName(leftJoinType)
+	leftDataJoinStruct, ok := getFieldByName(leftDataElemType, leftJoinType)
 	if !ok {
 		panic(leftDataElemType.Name() + " has no field " + leftJoinType)
 	}
@@ -141,7 +141,7 @@ func QueryJoin(leftData interface{}, rightData interface{}, joinPlace string, jo
 	rightDataType := rightDataValue.Type()
 	rightDataElemType := rightDataType.Elem()
 	rightDataValueLen := rightDataValue.Len()
-	rightDataJoinStruct, ok := rightDataElemType.FieldByName(rightJoinType)
+	rightDataJoinStruct, ok := getFieldByName(rightDataElemType, rightJoinType)
 	if !ok {
 		panic(rightDataElemType.Name() + " has no field " + rightJoinType)
 	}
@@ -380,7 +380,7 @@ func getSingleQueryCompare(fieldType reflect.Type) queryCompare {
 }
 
 func getQueryCompare(dataType reflect.Type, name string) queryCompare {
-	field, ok := dataType.FieldByName(name)
+	field, ok := getFieldByName(dataType, name)
 	if !ok {
 		panic(dataType.Name() + " has not name " + name)
 	}
@@ -495,7 +495,7 @@ func QueryColumn(data interface{}, column string) interface{} {
 	dataType := dataValue.Type().Elem()
 	dataLen := dataValue.Len()
 	column = strings.Trim(column, " ")
-	dataFieldIndexStruct, ok := dataType.FieldByName(column)
+	dataFieldIndexStruct, ok := getFieldByName(dataType, column)
 	if !ok {
 		panic(dataType.Name() + " has no field " + column)
 	}
@@ -530,7 +530,7 @@ func QueryDistinct(data interface{}, columnNames string) interface{} {
 	dataValue := reflect.ValueOf(data)
 	dataType := dataValue.Type().Elem()
 	for _, singleName := range name {
-		singleField, ok := dataType.FieldByName(singleName)
+		singleField, ok := getFieldByName(dataType, singleName)
 		if !ok {
 			panic(dataType.Name() + " struct has not field " + singleName)
 		}

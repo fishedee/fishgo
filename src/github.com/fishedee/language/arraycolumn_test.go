@@ -13,7 +13,7 @@ func assertArrayColumnEqual(t *testing.T, left interface{}, right interface{}, i
 	}
 }
 
-func TestArrayColumnSort(t *testing.T) {
+func TestKSort(t *testing.T) {
 	//测试类型 支持bool,int,float,string和time.Time
 	type contentType struct {
 		Name      string
@@ -336,6 +336,16 @@ func TestArrayColumnUnique(t *testing.T) {
 
 }
 
+type ArrayColumnInnerStruct struct {
+	MM int
+}
+
+type ArrayColumnInnerStruct2 struct {
+	ArrayColumnInnerStruct
+	MM int
+	DD float32
+}
+
 func TestArrayColumnKey(t *testing.T) {
 
 	type contentType struct {
@@ -429,6 +439,33 @@ func TestArrayColumnKey(t *testing.T) {
 				contentType{"h", -1, true, 0, 0, nowTime},
 			},
 			[]time.Time{oldTime, zeroTime, nowTime},
+		},
+		{
+			"MM",
+			[]ArrayColumnInnerStruct2{
+				ArrayColumnInnerStruct2{ArrayColumnInnerStruct{1}, 2, 1.1},
+				ArrayColumnInnerStruct2{ArrayColumnInnerStruct{2}, 4, 2.1},
+				ArrayColumnInnerStruct2{ArrayColumnInnerStruct{3}, 5, 3.1},
+			},
+			[]int{2, 4, 5},
+		},
+		{
+			"DD",
+			[]ArrayColumnInnerStruct2{
+				ArrayColumnInnerStruct2{ArrayColumnInnerStruct{1}, 2, 1.1},
+				ArrayColumnInnerStruct2{ArrayColumnInnerStruct{2}, 4, 2.1},
+				ArrayColumnInnerStruct2{ArrayColumnInnerStruct{3}, 5, 3.1},
+			},
+			[]float32{1.1, 2.1, 3.1},
+		},
+		{
+			"ArrayColumnInnerStruct.MM",
+			[]ArrayColumnInnerStruct2{
+				ArrayColumnInnerStruct2{ArrayColumnInnerStruct{1}, 2, 1.1},
+				ArrayColumnInnerStruct2{ArrayColumnInnerStruct{2}, 4, 2.1},
+				ArrayColumnInnerStruct2{ArrayColumnInnerStruct{3}, 5, 3.1},
+			},
+			[]int{1, 2, 3},
 		},
 	}
 
@@ -572,6 +609,45 @@ func TestArrayColumnMap(t *testing.T) {
 					true:  {"", 0, true, -1.1, -1.1, zeroTime},
 					false: {"", 0, false, -1.1, -1.1, zeroTime},
 				},
+			},
+		},
+		{
+			"MM",
+			[]ArrayColumnInnerStruct2{
+				ArrayColumnInnerStruct2{ArrayColumnInnerStruct{1}, 2, 1.1},
+				ArrayColumnInnerStruct2{ArrayColumnInnerStruct{2}, 4, 2.1},
+				ArrayColumnInnerStruct2{ArrayColumnInnerStruct{3}, 5, 3.1},
+			},
+			map[int]ArrayColumnInnerStruct2{
+				2: ArrayColumnInnerStruct2{ArrayColumnInnerStruct{1}, 2, 1.1},
+				4: ArrayColumnInnerStruct2{ArrayColumnInnerStruct{2}, 4, 2.1},
+				5: ArrayColumnInnerStruct2{ArrayColumnInnerStruct{3}, 5, 3.1},
+			},
+		},
+		{
+			"DD",
+			[]ArrayColumnInnerStruct2{
+				ArrayColumnInnerStruct2{ArrayColumnInnerStruct{1}, 2, 1.1},
+				ArrayColumnInnerStruct2{ArrayColumnInnerStruct{2}, 4, 2.1},
+				ArrayColumnInnerStruct2{ArrayColumnInnerStruct{3}, 5, 3.1},
+			},
+			map[float32]ArrayColumnInnerStruct2{
+				1.1: ArrayColumnInnerStruct2{ArrayColumnInnerStruct{1}, 2, 1.1},
+				2.1: ArrayColumnInnerStruct2{ArrayColumnInnerStruct{2}, 4, 2.1},
+				3.1: ArrayColumnInnerStruct2{ArrayColumnInnerStruct{3}, 5, 3.1},
+			},
+		},
+		{
+			"ArrayColumnInnerStruct.MM",
+			[]ArrayColumnInnerStruct2{
+				ArrayColumnInnerStruct2{ArrayColumnInnerStruct{1}, 2, 1.1},
+				ArrayColumnInnerStruct2{ArrayColumnInnerStruct{2}, 4, 2.1},
+				ArrayColumnInnerStruct2{ArrayColumnInnerStruct{3}, 5, 3.1},
+			},
+			map[int]ArrayColumnInnerStruct2{
+				1: ArrayColumnInnerStruct2{ArrayColumnInnerStruct{1}, 2, 1.1},
+				2: ArrayColumnInnerStruct2{ArrayColumnInnerStruct{2}, 4, 2.1},
+				3: ArrayColumnInnerStruct2{ArrayColumnInnerStruct{3}, 5, 3.1},
 			},
 		},
 	}

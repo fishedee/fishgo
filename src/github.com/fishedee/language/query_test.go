@@ -306,6 +306,16 @@ func TestQueryReduce(t *testing.T) {
 
 }
 
+type QueryInnerStruct struct {
+	MM int
+}
+
+type QueryInnerStruct2 struct {
+	QueryInnerStruct
+	MM int
+	DD float32
+}
+
 func TestQuerySort(t *testing.T) {
 	//测试类型 支持bool,int,float,string和time.Time
 	type contentType struct {
@@ -437,6 +447,49 @@ func TestQuerySort(t *testing.T) {
 				contentType{"b", -1, true, 0, 0, nowTime},
 				contentType{"", 5, false, 0, 0, zeroTime},
 				contentType{"5", 10, true, -1.1, -1.1, oldTime},
+			},
+		},
+		{
+			" Money desc,Age asc,Name desc",
+			[]contentType{
+				contentType{"b", -1, true, 0, 0, nowTime},
+				contentType{"a", -1, false, 1.1, 1.1, zeroTime},
+				contentType{"5", 10, true, -1.1, -1.1, oldTime},
+				contentType{"", 5, false, 0, 0, zeroTime},
+				contentType{"h", -1, true, 0, 0, nowTime},
+			},
+			[]contentType{
+				contentType{"a", -1, false, 1.1, 1.1, zeroTime},
+				contentType{"h", -1, true, 0, 0, nowTime},
+				contentType{"b", -1, true, 0, 0, nowTime},
+				contentType{"", 5, false, 0, 0, zeroTime},
+				contentType{"5", 10, true, -1.1, -1.1, oldTime},
+			},
+		},
+		{
+			"MM desc",
+			[]QueryInnerStruct2{
+				QueryInnerStruct2{QueryInnerStruct{3}, 4, 3.1},
+				QueryInnerStruct2{QueryInnerStruct{2}, 2, 1.1},
+				QueryInnerStruct2{QueryInnerStruct{1}, 5, 2.1},
+			},
+			[]QueryInnerStruct2{
+				QueryInnerStruct2{QueryInnerStruct{1}, 5, 2.1},
+				QueryInnerStruct2{QueryInnerStruct{3}, 4, 3.1},
+				QueryInnerStruct2{QueryInnerStruct{2}, 2, 1.1},
+			},
+		},
+		{
+			"QueryInnerStruct.MM asc",
+			[]QueryInnerStruct2{
+				QueryInnerStruct2{QueryInnerStruct{3}, 4, 3.1},
+				QueryInnerStruct2{QueryInnerStruct{2}, 2, 1.1},
+				QueryInnerStruct2{QueryInnerStruct{1}, 5, 2.1},
+			},
+			[]QueryInnerStruct2{
+				QueryInnerStruct2{QueryInnerStruct{1}, 5, 2.1},
+				QueryInnerStruct2{QueryInnerStruct{2}, 2, 1.1},
+				QueryInnerStruct2{QueryInnerStruct{3}, 4, 3.1},
 			},
 		},
 	}
@@ -859,6 +912,32 @@ func TestQueryJoin(t *testing.T) {
 				userType{"", 0, false, 0, 1.1, zeroTime},
 			},
 		},
+		{
+			[]QueryInnerStruct2{
+				QueryInnerStruct2{QueryInnerStruct{3}, 1, 1.1},
+				QueryInnerStruct2{QueryInnerStruct{2}, 2, 2.1},
+				QueryInnerStruct2{QueryInnerStruct{1}, 3, 3.1},
+			},
+			[]QueryInnerStruct2{
+				QueryInnerStruct2{QueryInnerStruct{3}, 4, 4.1},
+				QueryInnerStruct2{QueryInnerStruct{2}, 5, 5.1},
+				QueryInnerStruct2{QueryInnerStruct{1}, 6, 6.1},
+			},
+			"left",
+			"QueryInnerStruct.MM = QueryInnerStruct.MM",
+			func(left QueryInnerStruct2, right QueryInnerStruct2) QueryInnerStruct2 {
+				return QueryInnerStruct2{
+					left.QueryInnerStruct,
+					right.MM,
+					left.DD,
+				}
+			},
+			[]QueryInnerStruct2{
+				QueryInnerStruct2{QueryInnerStruct{3}, 4, 1.1},
+				QueryInnerStruct2{QueryInnerStruct{2}, 5, 2.1},
+				QueryInnerStruct2{QueryInnerStruct{1}, 6, 3.1},
+			},
+		},
 	}
 
 	for singleTestCaseIndex, singleTestCase := range testCase {
@@ -1060,6 +1139,25 @@ func TestQueryGroup(t *testing.T) {
 				contentType{"s", 2, true, 0, 0, nowTime},
 			},
 		},
+		{
+			[]QueryInnerStruct2{
+				QueryInnerStruct2{QueryInnerStruct{3}, 4, 4.1},
+				QueryInnerStruct2{QueryInnerStruct{2}, 5, 5.1},
+				QueryInnerStruct2{QueryInnerStruct{1}, 6, 6.1},
+				QueryInnerStruct2{QueryInnerStruct{2}, 6, 6.1},
+			},
+			"QueryInnerStruct.MM",
+			func(list []QueryInnerStruct2) []QueryInnerStruct2 {
+				sum := QuerySum(QueryColumn(list, "  MM  "))
+				list[0].MM = sum.(int)
+				return []QueryInnerStruct2{list[0]}
+			},
+			[]QueryInnerStruct2{
+				QueryInnerStruct2{QueryInnerStruct{1}, 6, 6.1},
+				QueryInnerStruct2{QueryInnerStruct{2}, 11, 5.1},
+				QueryInnerStruct2{QueryInnerStruct{3}, 4, 4.1},
+			},
+		},
 	}
 
 	for singleTestCaseIndex, singleTestCase := range testCase {
@@ -1151,6 +1249,15 @@ func TestQueryColumn(t *testing.T) {
 			},
 			"    CardMoney",
 			[]float64{0, 1.1, -1.2, 0, 0},
+		},
+		{
+			[]QueryInnerStruct2{
+				QueryInnerStruct2{QueryInnerStruct{1}, 2, 1.1},
+				QueryInnerStruct2{QueryInnerStruct{2}, 4, 2.1},
+				QueryInnerStruct2{QueryInnerStruct{3}, 5, 3.1},
+			},
+			"QueryInnerStruct.MM",
+			[]int{1, 2, 3},
 		},
 	}
 
@@ -1378,6 +1485,20 @@ func TestQueryDistinct(t *testing.T) {
 				contentType{"h", -1, true, 0, 0, nowTime},
 				contentType{"5", 10, true, -1.1, -1.1, oldTime},
 				contentType{"a", 15, true, 1.1, 1.1, zeroTime},
+			},
+		},
+		{
+			"QueryInnerStruct.MM",
+			[]QueryInnerStruct2{
+				QueryInnerStruct2{QueryInnerStruct{1}, 2, 1.1},
+				QueryInnerStruct2{QueryInnerStruct{2}, 4, 2.1},
+				QueryInnerStruct2{QueryInnerStruct{2}, 5, 4.1},
+				QueryInnerStruct2{QueryInnerStruct{3}, 5, 3.1},
+			},
+			[]QueryInnerStruct2{
+				QueryInnerStruct2{QueryInnerStruct{1}, 2, 1.1},
+				QueryInnerStruct2{QueryInnerStruct{2}, 4, 2.1},
+				QueryInnerStruct2{QueryInnerStruct{3}, 5, 3.1},
 			},
 		},
 	}

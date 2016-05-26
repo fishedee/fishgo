@@ -31,7 +31,7 @@ func ArrayColumnMap(data interface{}, columnNames string) interface{} {
 	dataValue := reflect.ValueOf(data)
 	dataType := dataValue.Type().Elem()
 	for _, singleName := range name {
-		singleField, ok := dataType.FieldByName(singleName)
+		singleField, ok := getFieldByName(dataType, singleName)
 		if !ok {
 			panic(dataType.Name() + " struct has not field " + singleName)
 		}

@@ -2,6 +2,7 @@ package language
 
 import (
 	"reflect"
+	"sync"
 )
 
 var TypeKind struct {
@@ -95,4 +96,56 @@ func IsEmptyValue(v reflect.Value) bool {
 		return k.(zeroable).IsZero()
 	}
 	return false
+}
+
+type getFieldByNameResult struct {
+	structField reflect.StructField
+	isExist     bool
+}
+
+var (
+	getFieldByNameCache = map[reflect.Type]map[string]getFieldByNameResult{}
+	getFieldByNameMutex = sync.RWMutex{}
+)
+
+func getFieldByNameInner(t reflect.Type, name string) (reflect.StructField, bool) {
+	nameArray := Explode(name, ".")
+	if len(nameArray) == 0 {
+		return reflect.StructField{}, false
+	}
+	var isExist bool
+	var resultStruct reflect.StructField
+	resultIndex := []int{}
+	for _, singleName := range nameArray {
+		resultStruct, isExist = t.FieldByName(singleName)
+		if !isExist {
+			return reflect.StructField{}, false
+		}
+		resultIndex = append(resultIndex, resultStruct.Index...)
+		t = resultStruct.Type
+	}
+	resultStruct.Index = resultIndex
+	return resultStruct, true
+}
+
+func getFieldByName(t reflect.Type, name string) (reflect.StructField, bool) {
+	getFieldByNameMutex.RLock()
+	result, isExist := getFieldByNameCache[t][name]
+	getFieldByNameMutex.RUnlock()
+
+	if isExist {
+		return result.structField, result.isExist
+	}
+	result.structField, result.isExist = getFieldByNameInner(t, name)
+
+	getFieldByNameMutex.Lock()
+	typeInfo, isExist := getFieldByNameCache[t]
+	if !isExist {
+		typeInfo = map[string]getFieldByNameResult{}
+	}
+	typeInfo[name] = result
+	getFieldByNameCache[t] = typeInfo
+	getFieldByNameMutex.Unlock()
+
+	return result.structField, result.isExist
 }
