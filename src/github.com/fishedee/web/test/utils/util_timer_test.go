@@ -40,7 +40,7 @@ func TestTimerClose(t *testing.T) {
 	for singleTestCaseIndex, singleTestCase := range testCase {
 		var result int
 		timer := newTimerForTest(t)
-		inputEvent := make(chan bool)
+		inputEvent := make(chan bool, 10)
 		singleTestCase.Handler(timer, func(this *timerModel) {
 			inputEvent <- true
 			time.Sleep(time.Second)

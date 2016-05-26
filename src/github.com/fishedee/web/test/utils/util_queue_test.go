@@ -203,6 +203,36 @@ func TestQueueSync(t *testing.T) {
 	}
 }
 
+func TestQueueRedis(t *testing.T) {
+	queue := newQueueForTest(t, QueueConfig{
+		SavePath:   "127.0.0.1:6379,100,13420693396",
+		SavePrefix: "queue:",
+		Driver:     "redis",
+	})
+
+	//生产者消费者模式有累积效应
+	queue.Produce("topic1", 1)
+	var result = make(chan int)
+	queue.Consume("topic1", func(this *queueModel, data int) {
+		result <- data
+	})
+	target := <-result
+	assertQueueEqual(t, target, 1, 0)
+
+	//发布订阅模式没有累积效应
+	queue.Publish("topic2", 2)
+	var result2 = make(chan int)
+	queue.Subscribe("topic2", func(this *queueModel, data int) {
+		result2 <- data
+	})
+	select {
+	case <-result2:
+		assertQueueEqual(t, false, "invalid!", 0)
+	case <-time.NewTimer(time.Second).C:
+		break
+	}
+}
+
 func TestQueueCtx(t *testing.T) {
 	testCase := []struct {
 		method string

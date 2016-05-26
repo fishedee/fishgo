@@ -13,7 +13,7 @@ type BasicAsyncQueuePubSubStore struct {
 type BasicQueueStore struct {
 	QueueStoreBasicInterface
 	mapPubSubStore map[string]*BasicAsyncQueuePubSubStore
-	mutex          sync.Mutex
+	mutex          sync.RWMutex
 }
 
 func NewBasicQueue(target QueueStoreBasicInterface) *BasicQueueStore {
@@ -24,6 +24,12 @@ func NewBasicQueue(target QueueStoreBasicInterface) *BasicQueueStore {
 }
 
 func (this *BasicQueueStore) Publish(topicId string, data interface{}) error {
+	this.mutex.RLock()
+	_, ok := this.mapPubSubStore[topicId]
+	this.mutex.RUnlock()
+	if !ok {
+		return nil
+	}
 	return this.Produce(topicId, data)
 }
 
