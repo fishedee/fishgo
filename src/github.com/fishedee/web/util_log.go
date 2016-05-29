@@ -67,6 +67,9 @@ func NewLog(config LogConfig) (Log, error) {
 	if config.Driver == "" {
 		return nil, nil
 	}
+	if config.Level == 0 {
+		config.Level = logs.LevelDebug
+	}
 	logConfigString, err := json.Marshal(config)
 	if err != nil {
 		panic(err)

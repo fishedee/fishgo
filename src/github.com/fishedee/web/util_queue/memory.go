@@ -1,7 +1,6 @@
 package util_queue
 
 import (
-	"errors"
 	. "github.com/fishedee/util"
 	"sync"
 )
@@ -26,7 +25,7 @@ func (this *MemoryQueueStore) Produce(topicId string, data interface{}) error {
 	result, ok := this.mapPushPopStore[topicId]
 	this.mutex.Unlock()
 	if !ok {
-		return errors.New("invalid has no consumber!")
+		return nil
 	}
 	result.listener(data)
 	return nil

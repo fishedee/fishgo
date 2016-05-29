@@ -1,9 +1,9 @@
 package web
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
+	. "github.com/fishedee/encoding"
 	. "github.com/fishedee/language"
 	. "github.com/fishedee/util"
 	. "github.com/fishedee/web/util_queue"
@@ -105,7 +105,7 @@ func (this *queueImplement) EncodeData(data []interface{}) ([]byte, error) {
 		return nil, err
 	}
 	data = append([]interface{}{ctxRequest}, data...)
-	dataByte, err := json.Marshal(data)
+	dataByte, err := EncodeJson(data)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +124,7 @@ func (this *queueImplement) DecodeData(dataByte []byte, dataType []reflect.Type)
 		}
 
 	}
-	err := json.Unmarshal(dataByte, &result)
+	err := DecodeJson(dataByte, &result)
 	if err != nil {
 		return nil, errors.New(err.Error() + "," + string(dataByte))
 	}

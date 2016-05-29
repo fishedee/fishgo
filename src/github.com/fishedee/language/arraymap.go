@@ -319,33 +319,40 @@ func mapToArray(dataValue reflect.Value, target reflect.Value, tag string) error
 	if dataKind != TypeKind.ARRAY {
 		return errors.New(fmt.Sprintf("不是数组，其类型为[%s]", dataValue.Type().String()))
 	}
+	//增长空间
 	dataLen := dataValue.Len()
 	targetType := target.Type()
+	targetLen := target.Len()
 	if targetType.Kind() == reflect.Slice {
-		newTarget := reflect.MakeSlice(targetType, dataLen, dataLen)
-		for i := 0; i != dataLen; i++ {
+		if target.IsNil() == true {
+			var newTarget reflect.Value
+			newTarget = reflect.MakeSlice(targetType, dataLen, dataLen)
+			target.Set(newTarget)
+		} else if targetLen != dataLen {
+			var newTarget reflect.Value
+			newTarget = reflect.MakeSlice(targetType, dataLen, dataLen)
+			reflect.Copy(newTarget, target)
+			target.Set(newTarget)
+		}
+		targetLen = dataLen
+	}
+	//复制数据
+	for i := 0; i != targetLen; i++ {
+		if i >= dataLen {
+			targetElemType := targetType.Elem()
+			zeroElemType := reflect.Zero(targetElemType)
+			for i := dataLen; i < targetLen; i++ {
+				target.Index(i).Set(zeroElemType)
+			}
+			break
+		} else {
 			singleData := dataValue.Index(i)
-			singleDataTarget := newTarget.Index(i)
+			singleDataTarget := target.Index(i)
 			err := mapToArrayInner(singleData, singleDataTarget, tag)
 			if err != nil {
 				return err
 			}
 		}
-		target.Set(newTarget)
-	} else {
-		newTarget := reflect.New(targetType)
-		for i := 0; i != newTarget.Len(); i++ {
-			if i >= dataLen {
-				continue
-			}
-			singleData := dataValue.Index(i)
-			singleDataTarget := newTarget.Index(i)
-			err := mapToArrayInner(singleData, singleDataTarget, tag)
-			if err != nil {
-				return err
-			}
-		}
-		target.Set(newTarget)
 	}
 	return nil
 }
@@ -360,23 +367,30 @@ func mapToMap(dataValue reflect.Value, target reflect.Value, tag string) error {
 	targetType := target.Type()
 	targetKeyType := targetType.Key()
 	targetValueType := targetType.Elem()
-	newTarget := reflect.MakeMap(targetType)
+	if target.IsNil() == true {
+		var newTarget reflect.Value
+		newTarget = reflect.MakeMap(targetType)
+		target.Set(newTarget)
+	}
 	for _, singleDataKey := range dataKeys {
-		singleDataValue := dataValue.MapIndex(singleDataKey)
-
-		singleDataTargetKey := reflect.New(targetKeyType)
-		singleDataTargetValue := reflect.New(targetValueType)
+		singleDataTargetKey := reflect.New(targetKeyType).Elem()
 		err := mapToArrayInner(singleDataKey, singleDataTargetKey, tag)
 		if err != nil {
 			return err
+		}
+
+		singleDataValue := dataValue.MapIndex(singleDataKey)
+		singleDataTargetValue := reflect.New(targetValueType).Elem()
+		singleDataTargetValueOld := target.MapIndex(singleDataTargetKey)
+		if singleDataTargetValueOld.IsValid() == true {
+			singleDataTargetValue.Set(singleDataTargetValueOld)
 		}
 		err = mapToArrayInner(singleDataValue, singleDataTargetValue, tag)
 		if err != nil {
 			return errors.New(fmt.Sprintf("参数%s%s", singleDataKey, err.Error()))
 		}
-		newTarget.SetMapIndex(singleDataTargetKey.Elem(), singleDataTargetValue.Elem())
+		target.SetMapIndex(singleDataTargetKey, singleDataTargetValue)
 	}
-	target.Set(newTarget)
 	return nil
 }
 
@@ -450,7 +464,14 @@ func mapToInterface(dataValue reflect.Value, target reflect.Value, tag string) e
 		target.Set(dataValue)
 		return nil
 	}
-	return mapToArrayInner(dataValue, targetElem, tag)
+	newTargetElem := reflect.New(targetElem.Type()).Elem()
+	newTargetElem.Set(targetElem)
+	err := mapToArrayInner(dataValue, newTargetElem, tag)
+	if err != nil {
+		return err
+	}
+	target.Set(newTargetElem)
+	return nil
 }
 
 func mapToArrayInner(data reflect.Value, target reflect.Value, tag string) error {

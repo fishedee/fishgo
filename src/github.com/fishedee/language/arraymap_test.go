@@ -389,6 +389,37 @@ func TestMapToArrayTotal(t *testing.T) {
 	}
 }
 
+func TestMapToArrayHalfEmpty(t *testing.T) {
+	testCase := []struct {
+		Origin  interface{}
+		Origin2 interface{}
+		Target  interface{}
+	}{
+		//array
+		{[]int{1, 2, 3, 4}, [0]int{}, [0]int{}},
+		{[]int{1, 2, 3}, [4]int{3, 6, 7, 8}, [4]int{1, 2, 3, 0}},
+		{[]int{1, 2, 3, 4}, [2]int{3, 6}, [2]int{1, 2}},
+		//slice
+		{[]int{1, 2, 3}, []int{}, []int{1, 2, 3}},
+		{[]int{1, 2, 3, 4}, []int{5, 6, 7}, []int{1, 2, 3, 4}},
+		{[]int{1, 2, 3, 4}, []interface{}{3, 6, 7}, []interface{}{1, 2, 3, 4}},
+		//map
+		{map[int]string{1: "a", 2: "b"}, map[int]string{}, map[int]string{1: "a", 2: "b"}},
+		{map[int]string{1: "a", 2: "b"}, map[int]string{3: "c"}, map[int]string{1: "a", 2: "b", 3: "c"}},
+		{map[int]string{1: "a", 2: "b"}, map[int]interface{}{3: "c"}, map[int]interface{}{1: "a", 2: "b", 3: "c"}},
+		{map[int]string{1: "a", 2: "b", 3: "yy"}, map[int]string{3: "c"}, map[int]string{1: "a", 2: "b", 3: "yy"}},
+	}
+
+	for _, singleTestCase := range testCase {
+		origin := singleTestCase.Origin
+		origin2 := reflect.ValueOf(&singleTestCase.Origin2)
+		target := singleTestCase.Target
+		err := MapToArray(origin, origin2.Interface(), "json")
+		AssertEqual(t, err, nil)
+		AssertEqual(t, origin2.Elem().Interface(), target)
+	}
+}
+
 func TestMapToArrayError(t *testing.T) {
 	testCase := []struct {
 		origin interface{}
