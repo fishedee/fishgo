@@ -35,6 +35,28 @@ func TestOpenSearchSignature(t *testing.T) {
 	assertOpenSearchEqual(t, result["AccessKeyId"], "testid")
 }
 
+func TestOpenSearchSignature2(t *testing.T) {
+	sdk := &OpenSearchSdk{
+		Host:   "",
+		AppId:  "pcjpOwW9kYVgoOCP",
+		AppKey: "mmFRVuxXOlRo4SSRMMy4ukkEulTkcm",
+	}
+	query := map[string]string{
+		"query":            "query=default:'搜 索'",
+		"index_name":       "t_bakeweb_recipe",
+		"Version":          "v2",
+		"SignatureMethod":  "HMAC-SHA1",
+		"SignatureVersion": "1.0",
+		"SignatureNonce":   "14645766476223910",
+		"Timestamp":        "2016-05-30T02:50:47Z",
+	}
+	targetSign := "HZRs+/BmgI3c5cAh1xfzY5cZ5N4="
+	result, err := sdk.getSignature("GET", query)
+	assertOpenSearchEqual(t, err, nil)
+	assertOpenSearchEqual(t, result["Signature"], targetSign)
+	assertOpenSearchEqual(t, result["AccessKeyId"], "pcjpOwW9kYVgoOCP")
+}
+
 func TestOpenSearchSearch(t *testing.T) {
 	sdk := &OpenSearchSdk{
 		Host:   "http://intranet.opensearch-cn-qingdao.aliyuncs.com",
@@ -44,7 +66,7 @@ func TestOpenSearchSearch(t *testing.T) {
 
 	response, err := sdk.Search(OpenSearchSearchRequest{
 		Query: OpenSearchQuery{
-			Query: "default:'蛋糕'",
+			Query: "default:'蛋 糕'",
 		},
 		IndexName: "t_bakeweb_recipe",
 	})

@@ -71,6 +71,14 @@ func (this *OpenSearchError) Error() string {
 	return fmt.Sprintf("错误码为：%v，错误描述为：%v", this.Code, this.Message)
 }
 
+func (this *OpenSearchSdk) encodeUrl(input string) (string, error) {
+	output, err := EncodeUrl(input)
+	if err != nil {
+		return "", err
+	}
+	return strings.Replace(output, "+", "%20", -1), nil
+}
+
 func (this *OpenSearchSdk) getSignature(method string, query map[string]string) (map[string]string, error) {
 	//参数格式化
 	newQuery := map[string]string{}
@@ -83,20 +91,21 @@ func (this *OpenSearchSdk) getSignature(method string, query map[string]string) 
 	stringToSignArray := []string{}
 	for _, singleQueryKey := range queryKey {
 		singleQueryValue := newQuery[singleQueryKey]
-		singleQueryKeyEncode, err := EncodeUrl(singleQueryKey)
+		singleQueryKeyEncode, err := this.encodeUrl(singleQueryKey)
 		if err != nil {
 			return nil, err
 		}
-		singleQueryValueEncode, err := EncodeUrl(singleQueryValue)
+		singleQueryValueEncode, err := this.encodeUrl(singleQueryValue)
 		if err != nil {
 			return nil, err
 		}
 		stringToSignArray = append(stringToSignArray, singleQueryKeyEncode+"="+singleQueryValueEncode)
 	}
 	stringToSign := strings.Join(stringToSignArray, "&")
+	fmt.Println(stringToSign)
 
 	//字符串签名
-	stringToSignEncode, err := EncodeUrl(stringToSign)
+	stringToSignEncode, err := this.encodeUrl(stringToSign)
 	if err != nil {
 		return nil, err
 	}
@@ -131,6 +140,7 @@ func (this *OpenSearchSdk) api(method string, url string, query map[string]strin
 	if err != nil {
 		return err
 	}
+	fmt.Println(newQuery)
 
 	//调用
 	var result struct {
