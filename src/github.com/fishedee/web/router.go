@@ -76,6 +76,8 @@ func (this *handlerType) addRoute(namespace string, target ControllerInterface) 
 			methodType:     singleMethod,
 		}
 	}
+	//预热ioc
+	injectIoc(reflect.ValueOf(target), nil)
 }
 
 func (this *handlerType) handleRequest(request *http.Request, response http.ResponseWriter) {
