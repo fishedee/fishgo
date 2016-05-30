@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/fishedee/web"
+	"net/http"
 	"time"
 )
 
@@ -20,12 +21,21 @@ func (this *testController) LongTask_Json() interface{} {
 	return ""
 }
 
+func (this *testController) receiveEvent(data int) {
+	request := this.Ctx.GetRawRequest().(*http.Request)
+	this.Log.Debug("%v", request)
+	this.Log.Debug("%v", data)
+}
+
 func (this *testController) AutoRender(data interface{}, viewname string) {
 	this.Ctx.Write([]byte(data.(string)))
 }
 
 //go:generate fishgen ^./models/.*(ao|db)\.go$
 func main() {
+	web.InitDaemon(func(this *testController) {
+		this.Queue.Consume("/test", (*testController).receiveEvent)
+	})
 	web.InitRoute("", &testController{})
 	web.Run()
 }
