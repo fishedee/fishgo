@@ -3,11 +3,12 @@ package web
 import (
 	"reflect"
 	"sync"
+	"unsafe"
 )
 
 var (
 	iocMutex     sync.RWMutex
-	iocType      = map[reflect.Type][][]int{}
+	iocType      = map[reflect.Type][]uintptr{}
 	iocBasicType = reflect.TypeOf(&Basic{})
 )
 
@@ -20,7 +21,7 @@ func getIocTypeIndexInner(modelType reflect.Type) [][]int {
 			result = append(result, []int{i})
 		} else if singleFiled.Type.Kind() == reflect.Struct &&
 			singleFiled.PkgPath == "" {
-			singleResultArray := getIocTypeIndex(singleFiled.Type)
+			singleResultArray := getIocTypeIndexInner(singleFiled.Type)
 			for _, singleResult := range singleResultArray {
 				data := append([]int{i}, singleResult...)
 				result = append(result, data)
@@ -30,7 +31,7 @@ func getIocTypeIndexInner(modelType reflect.Type) [][]int {
 	return result
 }
 
-func getIocTypeIndex(target reflect.Type) [][]int {
+func getIocTypeIndex(target reflect.Type) []uintptr {
 	iocMutex.RLock()
 	result, ok := iocType[target]
 	iocMutex.RUnlock()
@@ -38,7 +39,15 @@ func getIocTypeIndex(target reflect.Type) [][]int {
 	if ok {
 		return result
 	}
-	result = getIocTypeIndexInner(target)
+	index := getIocTypeIndexInner(target)
+	newData := reflect.New(target).Elem()
+	newDataBasicAddr := newData.UnsafeAddr()
+	result = nil
+	for _, singleIndex := range index {
+		singleNewData := newData.FieldByIndex(singleIndex)
+		singleNewDataAddr := singleNewData.UnsafeAddr()
+		result = append(result, singleNewDataAddr-newDataBasicAddr)
+	}
 
 	iocMutex.Lock()
 	iocType[target] = result
@@ -52,8 +61,9 @@ func injectIoc(target reflect.Value, basic *Basic) {
 		target = target.Elem()
 	}
 	typeIndex := getIocTypeIndex(target.Type())
-	basicValue := reflect.ValueOf(basic)
+	targetAddr := target.UnsafeAddr()
 	for _, singleIndex := range typeIndex {
-		target.FieldByIndex(singleIndex).Set(basicValue)
+		var pointer **Basic = (**Basic)(unsafe.Pointer(targetAddr + singleIndex))
+		*pointer = basic
 	}
 }
