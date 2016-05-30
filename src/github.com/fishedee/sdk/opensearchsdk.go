@@ -102,7 +102,6 @@ func (this *OpenSearchSdk) getSignature(method string, query map[string]string) 
 		stringToSignArray = append(stringToSignArray, singleQueryKeyEncode+"="+singleQueryValueEncode)
 	}
 	stringToSign := strings.Join(stringToSignArray, "&")
-	fmt.Println(stringToSign)
 
 	//字符串签名
 	stringToSignEncode, err := this.encodeUrl(stringToSign)
@@ -140,7 +139,6 @@ func (this *OpenSearchSdk) api(method string, url string, query map[string]strin
 	if err != nil {
 		return err
 	}
-	fmt.Println(newQuery)
 
 	//调用
 	var result struct {
