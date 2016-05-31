@@ -143,6 +143,9 @@ func initBasic(request *http.Request, response http.ResponseWriter, t *testing.T
 }
 
 func destroyBasic() {
+	if globalBasic.Log != nil {
+		globalBasic.Log.Close()
+	}
 	if globalBasic.Timer != nil {
 		globalBasic.Timer.Close()
 	}

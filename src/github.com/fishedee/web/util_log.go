@@ -23,6 +23,7 @@ type Log interface {
 	Notice(format string, v ...interface{})
 	Informational(format string, v ...interface{})
 	Debug(format string, v ...interface{})
+	Close()
 }
 
 type LogConfig struct {
@@ -65,7 +66,7 @@ func getLevel(in string) int {
 
 func NewLog(config LogConfig) (Log, error) {
 	if config.Driver == "" {
-		return nil, nil
+		config.Driver = "console"
 	}
 	if config.Level == 0 {
 		config.Level = logs.LevelDebug
@@ -79,6 +80,7 @@ func NewLog(config LogConfig) (Log, error) {
 	if err != nil {
 		return nil, err
 	}
+	Log = Log.Async()
 	return &logImplement{
 		BeeLogger:   Log,
 		prettyPrint: config.PrettyPrint,
@@ -197,4 +199,8 @@ func (this *logImplement) Info(format string, v ...interface{}) {
 
 func (this *logImplement) Trace(format string, v ...interface{}) {
 	this.BeeLogger.Trace(this.getLogFormat(format, v))
+}
+
+func (this *logImplement) Close() {
+	this.BeeLogger.Close()
 }

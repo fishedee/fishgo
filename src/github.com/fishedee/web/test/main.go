@@ -43,7 +43,7 @@ func (this *testController) DbTask_Json() interface{} {
 	result.Count = int(count)
 
 	data := []User{}
-	err = db.OrderBy("userId desc").Find(&data)
+	err = db.Find(&data)
 	if err != nil {
 		panic(err)
 	}
