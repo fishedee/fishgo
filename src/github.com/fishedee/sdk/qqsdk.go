@@ -2,6 +2,7 @@ package sdk
 
 import (
 	"fmt"
+
 	. "github.com/fishedee/encoding"
 	. "github.com/fishedee/util"
 )
@@ -34,6 +35,9 @@ type QqSdkOauthUserInfo struct {
 	YellowVipLevel  string `json:"yellow_vip_level"`
 	Level           string `json:"level"`
 	IsYellowYearVip string `json:"is_yellow_year_vip"`
+	Year            string `json:"year"`
+	Province        string `json:"province"`
+	City            string `json:"city"`
 }
 
 type QqSdkError struct {
