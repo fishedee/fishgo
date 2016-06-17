@@ -106,7 +106,7 @@ func (rs *RedisSessionStore) SessionRelease(w http.ResponseWriter) {
 
 	b, err := encoding.EncodePhp(rs.values)
 	if err != nil {
-		return
+		panic(err)
 	}
 
 	c.Do("SETEX", rs.sid, rs.maxlifetime, string(b))

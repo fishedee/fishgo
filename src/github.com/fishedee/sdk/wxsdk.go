@@ -8,6 +8,7 @@ import (
 	"io"
 	"math/rand"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -429,6 +430,32 @@ func (this *WxSdk) DelMenu(accessToken string) error {
 	return nil
 }
 
+//手动拼接参数
+func (this *WxSdk) getOauthUrlQuery(query map[string]string) string {
+	queryString := ""
+
+	sorted_keys := make([]string, 0)
+	for k, _ := range query {
+		sorted_keys = append(sorted_keys, k)
+	}
+
+	//对key排序
+	sort.Strings(sorted_keys)
+
+	for _, key := range sorted_keys {
+		keyEncode, err := EncodeUrl(key)
+		if err != nil {
+			continue
+		}
+		dataEncode, err := EncodeUrl(query[key])
+		if err != nil {
+			continue
+		}
+		queryString += keyEncode + "=" + dataEncode + "&"
+	}
+	return strings.Trim(queryString, "&")
+}
+
 //OAuth接口
 func (this *WxSdk) GetOauthUrl(callback string, state string, scope string) (string, error) {
 	query := map[string]string{
@@ -438,10 +465,7 @@ func (this *WxSdk) GetOauthUrl(callback string, state string, scope string) (str
 		"scope":         scope,
 		"state":         state,
 	}
-	queryStr, err := EncodeUrlQuery(query)
-	if err != nil {
-		return "", err
-	}
+	queryStr := this.getOauthUrlQuery(query)
 	return "https://open.weixin.qq.com/connect/oauth2/authorize?" + string(queryStr), nil
 }
 
@@ -453,10 +477,7 @@ func (this *WxSdk) GetPcOauthUrl(callback string, state string, scope string) (s
 		"scope":         scope,
 		"state":         state,
 	}
-	queryStr, err := EncodeUrlQuery(query)
-	if err != nil {
-		return "", err
-	}
+	queryStr := this.getOauthUrlQuery(query)
 	return "https://open.weixin.qq.com/connect/qrconnect?" + string(queryStr), nil
 }
 
