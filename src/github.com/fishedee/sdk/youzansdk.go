@@ -69,6 +69,143 @@ type YouzanSdkTradeSoldRequest struct {
 	BuyWay         string    `url:"buy_way,omitempty"`
 }
 
+// write by lwz 2016/06/16
+// 针对有赞新开放接口
+// add Start
+type YouzanSdkTradeSoldGetForOuterRequest struct {
+	UseHasNext   bool      `url:"use_has_next,omitempty"`
+	Type         string    `url:"type,omitempty"`
+	Status       string    `url:"status,omitempty"`
+	StartUpdate  time.Time `url:"start_update,omitempty"`
+	StartCreated time.Time `url:"start_created,omitempty"`
+	PageSize     int       `url:"page_size,omitempty"`
+	PageNo       int       `url:"page_no,omitempty"`
+	OuterUserId  string    `url:"outer_user_id"`
+	OuterType    string    `url:"outer_type"`
+	Fields       string    `url:"fields,omitempty"`
+	EndUpdate    time.Time `url:"end_update,omitempty"`
+	EndCreated   time.Time `url:"end_created,omitempty"`
+}
+
+// 订单
+type YouzanSdkTradeOuterResponse struct {
+	Trade YouzanSdkTradeOuterDetail `json:"trade"`
+}
+
+// 订单详细参数信息
+type YouzanSdkTradeOuterDetail struct {
+	Num              int                         `json:"num"`
+	GoodsKind        int                         `json:"goods_kind"`
+	NumIid           int                         `json:"num_iid"`
+	Price            float64                     `json:"price"`
+	PicPath          string                      `json:"pic_path"`
+	PicThumbPath     string                      `json:"pic_thumb_path"`
+	Title            string                      `json:"title"`
+	Type             string                      `json:"type"`
+	DiscountFee      float64                     `json:"discount_fee"`
+	Status           string                      `json:"status"`
+	StatusStr        string                      `json:"status_str"`
+	RefundState      string                      `json:"refund_state"`
+	ShippingType     string                      `json:"shipping_type"`
+	PostFee          float64                     `json:"post_fee"`
+	TotalFee         float64                     `json:"total_fee"`
+	RefundedFee      float64                     `json:"refunded_fee"`
+	Payment          float64                     `json:"payment"`
+	Created          time.Time                   `json:"created"`
+	UpdateTime       time.Time                   `json:"update_time"`
+	PayTime          time.Time                   `json:"pay_time"`
+	PayType          string                      `json:"pay_type"`
+	ConsignTime      time.Time                   `json:"consign_time"`
+	SignTime         time.Time                   `json:"sign_time"`
+	BuyerArea        string                      `json:"buyer_area"`
+	SellerFlag       int                         `json:"seller_flag"`
+	BuyerMessage     string                      `json:"buyer_message"`
+	Orders           []YouzanSdkTradeOrderOuter  `json:"orders"`
+	FetchDetail      []YouzanSdkTradeFetch       `json:"fetch_detail"`
+	CouponDetails    []YouzanSdkUmpTradeCoupon   `json:"coupon_details"`
+	PromotionDetails []YouzanSdkTradePromotion   `json:"promotion_details"`
+	AdjustFee        float64                     `json:"adjust_fee"`
+	SubTrades        []YouzanSdkTradeOuterDetail `json:"sub_trades"`
+	WeixinUserId     string                      `json:"weixin_user_id"`
+	ButtonList       []YouzanSdkTradeButtonOuter `json:"button_list"`
+	FeedBackNum      int                         `json:"feedback_num"`
+	TradeMemo        string                      `json:"trade_memo"`
+	FansInfo         YouzanSdkTradeFansOuter     `json:"fans_info"`
+	BuyWayStr        string                      `json:"buy_way_str"`
+	PfBuyWayStr      string                      `json:"pf_buy_way_str“`
+	SendNum          int                         `json:"send_num"`
+	UserId           string                      `json:"user_id"`
+	Kind             int                         `json:"kind"`
+	RelationType     string                      `json:"relation_type"`
+	Relations        []string                    `json:"relations"`
+	OutTradeNo       []string                    `json:"out_trade_no"`
+	GroupNo          string                      `json:"group_no"`
+	OuterUserId      int                         `json:"outer_user_id"`
+	BuyerNick        string                      `json:"buyer_nick"`
+	Tid              string                      `json:"tid"`
+	BuyerType        int                         `json:"buyer_type"`
+	BuyerId          string                      `json:"buyer_id"`
+	ReceiverCity     string                      `json:"receiver_city"`
+	ReceiverDistrict string                      `json:"receiver_district"`
+	ReceiverName     string                      `json:"receiver_name"`
+	ReceiverState    string                      `json:"receiver_state"`
+	ReceiverAddress  string                      `json:"receiver_address"`
+	ReceiverZip      string                      `json:"receiver_zip"`
+	ReceiverMobile   string                      `json:"receiver_mobile"`
+	Feedback         string                      `json:"feedback"`
+	OuterTid         string                      `json:"outer_tid"`
+}
+
+// Order参数信息
+type YouzanSdkTradeOrderOuter struct {
+	Oid                   int                            `json:"oid"`
+	OuterSkuId            string                         `json:"outer_sku_id"`
+	OuterItemId           string                         `json:"outer_item_id"`
+	Title                 string                         `json:"title"`
+	SellerNick            string                         `json:"seller_nick"`
+	FenxiaoPrice          float64                        `json:"fenxiao_price"`
+	FenxiaoPayment        float64                        `json:"fenxiao_payment"`
+	Price                 float64                        `json:"price"`
+	TotalFee              float64                        `json:"total_fee"`
+	Payment               float64                        `json:"payment"`
+	DiscountFee           float64                        `json:"discount_fee"`
+	SkuId                 int                            `json:"sku_id"`
+	SkuUniqueCode         string                         `json:"sku_unique_code"`
+	SkuPropertiesName     string                         `json:"sku_properties_name"`
+	PicPath               string                         `json:"pic_path"`
+	PicThumbPath          string                         `json:"pic_thumb_path"`
+	ItemType              int                            `json:"item_type"`
+	BuyerMessages         []YouzanSdkTradeBuyerMessage   `json:"buyer_messages"`
+	OrderPromotionDetails []YouzanSdkTradeOrderPromotion `json:"order_promotion_details"`
+	StateStr              string                         `json:"state_str"`
+	AllowSend             int                            `json:"allow_send"`
+	IsSend                int                            `json:"is_send"`
+	ItemRefundState       string                         `json:"item_refund_state"`
+	Num                   int                            `json:"num"`
+	NumIid                int                            `json:"num_iid"`
+}
+
+// YouzanSdkTradeButtonOuter参数信息
+type YouzanSdkTradeButtonOuter struct {
+	ToolIcon      string    `json:"tool_icon"`
+	ToolTitle     string    `json:"tool_title"`
+	ToolValue     string    `json:"tool_value"`
+	ToolType      string    `json:"tool_type"`
+	ToolParameter string    `json:"tool_parameter"`
+	NewSign       string    `json:"new_sign"`
+	CreateTime    time.Time `json:"create_time"`
+}
+
+// YouzanSdkTradeFansOuter参数信息
+type YouzanSdkTradeFansOuter struct {
+	FansNickname string `json:"fans_nickname"`
+	FansId       string `json:"fans_id"`
+	BuyerId      string `json:"buyer_id"`
+	FansType     string `json:"fans_type"`
+}
+
+// add End
+
 type YouzanSdkTradeBuyerMessage struct {
 	Title   string `json:"title"`
 	Content string `json:"content"`
@@ -311,6 +448,18 @@ func (this *YouzanSdk) GetTradeSold(input YouzanSdkTradeSoldRequest) (YouzanSdkT
 	if err != nil {
 		return YouzanSdkTradeSoldResponse{}, err
 	}
+	return result, nil
+}
+
+// write by lwz 2016/0615
+//根据第三方用户userId获取交易订单列表
+func (this *YouzanSdk) GetTradeSoldFoRouter(input YouzanSdkTradeSoldGetForOuterRequest) (YouzanSdkTradeSoldResponse, error) {
+	var result YouzanSdkTradeSoldResponse
+	err := this.api("kdt.trades.sold.getforouter", input, &result)
+	if err != nil {
+		return YouzanSdkTradeSoldResponse{}, err
+	}
+
 	return result, nil
 }
 
