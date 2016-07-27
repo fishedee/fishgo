@@ -37,6 +37,6 @@ func (stack *Stack) Len() int {
 	return stack.list.Len()
 }
 
-func (stack *Stack) Empty() bool {
+func (stack *Stack) IsEmpty() bool {
 	return stack.list.Len() == 0
 }
