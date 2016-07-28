@@ -30,8 +30,13 @@ func NewAliasMethod(probabilities []float64) *AliasMethod {
 func (this *AliasMethod) initialization() {
 	sum := 0.0
 	for _, single := range this.probabilities {
+		if single < 0 {
+			panic(errors.New("传入概率不能小于0,你输入了:" + fmt.Sprintf("%+v", single)))
+		}
 		sum += single
 	}
+	sumInt := int(sum * 10000)
+	sum = float64(sumInt) / 10000
 	if sum != 1.0 {
 		panic(errors.New("传入概率数组之和不为1～" + fmt.Sprintf("%+v", this.probabilities)))
 	}
@@ -48,6 +53,8 @@ func (this *AliasMethod) initialization() {
 
 	// 平均概率
 	average := float64(1.0) / float64(count)
+	averageInt := int(average * 10000)
+	average = float64(averageInt) / 10000
 
 	small := NewStack()
 	large := NewStack()
@@ -64,6 +71,13 @@ func (this *AliasMethod) initialization() {
 
 	// 每次取出一个小概率数
 	for {
+
+		for e := small.list.Front(); e != nil; e = e.Next() {
+		}
+
+		for e := large.list.Front(); e != nil; e = e.Next() {
+		}
+
 		if small.Len() <= 0 || large.Len() <= 0 {
 			break
 		}
@@ -73,21 +87,17 @@ func (this *AliasMethod) initialization() {
 
 		// 大概率下标
 		more := large.Pop().(int)
-
 		// 每个概率值翻count倍
 		x := this.probabilities[less] * 10000
 		y := int(x) * count
 		this.prob[less] = float64(y) / 10000
-
 		// 大概率数移动部分将小概率补为1,纪录小概率数被谁补偿
 		this.alias[less] = more
-
 		// 补偿后
 		a := this.probabilities[more] * 10000
 		b := this.probabilities[less] * 10000
 		c := average * 10000
 		this.probabilities[more] = (a + b - c) / 10000
-
 		// 判断剩余部分大小
 		if this.probabilities[more] >= average {
 			large.Push(more)
