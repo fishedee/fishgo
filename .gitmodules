@@ -154,3 +154,6 @@
 [submodule "src/github.com/facebookgo/stats"]
 	path = src/github.com/facebookgo/stats
 	url = git@github.com:facebookgo/stats.git
+[submodule "src/github.com/shopspring/decimal"]
+	path = src/github.com/shopspring/decimal
+	url = git@github.com:shopspring/decimal.git

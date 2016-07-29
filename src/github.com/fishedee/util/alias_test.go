@@ -46,7 +46,7 @@ func TestAlias(t *testing.T) {
 		[]float64{1, 1, 0.55, 0.3, 0.95},
 		[]float64{1, 0.6, 0.55, 0.25, 0.8},
 		[]float64{0.66, 1, 0.6801},
-		[]float64{0, 0, 0.08, 1, 0.3592, 0, 0.88, 0},
+		[]float64{0, 0, 0.08, 1, 0.36, 0, 0.88, 0},
 	}
 	aliasResult := [][]int{
 		[]int{-1, 0, 4, 4, 1},
@@ -107,4 +107,10 @@ func TestAlias(t *testing.T) {
 		})
 	}
 
+}
+
+func TestInit(t *testing.T) {
+	alias := &AliasMethod{}
+	num := alias.Rand()
+	assertAliasEqual(t, num, -1)
 }

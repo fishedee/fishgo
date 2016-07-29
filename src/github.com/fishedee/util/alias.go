@@ -11,6 +11,8 @@ import (
 	"fmt"
 	"math/rand"
 	"time"
+
+	"github.com/shopspring/decimal"
 )
 
 type AliasMethod struct {
@@ -28,16 +30,20 @@ func NewAliasMethod(probabilities []float64) *AliasMethod {
 }
 
 func (this *AliasMethod) initialization() {
-	sum := 0.0
+	// 设置浮点数的精度
+	decimal.DivisionPrecision = 4
+
+	// 输入数据校验
+	sum := decimal.NewFromFloat(0.0)
 	for _, single := range this.probabilities {
 		if single < 0 {
 			panic(errors.New("传入概率不能小于0,你输入了:" + fmt.Sprintf("%+v", single)))
 		}
-		sum += single
+		singleDecimal := decimal.NewFromFloat(single)
+		sum = sum.Add(singleDecimal)
 	}
-	sumInt := int(sum * 10000)
-	sum = float64(sumInt) / 10000
-	if sum != 1.0 {
+	oneFloat := decimal.NewFromFloat(1.0)
+	if !sum.Equals(oneFloat) {
 		panic(errors.New("传入概率数组之和不为1～" + fmt.Sprintf("%+v", this.probabilities)))
 	}
 	count := len(this.probabilities)
@@ -52,9 +58,9 @@ func (this *AliasMethod) initialization() {
 	}
 
 	// 平均概率
-	average := float64(1.0) / float64(count)
-	averageInt := int(average * 10000)
-	average = float64(averageInt) / 10000
+	countFloat := decimal.NewFromFloat(float64(count))
+	averageFloat := oneFloat.Div(countFloat)
+	average, _ := averageFloat.Float64()
 
 	small := NewStack()
 	large := NewStack()
@@ -69,7 +75,7 @@ func (this *AliasMethod) initialization() {
 		}
 	}
 
-	// 每次取出一个小概率数
+	// 每次处理一个小概率数
 	for {
 
 		if small.Len() <= 0 || large.Len() <= 0 {
@@ -82,19 +88,20 @@ func (this *AliasMethod) initialization() {
 		// 大概率下标
 		more := large.Pop().(int)
 
-		// 每个概率值翻count倍
-		x := this.probabilities[less] * 10000
-		y := int(x) * count
-		this.prob[less] = float64(y) / 10000
+		probabilitiesLessFloat := decimal.NewFromFloat(this.probabilities[less])
+		probabilitiesMoreFloat := decimal.NewFromFloat(this.probabilities[more])
 
-		// 大概率数移动部分将小概率补为1,纪录小概率数被谁补偿
+		// 概率值翻count倍--原色数组
+		lessFloat := probabilitiesLessFloat.Mul(countFloat)
+		this.prob[less], _ = lessFloat.Float64()
+
+		// 大概率数移动部分将小概率补为1,纪录小概率数被谁补偿--别名数组
 		this.alias[less] = more
 
 		// 补偿后
-		a := this.probabilities[more] * 10000
-		b := this.probabilities[less] * 10000
-		c := average * 10000
-		this.probabilities[more] = (a + b - c) / 10000
+		leftFloat := probabilitiesMoreFloat.Add(probabilitiesLessFloat).Sub(averageFloat)
+		this.probabilities[more], _ = leftFloat.Float64()
+
 		// 判断剩余部分大小
 
 		if this.probabilities[more] >= average {
