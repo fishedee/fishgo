@@ -25,6 +25,7 @@ func main() {
 		{"version", command.Version},
 		{"run", command.Run},
 		{"test", command.Test},
+		{"router", command.Router},
 	}
 
 	var singleCommandHandler commandHandlerType

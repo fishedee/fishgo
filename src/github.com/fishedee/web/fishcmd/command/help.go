@@ -9,12 +9,13 @@ Usage:
 	fishcmd command [arguments]
 
 The commands are:
-	
+
 	clean		Clean a go application
 	run		Run a go application
 		--watch	AutoRun a go application when dictory file change
 	test 		Test a go application
 		--watch	AutoTest a go application when dictory file change
+	router		Automatically generate router file
 	version		FishCmd version
 	help		FishCmd help
 

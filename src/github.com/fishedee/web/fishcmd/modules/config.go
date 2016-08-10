@@ -91,6 +91,10 @@ func GetAppName() string {
 	return appName
 }
 
+func GetAppDir() string {
+	return goPathSrc + "/" + appName
+}
+
 func GetAppAllDirectory() []string {
 	return appAllDirectory
 }

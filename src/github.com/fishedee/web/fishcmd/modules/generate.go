@@ -1,6 +1,11 @@
 package modules
 
+import (
+	"fmt"
+)
+
 func GeneratePackage(packageName string) error {
-	_, err := runCmdSync("go", "generate", packageName)
+	cmdLog, err := runCmdSync("go", "generate", packageName)
+	fmt.Printf("%v", string(cmdLog))
 	return err
 }
