@@ -1,18 +1,11 @@
 package language
 
 import (
-	"fmt"
+	. "github.com/fishedee/assert"
 	"reflect"
 	"testing"
 	"time"
 )
-
-func assertTypeEqual(t *testing.T, left interface{}, right interface{}) {
-	isEqual := reflect.DeepEqual(left, right)
-	if isEqual == false {
-		t.Error(fmt.Sprintf("%#v != %#v", left, right))
-	}
-}
 
 func TestIsEmptyValue(t *testing.T) {
 	testCase := []struct {
@@ -34,6 +27,6 @@ func TestIsEmptyValue(t *testing.T) {
 	for _, singleTestCase := range testCase {
 		dataValue := reflect.ValueOf(singleTestCase.data)
 		result := IsEmptyValue(dataValue)
-		assertTypeEqual(t, result, singleTestCase.isEmpty)
+		AssertEqual(t, result, singleTestCase.isEmpty)
 	}
 }

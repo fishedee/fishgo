@@ -1,6 +1,7 @@
 package util
 
 import (
+	. "github.com/fishedee/assert"
 	"testing"
 	"time"
 )
@@ -40,20 +41,20 @@ func testFunc(t *testing.T, origin []interface{}) {
 	//Push And Peak
 	for _, v := range origin {
 		list.Push(v)
-		assertAliasEqual(t, list.Peak(), v)
+		AssertEqual(t, list.Peak(), v)
 	}
 
 	getNum := 0
 	for e := list.list.Front(); e != nil; e = e.Next() {
-		assertAliasEqual(t, e.Value, origin[getNum])
+		AssertEqual(t, e.Value, origin[getNum])
 		getNum++
 	}
 
 	//Len
-	assertAliasEqual(t, list.Len(), len(origin))
+	AssertEqual(t, list.Len(), len(origin))
 
 	//IsEmpty false
-	assertAliasEqual(t, list.IsEmpty(), false)
+	AssertEqual(t, list.IsEmpty(), false)
 
 	//Pop
 	popNum := len(origin) - 1
@@ -62,10 +63,10 @@ func testFunc(t *testing.T, origin []interface{}) {
 		if data == nil {
 			break
 		}
-		assertAliasEqual(t, data, origin[popNum])
+		AssertEqual(t, data, origin[popNum])
 		popNum--
 	}
 
 	//IsEmpty true
-	assertAliasEqual(t, list.IsEmpty(), true)
+	AssertEqual(t, list.IsEmpty(), true)
 }

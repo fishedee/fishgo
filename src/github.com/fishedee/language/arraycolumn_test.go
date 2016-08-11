@@ -1,17 +1,10 @@
 package language
 
 import (
-	// "fmt"
-	"reflect"
+	. "github.com/fishedee/assert"
 	"testing"
 	"time"
 )
-
-func assertArrayColumnEqual(t *testing.T, left interface{}, right interface{}, index int) {
-	if reflect.DeepEqual(left, right) == false {
-		t.Errorf("case :%v ,%+v != %+v", index, left, right)
-	}
-}
 
 func TestKSort(t *testing.T) {
 	//测试类型 支持bool,int,float,string和time.Time
@@ -151,7 +144,7 @@ func TestKSort(t *testing.T) {
 	for singleTestCaseIndex, singleTestCase := range testCase {
 
 		result := ArrayColumnSort(singleTestCase.origin, singleTestCase.sortName)
-		assertArrayColumnEqual(t, result, singleTestCase.target, singleTestCaseIndex)
+		AssertEqual(t, result, singleTestCase.target, singleTestCaseIndex)
 
 	}
 
@@ -330,7 +323,7 @@ func TestArrayColumnUnique(t *testing.T) {
 	for singleTestCaseIndex, singleTestCase := range testCase {
 
 		result := ArrayColumnUnique(singleTestCase.origin, singleTestCase.uniqueName)
-		assertArrayColumnEqual(t, result, singleTestCase.target, singleTestCaseIndex)
+		AssertEqual(t, result, singleTestCase.target, singleTestCaseIndex)
 
 	}
 
@@ -472,7 +465,7 @@ func TestArrayColumnKey(t *testing.T) {
 	for singleTestCaseIndex, singleTestCase := range testCase {
 
 		result := ArrayColumnKey(singleTestCase.origin, singleTestCase.keyName)
-		assertArrayColumnEqual(t, result, singleTestCase.target, singleTestCaseIndex)
+		AssertEqual(t, result, singleTestCase.target, singleTestCaseIndex)
 
 	}
 
@@ -655,7 +648,7 @@ func TestArrayColumnMap(t *testing.T) {
 	for singleTestCaseIndex, singleTestCase := range testCase {
 
 		result := ArrayColumnMap(singleTestCase.origin, singleTestCase.mapName)
-		assertArrayColumnEqual(t, result, singleTestCase.target, singleTestCaseIndex)
+		AssertEqual(t, result, singleTestCase.target, singleTestCaseIndex)
 
 	}
 

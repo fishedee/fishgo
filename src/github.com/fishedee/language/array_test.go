@@ -1,17 +1,10 @@
 package language
 
 import (
-	"fmt"
+	. "github.com/fishedee/assert"
 	"reflect"
 	"testing"
 )
-
-func AssertArrayEqual(t *testing.T, testCaseIndex int, left interface{}, right interface{}) {
-	isEqual := reflect.DeepEqual(left, right)
-	if isEqual == false {
-		t.Error(fmt.Sprintf("case: %v,%#v != %#v", testCaseIndex, left, right))
-	}
-}
 
 func TestArrayKeyAndValue(t *testing.T) {
 	testCase := []struct {
@@ -29,8 +22,8 @@ func TestArrayKeyAndValue(t *testing.T) {
 
 	for singleTestCaseIndex, singleTestCase := range testCase {
 		key, value := ArrayKeyAndValue(singleTestCase.origin)
-		AssertArrayEqual(t, singleTestCaseIndex, ArraySort(key), ArraySort(singleTestCase.key))
-		AssertArrayEqual(t, singleTestCaseIndex, ArraySort(value), ArraySort(singleTestCase.value))
+		AssertEqual(t, ArraySort(key), ArraySort(singleTestCase.key), singleTestCaseIndex)
+		AssertEqual(t, ArraySort(value), ArraySort(singleTestCase.value), singleTestCaseIndex)
 	}
 }
 
@@ -47,7 +40,7 @@ func TestArrayReverse(t *testing.T) {
 
 	for singleTestCaseIndex, singleTestCase := range testCase {
 		target := ArrayReverse(singleTestCase.origin)
-		AssertArrayEqual(t, singleTestCaseIndex, target, singleTestCase.target)
+		AssertEqual(t, target, singleTestCase.target, singleTestCaseIndex)
 	}
 }
 
@@ -68,13 +61,13 @@ func TestArrayIn(t *testing.T) {
 		originArray := reflect.ValueOf(singleTestCase.origin)
 		for i := 0; i != originArray.Len(); i++ {
 			index := ArrayIn(originArray.Interface(), originArray.Index(i).Interface())
-			AssertArrayEqual(t, singleTestCaseIndex, index, i)
+			AssertEqual(t, index, i, singleTestCaseIndex)
 		}
 
 		noOriginArray := reflect.ValueOf(singleTestCase.noOrigin)
 		for i := 0; i != noOriginArray.Len(); i++ {
 			index := ArrayIn(originArray.Interface(), noOriginArray.Index(i))
-			AssertArrayEqual(t, singleTestCaseIndex, index, -1)
+			AssertEqual(t, index, -1, singleTestCaseIndex)
 		}
 	}
 }
@@ -92,7 +85,7 @@ func TestArrayUnique(t *testing.T) {
 
 	for singleTestCaseIndex, singleTestCase := range testCase {
 		result := ArrayUnique(singleTestCase.origin)
-		AssertArrayEqual(t, singleTestCaseIndex, result, singleTestCase.target)
+		AssertEqual(t, result, singleTestCase.target, singleTestCaseIndex)
 	}
 }
 
@@ -110,7 +103,7 @@ func TestArrayDiff(t *testing.T) {
 
 	for singleTestCaseIndex, singleTestCase := range testCase {
 		result := ArrayDiff(singleTestCase.origin, singleTestCase.origin2[0], singleTestCase.origin2[1:]...)
-		AssertArrayEqual(t, singleTestCaseIndex, result, singleTestCase.target)
+		AssertEqual(t, result, singleTestCase.target, singleTestCaseIndex)
 	}
 }
 
@@ -128,7 +121,7 @@ func TestArrayIntersect(t *testing.T) {
 
 	for singleTestCaseIndex, singleTestCase := range testCase {
 		result := ArrayIntersect(singleTestCase.origin, singleTestCase.origin2[0], singleTestCase.origin2[1:]...)
-		AssertArrayEqual(t, singleTestCaseIndex, result, singleTestCase.target)
+		AssertEqual(t, result, singleTestCase.target, singleTestCaseIndex)
 	}
 }
 
@@ -146,7 +139,7 @@ func TestArrayMerge(t *testing.T) {
 
 	for singleTestCaseIndex, singleTestCase := range testCase {
 		result := ArrayMerge(singleTestCase.origin, singleTestCase.origin2[0], singleTestCase.origin2[1:]...)
-		AssertArrayEqual(t, singleTestCaseIndex, result, singleTestCase.target)
+		AssertEqual(t, result, singleTestCase.target, singleTestCaseIndex)
 	}
 }
 
@@ -169,7 +162,7 @@ func TestArraySort(t *testing.T) {
 
 	for singleTestCaseIndex, singleTestCase := range testCase {
 		result := ArraySort(singleTestCase.origin)
-		AssertArrayEqual(t, singleTestCaseIndex, result, singleTestCase.target)
+		AssertEqual(t, result, singleTestCase.target, singleTestCaseIndex)
 	}
 }
 
@@ -192,7 +185,7 @@ func TestArrayShuffle(t *testing.T) {
 		result := ArrayShuffle(singleTestCase.origin)
 		leftResult := ArraySort(singleTestCase.origin)
 		rightResult := ArraySort(result)
-		AssertArrayEqual(t, singleTestCaseIndex, leftResult, rightResult)
+		AssertEqual(t, leftResult, rightResult, singleTestCaseIndex)
 	}
 }
 
@@ -225,6 +218,6 @@ func TestArraySlice(t *testing.T) {
 
 	for singleTestCaseIndex, singleTestCase := range testCase {
 		result := ArraySlice(singleTestCase.origin, singleTestCase.begin, singleTestCase.end...)
-		AssertArrayEqual(t, singleTestCaseIndex, singleTestCase.target, result)
+		AssertEqual(t, singleTestCase.target, result, singleTestCaseIndex)
 	}
 }

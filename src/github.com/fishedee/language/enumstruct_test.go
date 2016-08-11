@@ -1,17 +1,9 @@
 package language
 
 import (
-	"fmt"
-	"reflect"
+	. "github.com/fishedee/assert"
 	"testing"
 )
-
-func AssertEnumStructEqual(t *testing.T, left interface{}, right interface{}) {
-	isEqual := reflect.DeepEqual(left, right)
-	if isEqual == false {
-		t.Error(fmt.Sprintf("%#v != %#v", left, right))
-	}
-}
 
 func getEnumStructError(handler func()) (lastErr string) {
 	defer func() {
@@ -35,28 +27,28 @@ func TestEnumStruct(t *testing.T) {
 	InitEnumStruct(&testCase)
 
 	//断言基本枚举值
-	AssertEnumStructEqual(t, testCase.ENUM1, 1)
-	AssertEnumStructEqual(t, testCase.ENUM2, 2)
-	AssertEnumStructEqual(t, testCase.ENUM3, 3)
+	AssertEqual(t, testCase.ENUM1, 1)
+	AssertEqual(t, testCase.ENUM2, 2)
+	AssertEqual(t, testCase.ENUM3, 3)
 
 	//断言函数
-	AssertEnumStructEqual(t, testCase.Names(), map[string]string{
+	AssertEqual(t, testCase.Names(), map[string]string{
 		"1": "枚举1",
 		"2": "枚举2",
 		"3": "枚举3",
 	})
-	AssertEnumStructEqual(t, testCase.Entrys(), map[int]string{
+	AssertEqual(t, testCase.Entrys(), map[int]string{
 		1: "枚举1",
 		2: "枚举2",
 		3: "枚举3",
 	})
-	AssertEnumStructEqual(t, testCase.Datas(), []EnumData{
+	AssertEqual(t, testCase.Datas(), []EnumData{
 		{1, "枚举1"},
 		{2, "枚举2"},
 		{3, "枚举3"},
 	})
-	AssertEnumStructEqual(t, ArraySort(testCase.Keys()), []int{1, 2, 3})
-	AssertEnumStructEqual(t, ArraySort(testCase.Values()), []string{"枚举1", "枚举2", "枚举3"})
+	AssertEqual(t, ArraySort(testCase.Keys()), []int{1, 2, 3})
+	AssertEqual(t, ArraySort(testCase.Values()), []string{"枚举1", "枚举2", "枚举3"})
 
 	//错误的enum
 	var err string
@@ -70,7 +62,7 @@ func TestEnumStruct(t *testing.T) {
 	err = getEnumStructError(func() {
 		InitEnumStruct(&testCaseErr1)
 	})
-	AssertEnumStructEqual(t, err[0:len(realErr)], realErr)
+	AssertEqual(t, err[0:len(realErr)], realErr)
 
 	var testCaseErr2 struct {
 		EnumStruct
@@ -81,7 +73,7 @@ func TestEnumStruct(t *testing.T) {
 	err = getEnumStructError(func() {
 		InitEnumStruct(&testCaseErr2)
 	})
-	AssertEnumStructEqual(t, err[0:len(realErr)], realErr)
+	AssertEqual(t, err[0:len(realErr)], realErr)
 
 	var testCaseErr3 struct {
 		EnumStruct
@@ -92,7 +84,7 @@ func TestEnumStruct(t *testing.T) {
 	err = getEnumStructError(func() {
 		InitEnumStruct(&testCaseErr3)
 	})
-	AssertEnumStructEqual(t, err[0:len(realErr)], realErr)
+	AssertEqual(t, err[0:len(realErr)], realErr)
 
 	var testCaseErr4 struct {
 		EnumStruct
@@ -103,7 +95,7 @@ func TestEnumStruct(t *testing.T) {
 	err = getEnumStructError(func() {
 		InitEnumStruct(&testCaseErr4)
 	})
-	AssertEnumStructEqual(t, err[0:len(realErr)], realErr)
+	AssertEqual(t, err[0:len(realErr)], realErr)
 }
 
 func TestEnumStructString(t *testing.T) {
@@ -117,28 +109,28 @@ func TestEnumStructString(t *testing.T) {
 	InitEnumStructString(&testCase)
 
 	//断言基本枚举值
-	AssertEnumStructEqual(t, testCase.ENUM1, "/content/del1")
-	AssertEnumStructEqual(t, testCase.ENUM2, "/content/del2")
-	AssertEnumStructEqual(t, testCase.ENUM3, "/content/del3")
+	AssertEqual(t, testCase.ENUM1, "/content/del1")
+	AssertEqual(t, testCase.ENUM2, "/content/del2")
+	AssertEqual(t, testCase.ENUM3, "/content/del3")
 
 	//断言函数
-	AssertEnumStructEqual(t, testCase.Names(), map[string]string{
+	AssertEqual(t, testCase.Names(), map[string]string{
 		"/content/del1": "枚举1",
 		"/content/del2": "枚举2",
 		"/content/del3": "枚举3",
 	})
-	AssertEnumStructEqual(t, testCase.Entrys(), map[string]string{
+	AssertEqual(t, testCase.Entrys(), map[string]string{
 		"/content/del1": "枚举1",
 		"/content/del2": "枚举2",
 		"/content/del3": "枚举3",
 	})
-	AssertEnumStructEqual(t, testCase.Datas(), []EnumDataString{
+	AssertEqual(t, testCase.Datas(), []EnumDataString{
 		{"/content/del1", "枚举1"},
 		{"/content/del2", "枚举2"},
 		{"/content/del3", "枚举3"},
 	})
-	AssertEnumStructEqual(t, ArraySort(testCase.Keys()), []string{"/content/del1", "/content/del2", "/content/del3"})
-	AssertEnumStructEqual(t, ArraySort(testCase.Values()), []string{"枚举1", "枚举2", "枚举3"})
+	AssertEqual(t, ArraySort(testCase.Keys()), []string{"/content/del1", "/content/del2", "/content/del3"})
+	AssertEqual(t, ArraySort(testCase.Values()), []string{"枚举1", "枚举2", "枚举3"})
 
 	//错误的enum
 	var err string
@@ -152,7 +144,7 @@ func TestEnumStructString(t *testing.T) {
 	err = getEnumStructError(func() {
 		InitEnumStructString(&testCaseErr1)
 	})
-	AssertEnumStructEqual(t, err[0:len(realErr)], realErr)
+	AssertEqual(t, err[0:len(realErr)], realErr)
 
 	var testCaseErr2 struct {
 		EnumStructString
@@ -163,7 +155,7 @@ func TestEnumStructString(t *testing.T) {
 	err = getEnumStructError(func() {
 		InitEnumStructString(&testCaseErr2)
 	})
-	AssertEnumStructEqual(t, err[0:len(realErr)], realErr)
+	AssertEqual(t, err[0:len(realErr)], realErr)
 
 	var testCaseErr3 struct {
 		EnumStructString
@@ -174,5 +166,5 @@ func TestEnumStructString(t *testing.T) {
 	err = getEnumStructError(func() {
 		InitEnumStructString(&testCaseErr3)
 	})
-	AssertEnumStructEqual(t, err[0:len(realErr)], realErr)
+	AssertEqual(t, err[0:len(realErr)], realErr)
 }

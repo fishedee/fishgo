@@ -1,18 +1,11 @@
 package language
 
 import (
-	"fmt"
+	. "github.com/fishedee/assert"
 	"reflect"
 	"testing"
 	"time"
 )
-
-func AssertEqual(t *testing.T, left interface{}, right interface{}) {
-	isEqual := reflect.DeepEqual(left, right)
-	if isEqual == false {
-		t.Error(fmt.Sprintf("%#v != %#v", left, right))
-	}
-}
 
 func TestArrayToMapBasic(t *testing.T) {
 	now := time.Now()
@@ -36,9 +29,9 @@ func TestArrayToMapBasic(t *testing.T) {
 				"3": "5",
 			}},
 	}
-	for _, singleTestCase := range testCase {
+	for singleTestKey, singleTestCase := range testCase {
 		data := ArrayToMap(singleTestCase.origin, "json")
-		AssertEqual(t, data, singleTestCase.target)
+		AssertEqual(t, data, singleTestCase.target, singleTestKey)
 	}
 }
 
@@ -119,9 +112,9 @@ func TestArrayToMapStruct(t *testing.T) {
 			"third":  "3",
 		}},
 	}
-	for _, singleTestCase := range testCase {
+	for singleTestKey, singleTestCase := range testCase {
 		data := ArrayToMap(singleTestCase.origin, "json")
-		AssertEqual(t, data, singleTestCase.target)
+		AssertEqual(t, data, singleTestCase.target, singleTestKey)
 	}
 }
 
@@ -174,9 +167,9 @@ func TestArrayToMapTotal(t *testing.T) {
 			},
 		},
 	}
-	for _, singleTestCase := range testCase {
+	for singleTestKey, singleTestCase := range testCase {
 		data := ArrayToMap(singleTestCase.origin, "json")
-		AssertEqual(t, data, singleTestCase.target)
+		AssertEqual(t, data, singleTestCase.target, singleTestKey)
 	}
 }
 

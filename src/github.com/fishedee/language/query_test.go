@@ -1,17 +1,10 @@
 package language
 
 import (
-	// "fmt"
-	"reflect"
+	. "github.com/fishedee/assert"
 	"testing"
 	"time"
 )
-
-func assertEqual(t *testing.T, left interface{}, right interface{}, index int) {
-	if reflect.DeepEqual(left, right) == false {
-		t.Errorf("case :%v ,%+v != %+v", index, left, right)
-	}
-}
 
 func TestQuerySelect(t *testing.T) {
 	//测试类型 支持bool,int,float,string和time.Time
@@ -165,7 +158,7 @@ func TestQuerySelect(t *testing.T) {
 	for singleTestCaseIndex, singleTestCase := range testCase {
 
 		result := QuerySelect(singleTestCase.origin, singleTestCase.function)
-		assertEqual(t, result, singleTestCase.target, singleTestCaseIndex)
+		AssertEqual(t, result, singleTestCase.target, singleTestCaseIndex)
 
 	}
 }
@@ -219,7 +212,7 @@ func TestQueryWhere(t *testing.T) {
 	for singleTestCaseIndex, singleTestCase := range testCase {
 
 		result := QueryWhere(singleTestCase.origin, singleTestCase.function)
-		assertEqual(t, result, singleTestCase.target, singleTestCaseIndex)
+		AssertEqual(t, result, singleTestCase.target, singleTestCaseIndex)
 
 	}
 }
@@ -300,7 +293,7 @@ func TestQueryReduce(t *testing.T) {
 	for singleTestCaseIndex, singleTestCase := range testCase {
 
 		result := QueryReduce(singleTestCase.origin, singleTestCase.function, singleTestCase.initNum)
-		assertEqual(t, result, singleTestCase.target, singleTestCaseIndex)
+		AssertEqual(t, result, singleTestCase.target, singleTestCaseIndex)
 
 	}
 
@@ -497,7 +490,7 @@ func TestQuerySort(t *testing.T) {
 	for singleTestCaseIndex, singleTestCase := range testCase {
 
 		result := QuerySort(singleTestCase.origin, singleTestCase.sortName)
-		assertEqual(t, result, singleTestCase.target, singleTestCaseIndex)
+		AssertEqual(t, result, singleTestCase.target, singleTestCaseIndex)
 
 	}
 
@@ -943,7 +936,7 @@ func TestQueryJoin(t *testing.T) {
 	for singleTestCaseIndex, singleTestCase := range testCase {
 
 		result := QueryJoin(singleTestCase.leftData, singleTestCase.rightData, singleTestCase.joinPlace, singleTestCase.joinType, singleTestCase.joinFuctor)
-		assertEqual(t, result, singleTestCase.target, singleTestCaseIndex)
+		AssertEqual(t, result, singleTestCase.target, singleTestCaseIndex)
 
 	}
 }
@@ -1163,7 +1156,7 @@ func TestQueryGroup(t *testing.T) {
 	for singleTestCaseIndex, singleTestCase := range testCase {
 
 		result := QueryGroup(singleTestCase.data, singleTestCase.groupType, singleTestCase.groupFuctor)
-		assertEqual(t, result, singleTestCase.target, singleTestCaseIndex)
+		AssertEqual(t, result, singleTestCase.target, singleTestCaseIndex)
 
 	}
 
@@ -1264,7 +1257,7 @@ func TestQueryColumn(t *testing.T) {
 	for singleTestCaseIndex, singleTestCase := range testCase {
 
 		result := QueryColumn(singleTestCase.data, singleTestCase.Column)
-		assertEqual(t, result, singleTestCase.target, singleTestCaseIndex)
+		AssertEqual(t, result, singleTestCase.target, singleTestCaseIndex)
 
 	}
 }
@@ -1314,7 +1307,7 @@ func TestQueryReverse(t *testing.T) {
 	for singleTestCaseIndex, singleTestCase := range testCase {
 
 		result := QueryReverse(singleTestCase.data)
-		assertEqual(t, result, singleTestCase.target, singleTestCaseIndex)
+		AssertEqual(t, result, singleTestCase.target, singleTestCaseIndex)
 
 	}
 }
@@ -1506,7 +1499,7 @@ func TestQueryDistinct(t *testing.T) {
 	for singleTestCaseIndex, singleTestCase := range testCase {
 
 		result := QueryDistinct(singleTestCase.origin, singleTestCase.uniqueName)
-		assertEqual(t, result, singleTestCase.target, singleTestCaseIndex)
+		AssertEqual(t, result, singleTestCase.target, singleTestCaseIndex)
 
 	}
 }

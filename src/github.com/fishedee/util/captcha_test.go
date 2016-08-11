@@ -1,17 +1,17 @@
 package util
 
 import (
-	"reflect"
-	"testing"
-
+	. "github.com/fishedee/assert"
 	. "github.com/fishedee/crypto"
+	// "reflect"
+	"testing"
 )
 
-func assertCaptchaEqual(t *testing.T, left interface{}, right interface{}) {
-	if reflect.DeepEqual(left, right) == false {
-		t.Errorf("assert fail: %+v != %+v", left, right)
-	}
-}
+// func AssertEqual(t *testing.T, left interface{}, right interface{}) {
+// 	if reflect.DeepEqual(left, right) == false {
+// 		t.Errorf("assert fail: %+v != %+v", left, right)
+// 	}
+// }
 
 func TestCaptchaOutOfBound(t *testing.T) {
 	for i := 0; i != 1000; i++ {
@@ -42,20 +42,20 @@ func TestCaptcha(t *testing.T) {
 
 	for _, singleTestCase := range testCase {
 		captcha, err := NewCaptchaFromDigit(singleTestCase.origin)
-		assertCaptchaEqual(t, err, nil)
+		AssertEqual(t, err, nil)
 
 		_, err = captcha.GetBase64Image(singleTestCase.width, singleTestCase.height)
-		assertCaptchaEqual(t, err, nil)
+		AssertEqual(t, err, nil)
 
 		imageData, err := captcha.GetImage(singleTestCase.width, singleTestCase.height)
-		assertCaptchaEqual(t, err, nil)
+		AssertEqual(t, err, nil)
 
 		image, err := NewImageFromString(imageData)
-		assertCaptchaEqual(t, err, nil)
+		AssertEqual(t, err, nil)
 
 		imageSize, err := image.GetSize()
-		assertCaptchaEqual(t, err, nil)
-		assertCaptchaEqual(t, imageSize, ImageSize{
+		AssertEqual(t, err, nil)
+		AssertEqual(t, imageSize, ImageSize{
 			Width:  singleTestCase.width,
 			Height: singleTestCase.height,
 		})

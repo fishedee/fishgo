@@ -1,17 +1,9 @@
 package language
 
 import (
-	"fmt"
-	"reflect"
+	. "github.com/fishedee/assert"
 	"testing"
 )
-
-func AssertEqualPlode(t *testing.T, left interface{}, right interface{}, testCase interface{}) {
-	isEqual := reflect.DeepEqual(left, right)
-	if isEqual == false {
-		t.Error(fmt.Sprintf("%#v != %#v,testCase:%v", left, right, testCase))
-	}
-}
 
 func TestPlode(t *testing.T) {
 	testCase := []struct {
@@ -28,13 +20,13 @@ func TestPlode(t *testing.T) {
 	//test explode
 	for _, singleTestCase := range testCase {
 		result := Explode(singleTestCase.origin, singleTestCase.seperator)
-		AssertEqualPlode(t, result, singleTestCase.data, singleTestCase)
+		AssertEqual(t, result, singleTestCase.data, singleTestCase)
 	}
 
 	//test implode
 	for _, singleTestCase := range testCase {
 		singleOrigin := Implode(singleTestCase.data, singleTestCase.seperator)
-		AssertEqualPlode(t, singleOrigin, singleTestCase.origin, singleTestCase)
+		AssertEqual(t, singleOrigin, singleTestCase.origin, singleTestCase)
 	}
 }
 
@@ -53,12 +45,12 @@ func TestPlodeInt(t *testing.T) {
 	//test explode
 	for _, singleTestCase := range testCase {
 		result := ExplodeInt(singleTestCase.origin, singleTestCase.seperator)
-		AssertEqualPlode(t, result, singleTestCase.data, singleTestCase)
+		AssertEqual(t, result, singleTestCase.data, singleTestCase)
 	}
 
 	//test implode
 	for _, singleTestCase := range testCase {
 		singleOrigin := ImplodeInt(singleTestCase.data, singleTestCase.seperator)
-		AssertEqualPlode(t, singleOrigin, singleTestCase.origin, singleTestCase)
+		AssertEqual(t, singleOrigin, singleTestCase.origin, singleTestCase)
 	}
 }

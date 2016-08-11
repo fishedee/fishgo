@@ -1,35 +1,10 @@
 package util
 
 import (
-	"fmt"
+	. "github.com/fishedee/assert"
 	"math"
-	"path"
-	"reflect"
-	"runtime"
-	"strconv"
 	"testing"
 )
-
-func assertAliasEqual(t *testing.T, left interface{}, right interface{}) {
-	//打印出错的行数
-	if reflect.DeepEqual(left, right) == false {
-		_, filename, line, _ := runtime.Caller(1)
-		t.Errorf("%+v assert fail: %+v != %+v", path.Base(filename)+":"+strconv.Itoa(line), left, right)
-	}
-}
-
-func assertError(t *testing.T, errorText string, function func()) {
-	defer func() {
-		r := fmt.Sprintf("%+v", recover())
-		if reflect.DeepEqual(r, errorText) == false {
-			_, filename, line, _ := runtime.Caller(5)
-			t.Errorf("%+v assert fail: \"%+v\" != \"%+v\"", path.Base(filename)+":"+strconv.Itoa(line), r, errorText)
-		}
-	}()
-
-	function()
-
-}
 
 func TestAlias(t *testing.T) {
 	testCase := [][]float64{
@@ -61,8 +36,8 @@ func TestAlias(t *testing.T) {
 		expected := singleTestCase[0]
 
 		alias := NewAliasMethod(singleTestCase)
-		assertAliasEqual(t, alias.prob, probResult[index])
-		assertAliasEqual(t, alias.alias, aliasResult[index])
+		AssertEqual(t, alias.prob, probResult[index])
+		AssertEqual(t, alias.alias, aliasResult[index])
 
 		sum := 0.0
 		testNum := 10000
@@ -74,7 +49,7 @@ func TestAlias(t *testing.T) {
 		}
 		real := sum / float64(testNum)
 		if math.Abs(expected-real) >= 0.05 {
-			assertAliasEqual(t, expected, real)
+			AssertEqual(t, expected, real)
 		}
 	}
 
@@ -101,10 +76,10 @@ func TestAlias(t *testing.T) {
 		},
 	}
 
-	for _, singleTestCase := range testErrorCase {
-		assertError(t, singleTestCase.out, func() {
+	for singleTestKey, singleTestCase := range testErrorCase {
+		AssertError(t, singleTestCase.out, func() {
 			NewAliasMethod(singleTestCase.in)
-		})
+		}, singleTestKey)
 	}
 
 }
@@ -112,5 +87,5 @@ func TestAlias(t *testing.T) {
 func TestInit(t *testing.T) {
 	alias := &AliasMethod{}
 	num := alias.Rand()
-	assertAliasEqual(t, num, -1)
+	AssertEqual(t, num, -1)
 }
