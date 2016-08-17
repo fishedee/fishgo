@@ -27,6 +27,11 @@ func init() {
 }
 
 func GetTypeKind(t reflect.Type) int {
+	// 检查
+	if t == nil {
+		return TypeKind.OTHER
+	}
+
 	switch t.Kind() {
 	case reflect.Bool:
 		return TypeKind.BOOL
