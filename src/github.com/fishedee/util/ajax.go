@@ -23,6 +23,7 @@ type AjaxPoolOption struct {
 	Timeout         time.Duration
 	HasCookieJar    bool
 	TLSClientConfig *tls.Config
+	Proxy           string
 }
 
 type AjaxPool struct {
@@ -75,11 +76,18 @@ func NewAjaxPool(option *AjaxPoolOption) *AjaxPool {
 		}
 		client.Jar = jar
 	}
+	transport := &http.Transport{}
 	if option.TLSClientConfig != nil {
-		client.Transport = &http.Transport{
-			TLSClientConfig: option.TLSClientConfig,
-		}
+		transport.TLSClientConfig = option.TLSClientConfig
 	}
+	if option.Proxy != "" {
+		proxyUrl, err := url.Parse(option.Proxy)
+		if err != nil {
+			panic(err)
+		}
+		transport.Proxy = http.ProxyURL(proxyUrl)
+	}
+	client.Transport = transport
 	return &AjaxPool{
 		client: client,
 	}
