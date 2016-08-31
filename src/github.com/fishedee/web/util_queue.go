@@ -177,10 +177,12 @@ func (this *queueImplement) WrapPoolListener(listener QueueListener, poolSize in
 			this.closeFunc.IncrCloseCounter()
 			<-chanConsume
 			go func() {
+				defer func() {
+					chanConsume <- true
+				}()
 				defer this.closeFunc.DecrCloseCounter()
 				listener(data)
 			}()
-			chanConsume <- true
 			return nil
 		}
 	}
