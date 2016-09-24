@@ -54,7 +54,7 @@ func testUser(t *testing.T, wxSdk *WxSdk, accessToken string) {
 		Country:       "埃塞俄比亚",
 		HeadImgUrl:    "http://wx.qlogo.cn/mmopen/TBkSnIpf1E9AP4Kbz3PHSgZNldw7ZzxyNibneguA7QcXyC7N2HbKMKj7fQoWqib4EzyQAvKBbgHXvr7syOibXAZI7ZAINoOIp6m/0",
 		SubscribeTime: 1431501183,
-		Unionid:       "",
+		UnionId:       "",
 		Remark:        "",
 		GroupId:       0,
 	})
@@ -73,7 +73,7 @@ func testMessage(t *testing.T, wxSdk *WxSdk, accessToken string) {
 	//反序列化
 	recvMsg, err := wxSdk.ReceiveMessage([]byte(`<xml>
 		 <ToUserName><![CDATA[toUser]]></ToUserName>
-		 <FromUserName><![CDATA[fromUser]]></FromUserName> 
+		 <FromUserName><![CDATA[fromUser]]></FromUserName>
 		 <CreateTime>1348831860</CreateTime>
 		 <MsgType><![CDATA[text]]></MsgType>
 		 <Content><![CDATA[this is a test]]></Content>
@@ -133,7 +133,7 @@ func testMenu(t *testing.T, wxSdk *WxSdk, accessToken string) {
 
 	err = wxSdk.SetMenu(accessToken, `{
 	     "button":[
-	     {	
+	     {
 	          "type":"click",
 	          "name":"今日歌曲",
 	          "key":"V1001_TODAY_MUSIC"
@@ -141,7 +141,7 @@ func testMenu(t *testing.T, wxSdk *WxSdk, accessToken string) {
 	      {
 	           "name":"菜单",
 	           "sub_button":[
-	           {	
+	           {
 	               "type":"view",
 	               "name":"搜索",
 	               "url":"http://www.soso.com/"
@@ -200,7 +200,7 @@ func testMenu(t *testing.T, wxSdk *WxSdk, accessToken string) {
 	})
 }
 
-func testOauth(t *testing.T, wxSdk *WxSdk, accessToken string) {
+func testWxOauth(t *testing.T, wxSdk *WxSdk, accessToken string) {
 	url, err := wxSdk.GetOauthUrl("http://api.test.hongbeibang.com/login/wxcallback", "tt", "snsapi_userinfo")
 	assertWxSdkEqual(t, err == nil, true)
 	t.Errorf("%v", url)
@@ -221,7 +221,7 @@ func testOauth(t *testing.T, wxSdk *WxSdk, accessToken string) {
 		Country:    "中国",
 		HeadImgUrl: "http://wx.qlogo.cn/mmopen/TBkSnIpf1E9AP4Kbz3PHSgZNldw7ZzxyNibneguA7QcXyC7N2HbKMKj7fQoWqib4EzyQAvKBbgHXvr7syOibXAZI7ZAINoOIp6m/0",
 		Privilege:  []string{},
-		Unionid:    "",
+		UnionId:    "",
 	})
 }
 

@@ -21,7 +21,14 @@ func generateSingleField(data []FieldInfo) string {
 func generateSingleFieldName(data []FieldInfo) string {
 	var result []string
 	for _, singleData := range data {
-		result = append(result, singleData.name)
+
+		// 支持传递不定参数
+		uncertainParamStr := ""
+		if strings.Contains(singleData.tag, "...") {
+			uncertainParamStr = "..."
+		}
+
+		result = append(result, singleData.name+uncertainParamStr)
 	}
 	return strings.Join(result, ",")
 }
