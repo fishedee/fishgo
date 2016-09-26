@@ -127,8 +127,17 @@ type TaoBaoKeParam struct {
 	// 选品库的id
 	FavoritesId string `json:"favorites_id"`
 	// 1: 普通选品组; 2: 高佣选品组; -1: 同时输出所有类型的选品组
-	Type   int    `json:"type"`
+	Type int `json:"type"`
+	// 商品ID
 	NumIId string `json:"num_iid"`
+	// 招商活动ID
+	EventId string `json:"event_id"`
+	// 最早开团时间
+	StartTime string `json:"start_time"`
+	// 最晚开团时间
+	EndTime string `json:"end_time"`
+	// 卖家ID
+	UserId string `json:"user_id"`
 }
 
 // 淘宝客商品
@@ -220,6 +229,11 @@ type TaoBaoKeShopGetResponse struct {
 	TbkShopGetResponse TaoBaoKeShopResults `json:"tbk_shop_get_response"`
 }
 
+// 淘宝商铺推荐结果
+type TaoBaoKeShopRecommendGetResponse struct {
+	TbkShopRecommendGetResponse TaoBaoKeShopResults `json:"tbk_shop_recommend_get_response"`
+}
+
 type TaoBaoKeUatmItems struct {
 	UatmTbkItem []TaoBaoKeItem `json:"uatm_tbk_item"`
 }
@@ -254,6 +268,57 @@ type TaoBaoKeFavoriteResults struct {
 // 淘宝联盟选品库的宝贝列表
 type TaoBaoFavoritesGetResponse struct {
 	TbkUatmFavoritesGetResponse TaoBaoKeFavoriteResults `json:"tbk_uatm_favorites_get_response"`
+}
+
+type TaoBaoKeUatmEvent struct {
+	EventId    int    `json:"event_id"`
+	EventTitle string `json:"event_title"`
+	StartTime  string `json:"start_time"`
+	EndTime    string `json:"end_time"`
+}
+
+type TaoBaoKeUatmEvents struct {
+	TbkEvent []TaoBaoKeUatmEvent `json:"tbk_event"`
+}
+
+type TaoBaoKeUatmEventResults struct {
+	Results      TaoBaoKeUatmEvents `json:"results"`
+	TotalResults int                `json:"total_results"`
+	RequestId    string             `json:"request_id"`
+}
+
+// 淘宝客定向招商活动基本信息
+type TaoBaoKeUatmEventGetResponse struct {
+	TbkUatmEventGetResponse TaoBaoKeUatmEventResults `json:"tbk_uatm_event_get_response"`
+}
+
+type TaoBaoKeJuTqg struct {
+	Title        string `json:"title"`
+	TotalAmount  int    `json:"total_amount"`
+	ClickUrl     string `json:"click_url"`
+	CategoryName string `json:"category_name"`
+	ZkFinalPrice string `json:"zk_final_price"`
+	EndTime      string `json:"end_time"`
+	SoldNum      int    `json:"sold_num"`
+	StartTime    string `json:"start_time"`
+	ReservePrice string `json:"reserve_price"`
+	PicUrl       string `json:"pic_url"`
+	NumIId       int    `json:"num_iid"`
+}
+
+type TaoBaoKeJuTqgs struct {
+	Results []TaoBaoKeJuTqg `json:"results"`
+}
+
+type TaoBaoKeJuTqgResults struct {
+	Results      TaoBaoKeJuTqgs `json:"results"`
+	TotalResults int            `json:"total_results"`
+	RequestId    string         `json:"request_id"`
+}
+
+// 淘抢购商品列表
+type TaoBaoKeJuTqgGetResponse struct {
+	TbkJuTqgGetResponse TaoBaoKeJuTqgResults `json:"tbk_ju_tqg_get_response"`
 }
 
 // 淘宝客错误
@@ -301,6 +366,14 @@ func (this *TaoBaoSdk) GetTaoBaoKeShop(param TaoBaoKeParam) (TaoBaoKeShopGetResp
 	return result, err
 }
 
+// 淘宝客店铺推荐
+func (this *TaoBaoSdk) GetTaoBaoKeShopRecommend(param TaoBaoKeParam) (TaoBaoKeShopRecommendGetResponse, error) {
+	method := "taobao.tbk.shop.recommend.get"
+	result := TaoBaoKeShopRecommendGetResponse{}
+	err := this.getTaoBaoKe(method, param, &result)
+	return result, err
+}
+
 // 获取淘宝联盟选品库的宝贝信息
 func (this *TaoBaoSdk) GetTaoBaoKeUatmFavoriteItem(param TaoBaoKeParam) (TaoBaoFavoriteItemGetResponse, error) {
 	method := "taobao.tbk.uatm.favorites.item.get"
@@ -313,6 +386,30 @@ func (this *TaoBaoSdk) GetTaoBaoKeUatmFavoriteItem(param TaoBaoKeParam) (TaoBaoF
 func (this *TaoBaoSdk) GetTaoBaoKeUatmFavorites(param TaoBaoKeParam) (TaoBaoFavoritesGetResponse, error) {
 	method := "taobao.tbk.uatm.favorites.get"
 	result := TaoBaoFavoritesGetResponse{}
+	err := this.getTaoBaoKe(method, param, &result)
+	return result, err
+}
+
+// 淘客自己发起的，正在进行中的定向招商的活动列表
+func (this *TaoBaoSdk) GetTaoBaoKeUatmEvents(param TaoBaoKeParam) (TaoBaoKeUatmEventGetResponse, error) {
+	method := "taobao.tbk.uatm.event.get"
+	result := TaoBaoKeUatmEventGetResponse{}
+	err := this.getTaoBaoKe(method, param, &result)
+	return result, err
+}
+
+// 通过指定定向招商活动id，获取该活动id下的宝贝信息
+func (this *TaoBaoSdk) GetTaoBaoKeUatmEventItem(param TaoBaoKeParam) (TaoBaoFavoriteItemGetResponse, error) {
+	method := "taobao.tbk.uatm.event.item.get"
+	result := TaoBaoFavoriteItemGetResponse{}
+	err := this.getTaoBaoKe(method, param, &result)
+	return result, err
+}
+
+// 获取淘抢购的数据，淘客商品转淘客链接，非淘客商品输出普通链接
+func (this *TaoBaoSdk) GetTaoBaoKeJuTqg(param TaoBaoKeParam) (TaoBaoKeJuTqgGetResponse, error) {
+	method := "taobao.tbk.ju.tqg.get"
+	result := TaoBaoKeJuTqgGetResponse{}
 	err := this.getTaoBaoKe(method, param, &result)
 	return result, err
 }
