@@ -157,3 +157,9 @@
 [submodule "src/github.com/shopspring/decimal"]
 	path = src/github.com/shopspring/decimal
 	url = git@github.com:shopspring/decimal.git
+[submodule "src/github.com/juju/ratelimit"]
+	path = src/github.com/juju/ratelimit
+	url = git@github.com:juju/ratelimit.git
+[submodule "src/github.com/didip/tollbooth"]
+	path = src/github.com/didip/tollbooth
+	url = git@github.com:didip/tollbooth.git
