@@ -10,6 +10,7 @@ import (
 	"io"
 	"io/ioutil"
 	"mime/multipart"
+	"net"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
@@ -21,6 +22,7 @@ import (
 
 type AjaxPoolOption struct {
 	Timeout         time.Duration
+	MaxIdleConnect  int
 	HasCookieJar    bool
 	TLSClientConfig *tls.Config
 	Proxy           string
@@ -68,6 +70,9 @@ func NewAjaxPool(option *AjaxPoolOption) *AjaxPool {
 		}
 	}
 	client := &http.Client{}
+	if option.Timeout <= 0 {
+		option.Timeout = 30 * time.Second
+	}
 	client.Timeout = option.Timeout
 	if option.HasCookieJar {
 		jar, err := cookiejar.New(nil)
@@ -76,7 +81,19 @@ func NewAjaxPool(option *AjaxPoolOption) *AjaxPool {
 		}
 		client.Jar = jar
 	}
-	transport := &http.Transport{}
+	transport := &http.Transport{
+		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+	}
+	if option.MaxIdleConnect <= 0 {
+		option.MaxIdleConnect = 100
+	}
+	transport.MaxIdleConns = option.MaxIdleConnect
 	if option.TLSClientConfig != nil {
 		transport.TLSClientConfig = option.TLSClientConfig
 	}
