@@ -51,7 +51,14 @@ func Throw(code int, message string) {
 func CatchCrash(handler func(Exception)) {
 	err := recover()
 	if err != nil {
-		handler(*NewException(1, fmt.Sprint(err)))
+		var errStr string
+		errErr, isOk := err.(error)
+		if isOk {
+			errStr = errErr.Error()
+		} else {
+			errStr = fmt.Sprint(err)
+		}
+		handler(*NewException(1, errStr))
 	}
 }
 

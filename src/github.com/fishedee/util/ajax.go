@@ -502,7 +502,7 @@ func (this *Ajax) Send(client *http.Client) error {
 	//执行请求
 	response, err := client.Do(request)
 	if err != nil {
-		return errors.New(fmt.Sprintf("%#v", err))
+		return err
 	}
 	defer response.Body.Close()
 
