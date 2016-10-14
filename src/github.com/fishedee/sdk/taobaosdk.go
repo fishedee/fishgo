@@ -138,6 +138,8 @@ type TaoBaoKeParam struct {
 	EndTime string `json:"end_time"`
 	// 卖家ID
 	UserId string `json:"user_id"`
+	// 卖家IDs
+	UserIds string `json:"user_ids"`
 }
 
 // 淘宝客商品
@@ -176,11 +178,21 @@ type TaoBaoKeItem struct {
 	EventStartTime string `json:"event_start_time"`
 	//
 	EventEndTime string `json:"event_end_time"`
+	// 宝贝描述
+	Description string `json:"description"`
+	// 商品淘客地址
+	ItemClickUrl string `json:"item_click_url"`
+	// 商铺淘客地址
+	ShopClickUrl string `json:"shop_click_url"`
 }
 
 // 淘宝客商品列表
 type TaoBaoKeItems struct {
 	NTbkItem []TaoBaoKeItem `json:"n_tbk_item"`
+}
+
+type TaoBaoKeItemDetails struct {
+	NTbkItemDetail []TaoBaoKeItem `json:"n_tbk_item_detail"`
 }
 
 // 淘宝客商品列表及数量
@@ -190,14 +202,26 @@ type TaoBaoItemResults struct {
 	RequestId    string        `json:"request_id"`
 }
 
+// 淘宝客商品详细
+type TaoBaoItemDetailResults struct {
+	Results      TaoBaoKeItemDetails `json:"results"`
+	TotalResults int                 `json:"total_results"`
+	RequestId    string              `json:"request_id"`
+}
+
 // 淘宝客搜索商品结果
 type TaoBaoKeItemGetResponse struct {
 	TbkItemGetResponse TaoBaoItemResults `json:"tbk_item_get_response"`
 }
 
-// 淘宝客商品详细结果
+// 淘宝客商品详细结果-简版
 type TaoBaoKeItemInfoGetResponse struct {
 	TbkItemInfoGetResponse TaoBaoItemResults `json:"tbk_item_info_get_response"`
+}
+
+// 淘宝客商品详细结果-高级
+type TaoBaoKeItemDetailInfoGetResponse struct {
+	TbkItemDetailGetResponse TaoBaoItemDetailResults `json:"tbk_item_detail_get_response"`
 }
 
 // 淘宝客商品推荐结果
@@ -212,6 +236,7 @@ type TaoBaoKeShop struct {
 	SellerNick string `json:"seller_nick"`
 	PictUrl    string `json:"pict_url"`
 	ShopUrl    string `json:"shop_url"`
+	ClickUrl   string `json:"click_url"`
 }
 
 type TaoBaoKeShops struct {
@@ -321,6 +346,16 @@ type TaoBaoKeJuTqgGetResponse struct {
 	TbkJuTqgGetResponse TaoBaoKeJuTqgResults `json:"tbk_ju_tqg_get_response"`
 }
 
+// 淘宝客商品链接转换
+type TaoBaoKeItemConvertResponse struct {
+	TbkItemConvertResponse TaoBaoItemResults `json:"tbk_item_convert_response"`
+}
+
+// 淘宝客店铺链接转换
+type TaoBaoKeShopConvertResponse struct {
+	TbkShopConvertResponse TaoBaoKeShopResults `json:"tbk_shop_convert_response"`
+}
+
 // 淘宝客错误
 type TaoBaoKeError struct {
 	Code    int    `json:"code"`
@@ -342,10 +377,34 @@ func (this *TaoBaoSdk) GetTaoBaoKeAllItem(param TaoBaoKeParam) (TaoBaoKeItemGetR
 	return result, err
 }
 
-// 取淘宝客商品详细
+// 取淘宝客商品详细--简版
 func (this *TaoBaoSdk) GetTaoBaoKeItemInfo(param TaoBaoKeParam) (TaoBaoKeItemInfoGetResponse, error) {
 	method := "taobao.tbk.item.info.get"
 	result := TaoBaoKeItemInfoGetResponse{}
+	err := this.getTaoBaoKe(method, param, &result)
+	return result, err
+}
+
+// 取淘宝客商品详细--高级
+func (this *TaoBaoSdk) GetTaoBaoKeItemDetailInfo(param TaoBaoKeParam) (TaoBaoKeItemDetailInfoGetResponse, error) {
+	method := "taobao.tbk.item.detail.get"
+	result := TaoBaoKeItemDetailInfoGetResponse{}
+	err := this.getTaoBaoKe(method, param, &result)
+	return result, err
+}
+
+// 淘宝客商品链接转换--高级
+func (this *TaoBaoSdk) ConvertTaoBaoKeItem(param TaoBaoKeParam) (TaoBaoKeItemConvertResponse, error) {
+	method := "taobao.tbk.item.convert"
+	result := TaoBaoKeItemConvertResponse{}
+	err := this.getTaoBaoKe(method, param, &result)
+	return result, err
+}
+
+// 淘宝客店铺链接转换--高级
+func (this *TaoBaoSdk) ConvertTaoBaoKeShop(param TaoBaoKeParam) (TaoBaoKeShopConvertResponse, error) {
+	method := "taobao.tbk.shop.convert"
+	result := TaoBaoKeShopConvertResponse{}
 	err := this.getTaoBaoKe(method, param, &result)
 	return result, err
 }
