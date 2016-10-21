@@ -21,3 +21,20 @@ func getTime(someDay time.Time, hour, minute, sec, msec int) time.Time {
 	year, month, day := someDay.Date()
 	return time.Date(year, month, day, hour, minute, sec, msec, location)
 }
+
+//判断时间，Local或UTC时区是否为1年1月1日0时0分0秒
+func IsTimeZero(t time.Time) (bool, error) {
+	if t.Location() == time.UTC {
+		return t.IsZero(), nil
+	}
+
+	loc, err := time.LoadLocation("Local")
+	if err != nil {
+		return false, err
+	}
+	locZeroTime, err := time.ParseInLocation("2006-01-02 15:04:05", "0001-01-01 00:00:00", loc)
+	if err != nil {
+		return false, err
+	}
+	return t.Equal(locZeroTime), err
+}
