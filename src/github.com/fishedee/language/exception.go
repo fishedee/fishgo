@@ -52,13 +52,18 @@ func CatchCrash(handler func(Exception)) {
 	err := recover()
 	if err != nil {
 		var errStr string
-		errErr, isOk := err.(error)
-		if isOk {
-			errStr = errErr.Error()
+		exceptionErrr, isException := err.(*Exception)
+		if isException {
+			handler(*exceptionErrr)
 		} else {
-			errStr = fmt.Sprint(err)
+			errErr, isErr := err.(error)
+			if isErr {
+				errStr = errErr.Error()
+			} else {
+				errStr = fmt.Sprint(err)
+			}
+			handler(*NewException(1, errStr))
 		}
-		handler(*NewException(1, errStr))
 	}
 }
 
