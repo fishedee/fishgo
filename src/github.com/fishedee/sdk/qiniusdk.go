@@ -3,9 +3,11 @@ package sdk
 import (
 	"bytes"
 	"errors"
+	"net/http"
 	"net/url"
 
-	. "qiniupkg.com/api.v7/kodo"
+	"github.com/pili-engineering/pili-sdk-go.v2/pili"
+	"qiniupkg.com/api.v7/kodo"
 )
 
 const (
@@ -33,8 +35,8 @@ func (this *QiniuSdk) UploadString(bucketName string, data []byte) (string, erro
 
 	uploadReader := bytes.NewReader(data)
 	bucket := this.getBucket(bucketName)
-	putRet := PutRet{}
-	err := bucket.PutWithoutKey(nil, &putRet, uploadReader, fsize, &PutExtra{})
+	putRet := kodo.PutRet{}
+	err := bucket.PutWithoutKey(nil, &putRet, uploadReader, fsize, &kodo.PutExtra{})
 	if err != nil {
 		return "", err
 	}
@@ -47,7 +49,7 @@ func (this *QiniuSdk) UploadString(bucketName string, data []byte) (string, erro
  * @param  string     bucketName [储存区域]
  * @return Bucket                [返回储存区域]
  */
-func (this *QiniuSdk) getBucket(bucketName string) Bucket {
+func (this *QiniuSdk) getBucket(bucketName string) kodo.Bucket {
 	client := this.getClient()
 	return client.Bucket(bucketName)
 }
@@ -56,12 +58,12 @@ func (this *QiniuSdk) getBucket(bucketName string) Bucket {
  * [getClient 连接七牛客户端]
  * @return *Client  [七牛客户端]
  */
-func (this *QiniuSdk) getClient() *Client {
-	cfg := &Config{
+func (this *QiniuSdk) getClient() *kodo.Client {
+	cfg := &kodo.Config{
 		AccessKey: this.AccessKey,
 		SecretKey: this.SecretKey,
 	}
-	return New(0, cfg)
+	return kodo.New(0, cfg)
 }
 
 /**
@@ -72,8 +74,8 @@ func (this *QiniuSdk) getClient() *Client {
  */
 func (this *QiniuSdk) UploadFile(bucketName string, fileAddr string) (string, error) {
 	bucket := this.getBucket(bucketName)
-	putRet := PutRet{}
-	err := bucket.PutFileWithoutKey(nil, &putRet, fileAddr, &PutExtra{})
+	putRet := kodo.PutRet{}
+	err := bucket.PutFileWithoutKey(nil, &putRet, fileAddr, &kodo.PutExtra{})
 	if err != nil {
 		return "", err
 	}
@@ -100,7 +102,7 @@ func (this *QiniuSdk) MoveFile(bucketName string, keySrc, keyDest string) error 
  * @return string            [地址]
  */
 func (this *QiniuSdk) MakeBaseUrl(domain, key string) string {
-	return MakeBaseUrl(domain, key)
+	return kodo.MakeBaseUrl(domain, key)
 }
 
 /**
@@ -111,7 +113,7 @@ func (this *QiniuSdk) MakeBaseUrl(domain, key string) string {
 func (this *QiniuSdk) GetUploadToken(bucketName string) (string, error) {
 	client := this.getClient()
 
-	putPolicy := &PutPolicy{
+	putPolicy := &kodo.PutPolicy{
 		Scope:   bucketName,
 		Expires: 3600,
 	}
@@ -136,10 +138,10 @@ func (this *QiniuSdk) GetDownloadUrl(inUrl string) (string, error) {
 
 	client := this.getClient()
 
-	getPolicy := &GetPolicy{
+	getPolicy := &kodo.GetPolicy{
 		Expires: 3600,
 	}
-	baseUrl := MakeBaseUrl(domain, key)
+	baseUrl := kodo.MakeBaseUrl(domain, key)
 	privateUrl := client.MakePrivateUrl(baseUrl, getPolicy)
 
 	return privateUrl, nil
@@ -158,4 +160,60 @@ func (this *QiniuSdk) GetMimeTypeByKey(bucketName, key string) (string, error) {
 		return "", err
 	}
 	return stat.MimeType, nil
+}
+
+/**
+ * [NewMac 授权信息]
+ * @return *MAC  [授权信息]
+ */
+func (this *QiniuSdk) NewMac() *pili.MAC {
+	return &pili.MAC{
+		AccessKey: this.AccessKey,
+		SecretKey: []byte(this.SecretKey),
+	}
+}
+
+/**
+ * [GetRTMPPublishURL 生成 RTMP 推流地址]
+ * @param  [type]     domain             [与直播空间绑定的 RTMP 推流域名，可以在 portal.qiniu.com 上绑定]
+ * @param  [type]     hubName                [直播空间名称]
+ * @param  string     streamKey          [流名，流不需要事先存在，推流会自动创建流]
+ * @param  *MAC       mac                [授权信息]
+ * @param  int64      expireAfterSeconds [生成的推流地址的有效时间]
+ * @return string                                 [RTMP推流地址]
+ */
+func (this *QiniuSdk) GetRTMPPublishURL(domain, hubName, streamKey string, mac *pili.MAC, expireAfterSeconds int64) string {
+	return pili.RTMPPublishURL(domain, hubName, streamKey, mac, expireAfterSeconds)
+}
+
+/**
+ * [GetRTMPPlayURL 生成 RTMP 播放地址]
+ * @param  [type]     domain    [绑定的直播域名]
+ * @param  [type]     hubName       [直播空间名称]
+ * @param  string     streamKey [流名，流不需要事先存在，推流会自动创建流]
+ * @return string                        [播放地址]
+ */
+func (this *QiniuSdk) GetRTMPPlayURL(domain, hubName, streamKey string) string {
+	return pili.RTMPPlayURL(domain, hubName, streamKey)
+}
+
+/**
+ * [GetSnapshotPlayURL 生成直播封面地址]
+ * @param  [type]     domain    [绑定的直播域名]
+ * @param  [type]     hubName       [直播空间名称]
+ * @param  string     streamKey [流名，流不需要事先存在，推流会自动创建流]
+ * @return string                        [生成直播封面地址]
+ */
+func (this *QiniuSdk) GetSnapshotPlayURL(domain, hubName, streamKey string) string {
+	return pili.SnapshotPlayURL(domain, hubName, streamKey)
+}
+
+/**
+ * [NewClient 初始化授权客户]
+ * @param  *pili.MAC         mac [授权信息]
+ * @param  http.RoundTripper tr  [http会话]
+ * @return *pili.Client                   [授权客户]
+ */
+func (this *QiniuSdk) NewClient(mac *pili.MAC, tr http.RoundTripper) *pili.Client {
+	return pili.New(mac, tr)
 }

@@ -163,3 +163,6 @@
 [submodule "src/github.com/didip/tollbooth"]
 	path = src/github.com/didip/tollbooth
 	url = git@github.com:didip/tollbooth.git
+[submodule "src/github.com/pili-engineering/pili-sdk-go.v2"]
+	path = src/github.com/pili-engineering/pili-sdk-go.v2
+	url = git@github.com:pili-engineering/pili-sdk-go.v2.git
