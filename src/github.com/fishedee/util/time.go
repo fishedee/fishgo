@@ -12,6 +12,18 @@ func GetTodayHour(hour int) time.Time {
 	return GetTimeInDay(now, hour)
 }
 
+// 获取上个月 1号的时间
+func GetLastMonth() time.Time {
+	return GetMonthZero(time.Now()).AddDate(0, -1, 0)
+}
+
+// 获取某个月的 1号的时间
+func GetMonthZero(someDay time.Time) time.Time {
+	location := someDay.Location()
+	year, month, _ := someDay.Date()
+	return time.Date(year, month, 1, 0, 0, 0, 0, location)
+}
+
 func GetTodayZero() time.Time {
 	return GetTodayHour(0)
 }
