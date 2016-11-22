@@ -12,9 +12,10 @@ The commands are:
 	
 	clean		Clean a go application
 	run		Run a go application
-		--watch	AutoRun a go application when dictory file change
+		--watch		AutoRun a go application when dictory file change
 	test 		Test a go application
-		--watch	AutoTest a go application when dictory file change
+		--watch		AutoTest a go application when dictory file change
+		--benchmark	Benchmark a go application when dictory file change
 	version		FishCmd version
 	help		FishCmd help
 

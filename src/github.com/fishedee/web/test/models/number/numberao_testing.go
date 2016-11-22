@@ -9,6 +9,13 @@ type NumberAoTest struct {
 	NumberAo NumberAoModel
 }
 
+func (this *NumberAoTest) BenchmarkBasic() {
+	i := 0
+	this.Benchmark(1000, 100, func() {
+		i++
+	})
+}
+
 func (this *NumberAoTest) TestBasic() {
 	testCase := []struct {
 		origin  int

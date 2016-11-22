@@ -31,11 +31,11 @@ func build(appName string) error {
 	return nil
 }
 
-func test(appName string) error {
+func test(appName string, args string) error {
 	timer := modules.NewTimer()
 	modules.Log.Debug("start test ...")
 	timer.Start()
-	err := modules.TestPackage(appName)
+	err := modules.TestPackage(appName, args)
 	if err != nil {
 		modules.Log.Error("test fail! error: %v", err.Error())
 		return err
