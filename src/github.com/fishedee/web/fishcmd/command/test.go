@@ -7,10 +7,13 @@ import (
 func Test(argv []string) (string, error) {
 	//读取参数
 	isWatch := false
+	isBench := false
 	appName := "."
 	for _, singleArgv := range argv {
 		if singleArgv == "--watch" {
 			isWatch = true
+		} else if singleArgv == "--bench" {
+			isBench = true
 		} else {
 			appName = singleArgv
 		}
@@ -34,7 +37,12 @@ func Test(argv []string) (string, error) {
 			return
 		}
 
-		err = test(appName)
+		argv := appName
+		if isBench {
+			argv = `--bench="."`
+		}
+
+		err = test(argv)
 		if err != nil {
 			return
 		}

@@ -3,11 +3,12 @@ package sdk
 import (
 	"errors"
 	"fmt"
+	"net/url"
+	"time"
+
 	. "github.com/fishedee/crypto"
 	. "github.com/fishedee/encoding"
 	. "github.com/fishedee/language"
-	"net/url"
-	"time"
 )
 
 type DuibaSdk struct {

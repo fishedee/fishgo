@@ -1,11 +1,12 @@
 package web
 
 import (
-	"github.com/fishedee/language"
 	"net/http"
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/fishedee/language"
 )
 
 type ControllerInterface interface {
@@ -26,7 +27,7 @@ func (this *handlerType) ServeHTTP(response http.ResponseWriter, request *http.R
 	beginTime := time.Now().UnixNano()
 	this.handleRequest(request, response)
 	endTime := time.Now().UnixNano()
-	globalBasic.Log.Debug("%s %s : %s", request.Method, request.URL.String(), time.Duration(endTime-beginTime).String())
+	globalBasic.Log.Debug("%s %s %s : %s", request.Header.Get("X-Real-Ip"), request.Method, request.URL.String(), time.Duration(endTime-beginTime).String())
 }
 
 func (this *handlerType) firstLowerName(name string) string {

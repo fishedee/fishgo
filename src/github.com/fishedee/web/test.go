@@ -28,7 +28,7 @@ func (this *Test) getTraceLineNumber(traceNumber int) string {
 	}
 }
 
-func (this *Test) Concurrent(number int, concurrency int, handler func()) {
+func (this *Test) Concurrent(number int, concurrency int, handler func(n int)) {
 	if number <= 0 {
 		panic("benchmark numer is invalid")
 	}
@@ -42,20 +42,22 @@ func (this *Test) Concurrent(number int, concurrency int, handler func()) {
 	}
 
 	var wg sync.WaitGroup
+	n := 0
 	for i := 0; i < concurrency; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			runtime.LockOSThread()
 			for i := 0; i < singleConcurrency; i++ {
-				handler()
+				n++
+				handler(n)
 			}
 		}()
 	}
 	wg.Wait()
 }
 
-func (this *Test) Benchmark(number int, concurrency int, handler func(), testCase ...interface{}) {
+func (this *Test) Benchmark(number int, concurrency int, handler func(n int), testCase ...interface{}) {
 	beginTime := time.Now().UnixNano()
 	this.Concurrent(number, concurrency, handler)
 	endTime := time.Now().UnixNano()
@@ -68,12 +70,14 @@ func (this *Test) Benchmark(number int, concurrency int, handler func(), testCas
 	}
 	traceInfo := this.getTraceLineNumber(1)
 	fmt.Printf(
-		"%v: %v number %v concurrency %v / req, %.2freq / s\n",
+		"%v %v: %v number %v concurrency %v / req, %.2freq / s , %v totalTime\n",
 		traceInfo,
+		testCase[0],
 		number,
 		concurrency,
 		time.Duration(singleTime).String(),
 		singleReq,
+		time.Duration(totalTime).String(),
 	)
 }
 
