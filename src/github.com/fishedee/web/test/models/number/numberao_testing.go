@@ -13,7 +13,7 @@ func (this *NumberAoTest) BenchmarkBasic() {
 	i := 0
 	this.Benchmark(1000, 100, func() {
 		i++
-	})
+	}, "testCaseDesc")
 }
 
 func (this *NumberAoTest) TestBasic() {

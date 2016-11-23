@@ -63,18 +63,27 @@ func (this *Test) Benchmark(number int, concurrency int, handler func(), testCas
 	totalTime := endTime - beginTime
 	singleTime := totalTime / int64(number)
 	singleReq := float64(number) / (float64(totalTime) / 1e9)
-	if len(testCase) == 0 {
-		testCase = []interface{}{""}
-	}
 	traceInfo := this.getTraceLineNumber(1)
-	fmt.Printf(
-		"%v: %v number %v concurrency %v / req, %.2freq / s\n",
-		traceInfo,
-		number,
-		concurrency,
-		time.Duration(singleTime).String(),
-		singleReq,
-	)
+	if len(testCase) == 0 {
+		fmt.Printf(
+			"%v: %v number %v concurrency %v / req, %.2freq / s\n",
+			traceInfo,
+			number,
+			concurrency,
+			time.Duration(singleTime).String(),
+			singleReq,
+		)
+	} else {
+		fmt.Printf(
+			"%v:%v: %v number %v concurrency %v / req, %.2freq / s\n",
+			traceInfo,
+			testCase[0],
+			number,
+			concurrency,
+			time.Duration(singleTime).String(),
+			singleReq,
+		)
+	}
 }
 
 func (this *Test) AssertEqual(left interface{}, right interface{}, testCase ...interface{}) {
