@@ -166,3 +166,6 @@
 [submodule "src/github.com/pili-engineering/pili-sdk-go.v2"]
 	path = src/github.com/pili-engineering/pili-sdk-go.v2
 	url = git@github.com:pili-engineering/pili-sdk-go.v2.git
+[submodule "src/github.com/gorilla/websocket"]
+	path = src/github.com/gorilla/websocket
+	url = git@github.com:gorilla/websocket.git

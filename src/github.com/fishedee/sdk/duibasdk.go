@@ -3,11 +3,12 @@ package sdk
 import (
 	"errors"
 	"fmt"
+	"net/url"
+	"time"
+
 	. "github.com/fishedee/crypto"
 	. "github.com/fishedee/encoding"
 	. "github.com/fishedee/language"
-	"net/url"
-	"time"
 )
 
 type DuibaSdk struct {
@@ -91,7 +92,15 @@ func (this *DuibaSdk) GetLoginUrl(clientId string, point int) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return "http://www.duiba.com.cn/autoLogin/autologin?" + string(queryStr), nil
+	return this.getHttpsLoginHost() + string(queryStr), nil
+}
+
+func (this *DuibaSdk) getHttpLoginHost() string {
+	return "http://www.duiba.com.cn/autoLogin/autologin?"
+}
+
+func (this *DuibaSdk) getHttpsLoginHost() string {
+	return "https://www.duiba.com.cn/autoLogin/autologin?"
 }
 
 func (this *DuibaSdk) ReceiveCreditConsume(request *url.URL) (DuibaSdkReceiveCreditConsume, error) {
