@@ -3,12 +3,13 @@ package web
 import (
 	"errors"
 	"fmt"
+	"reflect"
+	"strconv"
+
 	. "github.com/fishedee/encoding"
 	. "github.com/fishedee/language"
 	. "github.com/fishedee/util"
 	. "github.com/fishedee/web/util_queue"
-	"reflect"
-	"strconv"
 )
 
 type Queue interface {
@@ -141,7 +142,7 @@ func (this *queueImplement) DecodeData(dataByte []byte, dataType []reflect.Type)
 	valueResult = append(valueResult, target)
 	for i := 1; i != len(dataType); i++ {
 		if i >= len(result) {
-			panic(fmt.Sprintf("call with %d argument function for %d argument", len(dataType), len(result)))
+			panic(fmt.Sprintf("call with %d argument function for %d argument, dataType: %v, result: %v", len(dataType), len(result), dataType, valueResult))
 		}
 		valueResult = append(valueResult, reflect.ValueOf(result[i]).Elem())
 	}

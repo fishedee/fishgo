@@ -152,14 +152,14 @@ func (this *contextImplement) GetParamToStruct(requireStruct interface{}) {
 
 func (this *contextImplement) GetUrlParamToStruct(requireStruct interface{}) {
 	if this.GetMethod() != "GET" {
-		language.Throw(1, "请求Method不是Get方法")
+		language.Throw(1, "请求Method不是Get方法: "+this.GetMethod())
 	}
 	this.GetParamToStruct(requireStruct)
 }
 
 func (this *contextImplement) GetFormParamToStruct(requireStruct interface{}) {
 	if this.GetMethod() != "POST" {
-		language.Throw(1, "请求Method不是POST方法")
+		language.Throw(1, "请求Method不是POST方法: "+this.GetMethod())
 	}
 	this.GetParamToStruct(requireStruct)
 }

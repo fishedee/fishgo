@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/pili-engineering/pili-sdk-go.v2/pili"
 	"qiniupkg.com/api.v7/kodo"
@@ -133,8 +134,8 @@ func (this *QiniuSdk) GetDownloadUrl(inUrl string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	domain := "http://" + urlStruct.Host
-	key := urlStruct.Path
+	domain := urlStruct.Host
+	key := strings.Replace(urlStruct.Path, "/", "", -1)
 
 	client := this.getClient()
 
