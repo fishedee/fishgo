@@ -169,3 +169,9 @@
 [submodule "src/github.com/gorilla/websocket"]
 	path = src/github.com/gorilla/websocket
 	url = git@github.com:gorilla/websocket.git
+[submodule "src/github.com/TrueFurby/go-callvis"]
+	path = src/github.com/TrueFurby/go-callvis
+	url = git@github.com:TrueFurby/go-callvis.git
+[submodule "src/github.com/winlinvip/go-fdkaac"]
+	path = src/github.com/winlinvip/go-fdkaac
+	url = git@github.com:winlinvip/go-fdkaac.git
