@@ -2,6 +2,7 @@ package sdk
 
 import (
 	"fmt"
+
 	. "github.com/fishedee/encoding"
 	. "github.com/fishedee/util"
 )
@@ -67,7 +68,7 @@ func (this *YunpianSdk) SendSms(mobile string, text string) (YunpianSdkSendSmsRe
 		"text":   text,
 	}, &result)
 	if err != nil {
-		return YunpianSdkSendSmsResult{}, nil
+		return YunpianSdkSendSmsResult{}, err
 	}
 	return result, err
 }
