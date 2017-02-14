@@ -149,6 +149,31 @@ func (this *QiniuSdk) GetDownloadUrl(inUrl string) (string, error) {
 }
 
 /**
+ * [GetDownloadUrl 取私密视频缩略图下载连接]
+ * @param  string      inUrl  [图片链接]
+ * @param  string      sample  [缩略图生产参数]
+ * @return string, error      [私密链接，错误值]
+ */
+func (this *QiniuSdk) GetSampleDownloadUrl(inUrl, sample string) (string, error) {
+	urlStruct, err := url.Parse(inUrl)
+	if err != nil {
+		return "", err
+	}
+	domain := urlStruct.Host
+	key := strings.Replace(urlStruct.Path, "/", "", -1)
+
+	client := this.getClient()
+
+	getPolicy := &kodo.GetPolicy{
+		Expires: 3600,
+	}
+	baseUrl := kodo.MakeBaseUrl(domain, key)
+	privateUrl := client.MakePrivateUrl(baseUrl+"?"+sample, getPolicy)
+
+	return privateUrl, nil
+}
+
+/**
  * [GetMimeTypeByUrl 取文件的MIME类型]
  * @param  [type]      bucketName [储存区域]
  * @param  string      url        [图片哈希]
