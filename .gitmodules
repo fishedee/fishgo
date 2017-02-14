@@ -175,3 +175,6 @@
 [submodule "src/github.com/winlinvip/go-fdkaac"]
 	path = src/github.com/winlinvip/go-fdkaac
 	url = git@github.com:winlinvip/go-fdkaac.git
+[submodule "src/github.com/boombuler/barcode"]
+	path = src/github.com/boombuler/barcode
+	url = git@github.com:boombuler/barcode.git
