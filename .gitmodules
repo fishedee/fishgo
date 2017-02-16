@@ -178,3 +178,12 @@
 [submodule "src/github.com/boombuler/barcode"]
 	path = src/github.com/boombuler/barcode
 	url = git@github.com:boombuler/barcode.git
+[submodule "src/github.com/joho/godotenv"]
+	path = src/github.com/joho/godotenv
+	url = git@github.com:joho/godotenv.git
+[submodule "src/github.com/nsqio/go-nsq"]
+	path = src/github.com/nsqio/go-nsq
+	url = git@github.com:nsqio/go-nsq.git
+[submodule "src/github.com/golang/snappy"]
+	path = src/github.com/golang/snappy
+	url = git@github.com:golang/snappy.git
