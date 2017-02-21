@@ -60,11 +60,14 @@ func generate() error {
 }
 
 func run(appName string, isAsync bool) error {
-	err := modules.RunPackage(appName, isAsync)
+	appNameArray := strings.Split(appName, "/")
+	appBinName := appNameArray[len(appNameArray)-1]
+
+	err := modules.RunPackage(appBinName, isAsync)
 	if err != nil {
-		modules.Log.Error("%v running fail! error: %v", appName, err.Error())
+		modules.Log.Error("%v running fail! error: %v", appBinName, err.Error())
 		return err
 	}
-	modules.Log.Debug("%v is running", appName)
+	modules.Log.Debug("%v is running", appBinName)
 	return nil
 }

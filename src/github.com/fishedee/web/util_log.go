@@ -36,6 +36,7 @@ type LogConfig struct {
 	Rotate      bool   `json:"rotate"`
 	Level       int    `json:"level"`
 	PrettyPrint bool   `json:"prettyprint"`
+	Async       bool   `json:"async"`
 }
 
 type logImplement struct {
@@ -80,7 +81,10 @@ func NewLog(config LogConfig) (Log, error) {
 	if err != nil {
 		return nil, err
 	}
-	Log = Log.Async()
+	if config.Async {
+		Log = Log.Async()
+	}
+
 	return &logImplement{
 		BeeLogger:   Log,
 		prettyPrint: config.PrettyPrint,
@@ -97,6 +101,7 @@ func NewLogFromConfig(configName string) (Log, error) {
 	fishlogrotate := globalBasic.Config.GetString(configName + "rotate")
 	fishloglevel := globalBasic.Config.GetString(configName + "level")
 	fishlogprettyprint := globalBasic.Config.GetString(configName + "prettyprint")
+	fishlogasync := globalBasic.Config.GetString(configName + "async")
 
 	logConfig := LogConfig{}
 	logConfig.Driver = fishlogdriver
@@ -108,6 +113,7 @@ func NewLogFromConfig(configName string) (Log, error) {
 	logConfig.Rotate, _ = strconv.ParseBool(fishlogrotate)
 	logConfig.Level = getLevel(fishloglevel)
 	logConfig.PrettyPrint, _ = strconv.ParseBool(fishlogprettyprint)
+	logConfig.Async, _ = strconv.ParseBool(fishlogasync)
 
 	return NewLog(logConfig)
 }

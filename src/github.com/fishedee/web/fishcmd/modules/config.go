@@ -9,6 +9,7 @@ import (
 )
 
 var appName string
+var appBinName string
 var goPath string
 var goPathSrc string
 var goPathBin string
@@ -52,6 +53,8 @@ func InitConfig() error {
 		return fmt.Errorf("You are not in good directory [%v]", workingDir)
 	}
 
+	workingDirArray := strings.Split(workingDir, "/")
+	appBinName = workingDirArray[len(workingDirArray)-1]
 	appAllDirectory, err = getAllAppDirectory(workingDir)
 	if err != nil {
 		return fmt.Errorf("GetAllAppDirectory Fail [%v]", err)
@@ -96,11 +99,11 @@ func GetAppAllDirectory() []string {
 }
 
 func GetAppInstallPath() string {
-	return goPathBin + "/" + appName
+	return goPathBin + "/" + appBinName
 }
 
 func GetAppCurrentPath() string {
-	return workingDir + "/" + appName
+	return workingDir + "/" + appBinName
 }
 
 func GetWorkginDir() string {
