@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8" />
+	<title>邀请卡</title>
+	<style type="text/css">
+		.cardWrap {
+	        width:325px;
+	        position:relative;
+	        font-size:0;
+	        padding:5px;
+	        box-sizing:border-box;
+	        background-color:#ffffff;
+	        margin:30px auto;
+	        box-shadow:0px 1px 6px rgba(0, 0, 0, .1);
+	        -moz-box-shadow:0px 1px 6px rgba(0, 0, 0, .1);
+	        -webkit-box-shadow:0px 1px 6px rgba(0, 0, 0, .1);
+	        border-radius:4px;
+	    }
+	    .cardContentWrap {
+	        position:absolute;
+	        top:0;
+	        bottom:0;
+	        left:0;
+	        right:0;
+	        margin:auto;
+	        max-height:236px;
+	    }
+	    .clientImageWrap {
+	        position:relative;
+	        width:40px;
+	        height:40px;
+	        font-size:0;
+	        border-radius:50%;
+	        margin:0 auto;
+	    }
+	    .circleShadow {
+	        position:absolute;
+	        top:0;
+	        bottom:0;
+	        left:0;
+	        right:0;
+	        margin:auto;
+	        border-radius:50%;
+	        width:30px;
+	        height:20px;
+	        box-shadow:0px 15px 10px rgba(0, 0, 0, .10);
+	        -moz-box-shadow:0px 15px 10px rgba(0, 0, 0, .10);
+	        -webkit-box-shadow:0px 15px 10px rgba(0, 0, 0, .10);
+	    }
+	    .clientNameWrap {
+	        margin:0.6rem auto;
+	        text-align:center;
+	        font-size:11px;
+	        color:#000000;
+	    }
+	    .titleWrap {
+	        text-align:center;
+	    }
+	    .titleWrap span {
+            display:inline-block;
+            vertical-align:middle;
+        }
+        .courseTitle {
+	        text-align:center;
+	        font-size:16px;
+	        color:#000000;
+	        max-width:170px;
+	        overflow:hidden;
+	        text-overflow:ellipsis;
+	        -o-text-overflow:ellipsis;
+	        -webkit-text-overflow:ellipsis;
+	        -moz-text-overflow:ellipsis;
+	        white-space:nowrap;
+	    }
+	    .degreeTitle {
+	    	text-align:left;
+	        font-size:11px;
+	        color:#999999;
+	        margin:0 10px;
+	        width: 45px;
+	    }
+	    .summaryWrap {
+	        text-align:center;
+	        font-size:11px;
+	        margin:0.9rem 43px;
+	        color:#999999;;
+	        line-height:14px;
+	        max-height:28px;
+	        text-overflow: ellipsis;
+	        overflow: hidden;
+	        display:box;
+	        display:-moz-box;
+	        display:-webkit-box;
+	        -webkit-line-clamp: 2;
+	        -moz-line-clamp: 2;
+	        -line-clamp:2;
+	        -webkit-box-orient: vertical;
+	        -moz-box-orient: vertical;
+	        -box-orient: vertical;
+	    }
+	    .beginTimeWrap {
+	        margin-bottom:1.4rem;
+	        text-align:center;
+	        font-size:11px;
+	        color:#000000;
+	    }
+	    .qrCodeWrap {
+	        background-color:#ffffff;
+	        width:80px;
+	        height:80px;
+	        margin:0 auto;
+	        padding:2.5px;
+	        box-sizing:border-box;
+	        font-size:0;
+	        border-radius:4px;
+	        overflow:hidden;
+	        box-shadow:0px 1px 6px rgba(0, 0, 0, .1);
+	        -moz-box-shadow:0px 1px 6px rgba(0, 0, 0, .1);
+	        -webkit-box-shadow:0px 1px 6px rgba(0, 0, 0, .1);
+	    }
+	    .imageStyle {
+	        width:100%;
+	        overflow:hidden;
+	    }
+	    .qrCodeText {
+	        font-size:11px;
+	        color:#000000;
+	        margin-top:5px;
+	        text-align:center;
+	    }
+		.clientImg {
+			width: 100%;
+		    height: 100%;
+		    border-radius: 50%;
+			overflow: hidden;
+			position: relative;
+		}
+		.fontFamily {
+			/*font-family: Microsoft YaHei, "微软雅黑";*/
+			font-family: "Go Mono";
+		}
+	</style>
+</head>
+<body>
+	<div class='cardWrap'>
+        <img class='imageStyle' src='http://image.hongbeibang.com/FiaEi7qg6TS0ZLKLGbYPp3m0AXap?650X900&imageMogr2/strip/thumbnail/750x750' />
+        <div class='cardContentWrap'>
+            <div class='clientImageWrap'>
+                <div class='circleShadow'></div>
+                <img class='clientImg' src='{{userImage}}&imageMogr2/strip/thumbnail/!100x100r|imageMogr2/gravity/Center/crop/100x100' />
+            </div>
+            <div class='clientNameWrap fontFamily'>主讲人：{{userName}}</div>
+            <div class='titleWrap'>
+                <span class='degreeTitle'></span>
+                <span class='courseTitle fontFamily'>{{educationCourseTitle}}</span>
+                <span class='degreeTitle fontFamily'>{{courseDegreeTitle}}</span>
+            </div>
+            <div class='summaryWrap fontFamily'>{{courseSummary}}</div>
+            <div class='beginTimeWrap fontFamily'>开课时间：{{courseBeginTime}}</div>
+            <div class='qrCodeWrap'>
+                <img class='imageStyle' src='{{courseQrCode}}&imageMogr2/strip/thumbnail/!150x150r|imageMogr2/gravity/Center/crop/150x150' />
+            </div>
+            <div class='qrCodeText fontFamily'>长按识别二维码接受邀请</div>
+        </div>
+    </div>
+</body>
+</html>
