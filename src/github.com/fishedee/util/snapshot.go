@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
-	"strings"
 )
 
 type Browser struct {
@@ -50,19 +49,13 @@ func NewBrowser(userAgent, host string, port, width, height int) *Browser {
 // path: 图片保存文件名
 func (this *Browser) Snapshot(url, path string) error {
 	env := os.Environ()
-	home := ""
-	for _, single := range env {
-		if strings.Contains(single, "HOME=") {
-			home = strings.Split(single, "=")[1]
-		}
-	}
 
 	// 拼接casperjs命令
 	cmd := exec.Command(
 		"casperjs",
 		"--ssl-protocol=any",
 		"--ignore-ssl-errors=true",
-		home+"/Project/fishgo/src/github.com/fishedee/util/scripts/snapshot.js",
+		"/var/www/fishgo/src/github.com/fishedee/util/scripts/snapshot.js",
 		"--width="+strconv.Itoa(this.viewPort.width),
 		"--height="+strconv.Itoa(this.viewPort.height),
 		"--useragent="+this.userAgent,
