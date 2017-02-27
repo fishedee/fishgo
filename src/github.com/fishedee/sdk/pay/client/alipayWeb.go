@@ -55,19 +55,16 @@ func (this *AliWebClient) Pay(charge *common.Charge) (map[string]string, error) 
 	m["sign"] = sign
 	m["sign_type"] = "RSA"
 	fmt.Println("sign:", sign)
-	return map[string]string{"url":this.ToURL(m)}, nil
+	return map[string]string{"url": this.ToURL(m)}, nil
 }
 
 // GenSign 产生签名
 func (this *AliWebClient) GenSign(m map[string]string) string {
-	delete(m, "sign_type")
-	delete(m, "sign")
 	var data []string
 	for k, v := range m {
-		if v == "" {
-			continue
+		if v != "" && k != "sign" && k != "sign_type" {
+			data = append(data, fmt.Sprintf(`%s=%s`, k, v))
 		}
-		data = append(data, fmt.Sprintf(`%s=%s`, k, v))
 	}
 	sort.Strings(data)
 	signData := strings.Join(data, "&")

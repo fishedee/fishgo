@@ -4,7 +4,6 @@ import (
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
-	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"github.com/fishedee/sdk/pay/common"
@@ -13,6 +12,7 @@ import (
 	"strings"
 	"time"
 	"encoding/json"
+	"crypto/sha1"
 )
 
 var defaultAliAppClient *AliAppClient
@@ -43,7 +43,7 @@ func (this *AliAppClient) Pay(charge *common.Charge) (map[string]string, error) 
 	m["timestamp"] = time.Now().Format("2006-01-02 15:04:05")
 	m["version"] = "1.0"
 	m["notify_url"] = charge.CallbackURL
-	m["sign_type"] = "RSA2"
+	m["sign_type"] = "RSA"
 	//m["subject"] = charge.Describe
 	//m["out_trade_no"] = charge.TradeNum
 	//m["product_code"] = "QUICK_MSECURITY_PAY"
@@ -59,35 +59,30 @@ func (this *AliAppClient) Pay(charge *common.Charge) (map[string]string, error) 
 	}
 	m["biz_content"] = string(bizContentJson)
 
-	sign := this.GenSign(m)
-	m["sign_type"] = "RSA2"
-	m["sign"] = sign
+	m["sign"] = this.GenSign(m)
 
 	fmt.Printf("%+v",m)
-	return map[string]string{"orderStr":this.ToURL(m)}, nil
+	return m, nil
 }
 
 // GenSign 产生签名
 func (this *AliAppClient) GenSign(m map[string]string) string {
-	//delete(m, "sign_type")
-	delete(m, "sign")
 	var data []string
 	for k, v := range m {
-		if v == "" {
-			continue
+		if v != "" && k != "sign"{
+			data = append(data, fmt.Sprintf(`%s=%s`, k, v))
 		}
-		data = append(data, fmt.Sprintf(`%s=%s`, k, v))
 	}
 	sort.Strings(data)
 	signData := strings.Join(data, "&")
 	fmt.Println(signData)
-	s := sha256.New()
+	s := sha1.New()
 	_, err := s.Write([]byte(signData))
 	if err != nil {
 		panic(err)
 	}
 	hashByte := s.Sum(nil)
-	signByte, err := this.PrivateKey.Sign(rand.Reader, hashByte, crypto.SHA256)
+	signByte, err := this.PrivateKey.Sign(rand.Reader, hashByte, crypto.SHA1)
 	if err != nil {
 		panic(err)
 	}
@@ -100,13 +95,13 @@ func (this *AliAppClient) CheckSign(signData, sign string) {
 	if err != nil {
 		panic(err)
 	}
-	s := sha256.New()
+	s := sha1.New()
 	_, err = s.Write([]byte(signData))
 	if err != nil {
 		panic(err)
 	}
 	hash := s.Sum(nil)
-	err = rsa.VerifyPKCS1v15(this.PublicKey, crypto.SHA256, hash, signByte)
+	err = rsa.VerifyPKCS1v15(this.PublicKey, crypto.SHA1, hash, signByte)
 	if err != nil {
 		panic(err)
 	}

@@ -90,14 +90,13 @@ func (this *WechatWebClient) Pay(charge *common.Charge) (map[string]string, erro
 
 // GenSign 产生签名
 func (this *WechatWebClient) GenSign(m map[string]string) string {
-	delete(m, "sign")
-	delete(m, "key")
 	var signData []string
 	for k, v := range m {
-		if v != "" {
+		if v != "" && k != "sign" && k != "key"{
 			signData = append(signData, fmt.Sprintf("%s=%s", k, v))
 		}
 	}
+	fmt.Printf("%+v",signData)
 
 	sort.Strings(signData)
 	signStr := strings.Join(signData, "&")
