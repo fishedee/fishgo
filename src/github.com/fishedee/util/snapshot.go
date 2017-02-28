@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"strings"
 )
 
 type Browser struct {
@@ -48,11 +49,9 @@ func NewBrowser(userAgent, host string, port, width, height int) *Browser {
 // url: 文件路径
 // path: 图片保存文件名
 func (this *Browser) Snapshot(url, path string) error {
-	env := os.Environ()
-
 	// 拼接casperjs命令
 	cmd := exec.Command(
-		"casperjs",
+		"/usr/local/casperjs/1.1.3/package/bin/casperjs",
 		"--ssl-protocol=any",
 		"--ignore-ssl-errors=true",
 		"/var/www/fishgo/src/github.com/fishedee/util/scripts/snapshot.js",
@@ -65,17 +64,41 @@ func (this *Browser) Snapshot(url, path string) error {
 	)
 
 	// 设置运行环境
-	env = append(
-		env,
-		"LC_CTYPE=zh_CN.UTF-8",
-	)
+	env := this.getEnv()
 	cmd.Env = env
 
 	// 运行命令
-	err := cmd.Run()
+	msg, err := cmd.Output()
 	if err != nil {
-		return errors.New(fmt.Sprintf("failed to run cmd: %v\n", err))
+		return errors.New(fmt.Sprintf("failed to run cmd: %v\n, msg is %v\n, env is %v\n", err, string(msg), env))
 	}
 
 	return nil
+}
+
+// 设置环境变量
+func (this *Browser) getEnv() []string {
+	// 待添加path部分
+	addPATH := ":/usr/local/casperjs/1.1.3/package/bin:/home/jd/.npm/casperjs/1.1.3/package/bin:/usr/local/phantomjs/bin/"
+
+	// 获取当前设置
+	env := os.Environ()
+
+	// 替换path部分设置
+	newEnv := []string{}
+	for _, single := range env {
+		singleValue := single
+		if strings.Contains(single, "PATH") {
+			singleValue = single + addPATH
+		}
+		newEnv = append(newEnv, singleValue)
+	}
+
+	// 添加语言设置
+	newEnv = append(
+		newEnv,
+		"LC_CTYPE=zh_CN.UTF-8",
+	)
+
+	return newEnv
 }
