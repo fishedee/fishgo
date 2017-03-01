@@ -46,7 +46,7 @@ func (this *WechatAppClient) Pay(charge *common.Charge) (map[string]string, erro
 
 	sign ,err := WechatGenSign(this.Key,m)
 	if err != nil {
-		return map[string]string{}, err
+		return map[string]string{}, errors.New("WechatApp.sign: " + err.Error())
 	}
 
 	m["sign"] = sign
@@ -64,9 +64,9 @@ func (this *WechatAppClient) Pay(charge *common.Charge) (map[string]string, erro
 	c["noncestr"] = util.RandomStr()
 	c["timestamp"] = fmt.Sprintf("%d", time.Now().Unix())
 
-	sign2 ,err := WechatGenSign(this.Key,m)
+	sign2 ,err := WechatGenSign(this.Key,c)
 	if err != nil {
-		return map[string]string{}, errors.New("WechatApp: " + err.Error())
+		return map[string]string{}, errors.New("WechatApp.paySign: " + err.Error())
 	}
 	c["paySign"] = strings.ToUpper(sign2)
 
