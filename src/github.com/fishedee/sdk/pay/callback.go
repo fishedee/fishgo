@@ -119,7 +119,12 @@ func WeChatWebCallback(w http.ResponseWriter, r *http.Request) (*common.WeChatPa
 		signData = append(signData, fmt.Sprintf("%v=%v", k, v))
 	}
 
-	mySign := client.DefaultWechatWebClient().GenSign(m)
+	key := client.DefaultWechatAppClient().Key
+
+	mySign ,err := client.WechatGenSign(key,m)
+	if err != nil {
+		return &reXML,err
+	}
 
 	if mySign != m["sign"] {
 		panic(errors.New("签名交易错误"))

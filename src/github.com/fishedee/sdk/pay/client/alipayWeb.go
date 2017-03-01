@@ -44,18 +44,16 @@ func (this *AliWebClient) Pay(charge *common.Charge) (map[string]string, error) 
 	m["notify_url"] = charge.CallbackURL
 	m["return_url"] = charge.ReturnURL // 注意链接不能有&符号，否则会签名错误
 	m["out_trade_no"] = charge.TradeNum
-	m["subject"] = TruncatedText(charge.Describe,64)
+	m["subject"] = TruncatedText(charge.Describe,32)
 	m["total_fee"] = fmt.Sprintf("%.2f", charge.MoneyFee)
 	m["seller_id"] = this.SellerID
-	//m["payment_type"] = "1"
-	//m["show_url"] = charge.ShowURL
 
 	sign := this.GenSign(m)
 
 	m["sign"] = sign
 	m["sign_type"] = "RSA"
 	fmt.Println("sign:", sign)
-	return map[string]string{"url": this.ToURL(m)}, nil
+	return map[string]string{"url": ToURL(this.PayURL,m)}, nil
 }
 
 // GenSign 产生签名
@@ -80,15 +78,6 @@ func (this *AliWebClient) GenSign(m map[string]string) string {
 		panic(err)
 	}
 	return url.QueryEscape(base64.StdEncoding.EncodeToString(signByte))
-}
-
-// ToURL
-func (this *AliWebClient) ToURL(m map[string]string) string {
-	var buf []string
-	for k, v := range m {
-		buf = append(buf, fmt.Sprintf("%s=%s", k, v))
-	}
-	return fmt.Sprintf("%s?%s", this.PayURL, strings.Join(buf, "&"))
 }
 
 // CheckSign 检测签名

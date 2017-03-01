@@ -49,7 +49,7 @@ func (this *AliAppClient) Pay(charge *common.Charge) (map[string]string, error) 
 	//m["out_trade_no"] = charge.TradeNum
 	//m["product_code"] = "QUICK_MSECURITY_PAY"
 	//m["total_amount"] = fmt.Sprintf("%.2f", charge.MoneyFee)
-	bizContent["subject"] = TruncatedText(charge.Describe,64)
+	bizContent["subject"] = TruncatedText(charge.Describe,32)
 	bizContent["out_trade_no"] = charge.TradeNum
 	bizContent["product_code"] = "QUICK_MSECURITY_PAY"
 	bizContent["total_amount"] = fmt.Sprintf("%.2f", charge.MoneyFee)
