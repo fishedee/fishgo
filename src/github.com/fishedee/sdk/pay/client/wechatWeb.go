@@ -10,7 +10,7 @@ import (
 	"github.com/fishedee/sdk/pay/common"
 	"github.com/fishedee/sdk/pay/util"
 	"sort"
-	// "strconv"
+	"errors"
 	"strings"
 	"time"
 )
@@ -41,7 +41,7 @@ func (this *WechatWebClient) Pay(charge *common.Charge) (map[string]string, erro
 	m["appid"] = this.AppID
 	m["mch_id"] = this.MchID
 	m["nonce_str"] = util.RandomStr()
-	m["body"] = charge.Describe
+	m["body"] = TruncatedText(charge.Describe,128)
 	m["out_trade_no"] = charge.TradeNum
 	m["total_fee"] = fmt.Sprintf("%d", int(charge.MoneyFee*100))
 	m["spbill_create_ip"] = util.LocalIP()
@@ -50,7 +50,11 @@ func (this *WechatWebClient) Pay(charge *common.Charge) (map[string]string, erro
 	m["openid"] = charge.OpenID
 	m["sign_type"] = "MD5"
 
-	m["sign"] = this.GenSign(m)
+	sign ,err := WechatGenSign(this.Key,m)
+	if err != nil {
+		return map[string]string{}, err
+	}
+	m["sign"] = sign
 
 	// 转出xml结构
 	buf := bytes.NewBufferString("")
@@ -60,21 +64,21 @@ func (this *WechatWebClient) Pay(charge *common.Charge) (map[string]string, erro
 	xmlStr := fmt.Sprintf("<xml>%s</xml>", buf.String())
 	re, err := HTTPSC.PostData(this.PayURL, "text/xml:charset=UTF-8", xmlStr)
 	if err != nil {
-		panic(err)
+		return map[string]string{}, errors.New("HTTPSC.PostData: " + err.Error())
 	}
 	var xmlRe common.WeChatReResult
 	err = xml.Unmarshal(re, &xmlRe)
 	if err != nil {
-		panic(err)
+		return map[string]string{}, errors.New("xml.Unmarshal: " + err.Error())
 	}
 	if xmlRe.ReturnCode != "SUCCESS" {
 		// 通信失败
-		panic(xmlRe.ReturnMsg)
+		return map[string]string{}, errors.New("xmlRe.ReturnMsg: " + xmlRe.ReturnMsg)
 	}
 
 	if xmlRe.ResultCode != "SUCCESS" {
 		// 支付失败
-		panic(xmlRe.ErrCodeDes)
+		return map[string]string{}, errors.New("xmlRe.ErrCodeDes: " + xmlRe.ErrCodeDes)
 	}
 
 	var c = make(map[string]string)
@@ -83,7 +87,11 @@ func (this *WechatWebClient) Pay(charge *common.Charge) (map[string]string, erro
 	c["nonceStr"] = util.RandomStr()
 	c["package"] = fmt.Sprintf("prepay_id=%s", xmlRe.PrepayID)
 	c["signType"] = "MD5"
-	c["paySign"] = this.GenSign(c)
+	sign2 ,err := WechatGenSign(this.Key,c)
+	if err != nil {
+		return map[string]string{}, err
+	}
+	c["paySign"] = sign2
 
 	return c, nil
 }
@@ -136,5 +144,5 @@ func (this *WechatWebClient) QueryOrder(tradeNum string) (*common.WeChatQueryRes
 
 	var queryResult common.WeChatQueryResult
 	err = xml.Unmarshal(result, &queryResult)
-	return &queryResult, err
+	return &queryResult, errors.New("xml.Unmarshal: " + err.Error())
 }

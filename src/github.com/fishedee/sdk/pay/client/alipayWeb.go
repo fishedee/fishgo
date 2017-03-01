@@ -44,7 +44,7 @@ func (this *AliWebClient) Pay(charge *common.Charge) (map[string]string, error) 
 	m["notify_url"] = charge.CallbackURL
 	m["return_url"] = charge.ReturnURL // 注意链接不能有&符号，否则会签名错误
 	m["out_trade_no"] = charge.TradeNum
-	m["subject"] = charge.Describe
+	m["subject"] = TruncatedText(charge.Describe,64)
 	m["total_fee"] = fmt.Sprintf("%.2f", charge.MoneyFee)
 	m["seller_id"] = this.SellerID
 	//m["payment_type"] = "1"

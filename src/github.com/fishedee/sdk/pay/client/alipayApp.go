@@ -4,15 +4,16 @@ import (
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha1"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"github.com/fishedee/sdk/pay/common"
 	"net/url"
 	"sort"
 	"strings"
 	"time"
-	"encoding/json"
-	"crypto/sha1"
+	"github.com/go-errors/errors"
 )
 
 var defaultAliAppClient *AliAppClient
@@ -48,20 +49,20 @@ func (this *AliAppClient) Pay(charge *common.Charge) (map[string]string, error) 
 	//m["out_trade_no"] = charge.TradeNum
 	//m["product_code"] = "QUICK_MSECURITY_PAY"
 	//m["total_amount"] = fmt.Sprintf("%.2f", charge.MoneyFee)
-	bizContent["subject"] = charge.Describe
+	bizContent["subject"] = TruncatedText(charge.Describe,64)
 	bizContent["out_trade_no"] = charge.TradeNum
 	bizContent["product_code"] = "QUICK_MSECURITY_PAY"
 	bizContent["total_amount"] = fmt.Sprintf("%.2f", charge.MoneyFee)
 
 	bizContentJson, err := json.Marshal(bizContent)
 	if err != nil {
-		panic(err)
+		return map[string]string{}, errors.New("json.Marshal: "+err.Error())
 	}
 	m["biz_content"] = string(bizContentJson)
 
 	m["sign"] = this.GenSign(m)
 
-	fmt.Printf("%+v",m)
+	fmt.Printf("%+v", m)
 	return m, nil
 }
 
@@ -69,7 +70,7 @@ func (this *AliAppClient) Pay(charge *common.Charge) (map[string]string, error) 
 func (this *AliAppClient) GenSign(m map[string]string) string {
 	var data []string
 	for k, v := range m {
-		if v != "" && k != "sign"{
+		if v != "" && k != "sign" {
 			data = append(data, fmt.Sprintf(`%s=%s`, k, v))
 		}
 	}
