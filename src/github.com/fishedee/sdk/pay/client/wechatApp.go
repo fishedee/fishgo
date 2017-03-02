@@ -72,3 +72,21 @@ func (this *WechatAppClient) Pay(charge *common.Charge) (map[string]string, erro
 
 	return c, nil
 }
+
+// QueryOrder 查询订单
+func (this *WechatAppClient) QueryOrder(tradeNum string) (common.WeChatQueryResult, error) {
+	var m = make(map[string]string)
+	m["appid"] = this.AppID
+	m["mch_id"] = this.MchID
+	m["out_trade_no"] = tradeNum
+	m["nonce_str"] = util.RandomStr()
+
+	sign ,err := WechatGenSign(this.Key,m)
+	if err != nil {
+		return common.WeChatQueryResult{}, err
+	}
+
+	m["sign"] = sign
+
+	return PostWechat("https://api.mch.weixin.qq.com/pay/orderquery",m)
+}

@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"crypto/md5"
 	"encoding/xml"
-	"github.com/fishedee/sdk/pay/common"
 	"errors"
 	"fmt"
+	"github.com/fishedee/sdk/pay/common"
 	"sort"
 	"strings"
 )
@@ -18,7 +18,6 @@ func WechatGenSign(key string, m map[string]string) (string, error) {
 			signData = append(signData, fmt.Sprintf("%s=%s", k, v))
 		}
 	}
-	fmt.Printf("%+v", signData)
 
 	sort.Strings(signData)
 	signStr := strings.Join(signData, "&")
@@ -64,9 +63,9 @@ func FilterTheSpecialSymbol(data string) string {
 	return strings.Replace(data, "\n", " ", -1)
 }
 
-//对微信下订单
-func PostWechat(payUrl string,data map[string]string) (common.WeChatReResult,error){
-	var xmlRe common.WeChatReResult
+//对微信下订单或者查订单
+func PostWechat(url string, data map[string]string) (common.WeChatQueryResult, error) {
+	var xmlRe common.WeChatQueryResult
 	buf := bytes.NewBufferString("")
 
 	for k, v := range data {
@@ -74,7 +73,7 @@ func PostWechat(payUrl string,data map[string]string) (common.WeChatReResult,err
 	}
 	xmlStr := fmt.Sprintf("<xml>%s</xml>", buf.String())
 
-	re, err := HTTPSC.PostData(payUrl, "text/xml:charset=UTF-8", xmlStr)
+	re, err := HTTPSC.PostData(url, "text/xml:charset=UTF-8", xmlStr)
 	if err != nil {
 		return xmlRe, errors.New("HTTPSC.PostData: " + err.Error())
 	}
@@ -90,17 +89,37 @@ func PostWechat(payUrl string,data map[string]string) (common.WeChatReResult,err
 	}
 
 	if xmlRe.ResultCode != "SUCCESS" {
-		// 支付失败
+		// 业务结果失败
 		return xmlRe, errors.New("xmlRe.ErrCodeDes: " + xmlRe.ErrCodeDes)
 	}
-	return xmlRe,nil
+	return xmlRe, nil
+}
+
+//对支付宝者查订单
+func GetAlipay(url string) (common.AliWebQueryResult, error) {
+	var xmlRe common.AliWebQueryResult
+
+	re, err := HTTPSC.GetData(url)
+	if err != nil {
+		return xmlRe, errors.New("HTTPSC.PostData: " + err.Error())
+	}
+	err = xml.Unmarshal(re, &xmlRe)
+	if err != nil {
+		return xmlRe, errors.New("xml.Unmarshal: " + err.Error())
+	}
+
+	//if xmlRe.IsSuccess != "T" {
+	//	// 通信失败
+	//	return xmlRe, errors.New("HTTPSC.GetData.通信失败: " + xmlRe.ErrorMsg)
+	//}
+	return xmlRe, nil
 }
 
 // ToURL
-func ToURL(payUrl string,m map[string]string) string {
+func ToURL(payUrl string, m map[string]string) string {
 	var buf []string
 	for k, v := range m {
 		buf = append(buf, fmt.Sprintf("%s=%s", k, v))
 	}
-	return fmt.Sprintf("%s?%s",payUrl, strings.Join(buf, "&"))
+	return fmt.Sprintf("%s?%s", payUrl, strings.Join(buf, "&"))
 }

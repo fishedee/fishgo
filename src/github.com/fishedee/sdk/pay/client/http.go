@@ -76,6 +76,16 @@ func (c *HTTPSClient) PostData(url string, contentType string, data string) ([]b
 	return ioutil.ReadAll(resp.Body)
 }
 
+// PostData 提交post数据
+func (c *HTTPSClient) GetData(url string) ([]byte, error) {
+	resp, err := c.Get(url)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+	return ioutil.ReadAll(resp.Body)
+}
+
 // HTTPClient http客户端
 type HTTPClient struct {
 	http.Client

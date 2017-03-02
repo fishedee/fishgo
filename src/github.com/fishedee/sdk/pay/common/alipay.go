@@ -14,7 +14,7 @@ type AliWebPayResult struct {
 	OutTradeNum      string `json:"out_trade_no"`
 	OutBizNo         string `json:"out_biz_no"`
 	BuyerID          string `json:"buyer_id"`
-	buyerPayAmount   string `json:"buyer_pay_amount"`
+	BuyerPayAmount   string `json:"buyer_pay_amount"`
 	RefundFee        string `json:"refund_fee"`
 	Subject          string `json:"subject"`
 	PayMentType      string `json:"payment_type"`
@@ -59,4 +59,30 @@ type AliQueryResult struct {
 	DiscountGoodsDetail string `json:"discount_goods_detail"`
 	IndustrySepcDetail  string `json:"industry_sepc_detail"`
 	PassbackParams      string `json:"passback_params"`
+}
+
+type AliWebQueryResult struct {
+	IsSuccess string `xml:"is_success"`
+	ErrorMsg  string `xml:"error"`
+	SignType  string `xml:"sign_type"`
+	Sign      string `xml:"sign"`
+	Response  struct {
+		Trade struct {
+			BuyerEmail          string `xml:"buyer_email"`
+			BuyerId             string `xml:"buyer_id"`
+			SellerID            string `xml:"seller_id"`
+			TradeStatus         string `xml:"trade_status"`
+			IsTotalFeeAdjust    string `xml:"is_total_fee_adjust"`
+			OutTradeNum         string `xml:"out_trade_no"`
+			Subject             string `xml:"subject"`
+			FlagTradeLocked     string `xml:"flag_trade_locked"`
+			Body                string `xml:"body"`
+			GmtCreate           string `xml:"gmt_create"`
+			GmtPayment          string `xml:"gmt_payment"`
+			GmtLastModifiedTime string `xml:"gmt_last_modified_time"`
+			SellerEmail         string `xml:"seller_email"`
+			TotalFee            string `xml:"total_fee"`
+			TradeNum            string `xml:"trade_no"`
+		} `xml:"trade"`
+	} `xml:"response"`
 }

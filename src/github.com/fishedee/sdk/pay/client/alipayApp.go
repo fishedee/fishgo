@@ -62,8 +62,7 @@ func (this *AliAppClient) Pay(charge *common.Charge) (map[string]string, error) 
 
 	m["sign"] = this.GenSign(m)
 
-	fmt.Printf("%+v", m)
-	return m, nil
+	return map[string]string{"orderString":this.ToURL(m)}, nil
 }
 
 // GenSign 产生签名
@@ -76,7 +75,7 @@ func (this *AliAppClient) GenSign(m map[string]string) string {
 	}
 	sort.Strings(data)
 	signData := strings.Join(data, "&")
-	fmt.Println(signData)
+
 	s := sha1.New()
 	_, err := s.Write([]byte(signData))
 	if err != nil {

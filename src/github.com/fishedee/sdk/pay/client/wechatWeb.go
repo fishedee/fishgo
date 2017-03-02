@@ -1,10 +1,6 @@
 package client
 
 import (
-	"bytes"
-	// "encoding/json"
-	"encoding/xml"
-	//"errors"
 	"fmt"
 	"github.com/fishedee/sdk/pay/common"
 	"github.com/fishedee/sdk/pay/util"
@@ -75,8 +71,7 @@ func (this *WechatWebClient) Pay(charge *common.Charge) (map[string]string, erro
 }
 
 // QueryOrder 查询订单
-func (this *WechatWebClient) QueryOrder(tradeNum string) (*common.WeChatQueryResult, error) {
-	var queryResult common.WeChatQueryResult
+func (this *WechatWebClient) QueryOrder(tradeNum string) (common.WeChatQueryResult, error) {
 	var m = make(map[string]string)
 	m["appid"] = this.AppID
 	m["mch_id"] = this.MchID
@@ -85,21 +80,10 @@ func (this *WechatWebClient) QueryOrder(tradeNum string) (*common.WeChatQueryRes
 
 	sign ,err := WechatGenSign(this.Key,m)
 	if err != nil {
-		return &queryResult, err
+		return common.WeChatQueryResult{}, err
 	}
+
 	m["sign"] = sign
 
-	buf := bytes.NewBufferString("")
-	for k, v := range m {
-		buf.WriteString(fmt.Sprintf("<%s><![CDATA[%s]]></%s>", k, v, k))
-	}
-	xmlStr := fmt.Sprintf("<xml>%s</xml>", buf.String())
-
-	result, err := HTTPSC.PostData(this.QueryURL, "text/xml:charset=UTF-8", xmlStr)
-	if err != nil {
-		return nil, err
-	}
-
-	err = xml.Unmarshal(result, &queryResult)
-	return &queryResult, errors.New("xml.Unmarshal: " + err.Error())
+	return PostWechat("https://api.mch.weixin.qq.com/pay/orderquery",m)
 }

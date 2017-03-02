@@ -52,8 +52,22 @@ func (this *AliWebClient) Pay(charge *common.Charge) (map[string]string, error) 
 
 	m["sign"] = sign
 	m["sign_type"] = "RSA"
-	fmt.Println("sign:", sign)
 	return map[string]string{"url": ToURL(this.PayURL,m)}, nil
+}
+
+// 订单查询
+func (this *AliWebClient) QueryOrder(outTradeNo string) (common.AliWebQueryResult,error) {
+	var m = make(map[string]string)
+	m["service"] = "single_trade_query"
+	m["partner"] = this.PartnerID
+	m["_input_charset"] = "utf-8"
+	m["out_trade_no"] = outTradeNo
+
+	sign := this.GenSign(m)
+
+	m["sign"] = sign
+	m["sign_type"] = "RSA"
+	return GetAlipay(ToURL(this.PayURL,m))
 }
 
 // GenSign 产生签名
@@ -66,7 +80,6 @@ func (this *AliWebClient) GenSign(m map[string]string) string {
 	}
 	sort.Strings(data)
 	signData := strings.Join(data, "&")
-	fmt.Println(signData)
 	s := sha1.New()
 	_, err := s.Write([]byte(signData))
 	if err != nil {
