@@ -110,6 +110,10 @@ func NewAjaxPool(option *AjaxPoolOption) *AjaxPool {
 	}
 }
 
+func (this *AjaxPool) Do(option *Ajax) error {
+	return option.Send(this.client)
+}
+
 func (this *AjaxPool) Get(option *Ajax) error {
 	option.Method = "GET"
 	return option.Send(this.client)
