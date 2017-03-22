@@ -72,3 +72,17 @@ func (this *YunpianSdk) SendSms(mobile string, text string) (YunpianSdkSendSmsRe
 	}
 	return result, err
 }
+
+// 批量发送短信
+func (this *YunpianSdk) SendMsgs(mobile string, text string) (YunpianSdkSendSmsResult, error) {
+	var result YunpianSdkSendSmsResult
+	err := this.api("/v2/sms/batch_send.json", map[string]string{
+		"apikey": this.ApiKey,
+		"mobile": mobile,
+		"text":   text,
+	}, &result)
+	if err != nil {
+		return YunpianSdkSendSmsResult{}, err
+	}
+	return result, err
+}

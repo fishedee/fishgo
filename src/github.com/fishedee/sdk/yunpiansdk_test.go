@@ -13,7 +13,7 @@ func assertYunpianSdkEqual(t *testing.T, left interface{}, right interface{}) {
 
 func TestYunpianSdkSendSms(t *testing.T) {
 	sdk := &YunpianSdk{
-		ApiKey: "850bfe241f3d8c3ca9ecde53d161b209",
+		ApiKey: "xxx",
 	}
 	result, err := sdk.SendSms(
 		"15018749403",
