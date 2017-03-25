@@ -17,6 +17,7 @@ src/github.com/tsenart/
 src/github.com/walle/
 src/github.com/slene/
 src/gopkg.in/alecthomas/
+src/github.com/fishedee/sdk/testdata/*
 gopkg.in/alecthomas/
 !pkg/.gitignore
 !bin/.gitignore

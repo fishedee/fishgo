@@ -2,9 +2,11 @@ package sdk
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/pili-engineering/pili-sdk-go.v2/pili"
@@ -12,7 +14,7 @@ import (
 )
 
 const (
-	maxSize = 128 * 1024 * 1024
+	maxSize = 256 * 1024 * 1024 // 文件最大容量
 )
 
 // 七牛sdk
@@ -46,6 +48,99 @@ func (this *QiniuSdk) UploadString(bucketName string, data []byte) (string, erro
 }
 
 /**
+ * [UploadString 上传文件到七牛--支持断点续传]
+ * @param  string      bucketName [储存区域]
+ * @param  []byte      data       [图片字节流]
+ * @return string, error          [图片哈希值,错误值]
+ */
+func (this *QiniuSdk) RuploadString(bucketName string, data []byte) (string, error) {
+	//判断图片文件大小
+	fsize := int64(len(data))
+	if fsize > maxSize {
+		return "", errors.New("上传图片太大！")
+	}
+
+	ctx := context.WithValue(context.Background(), 1, 1)
+	uploadReader := bytes.NewReader(data)
+	bucket := this.getBucket(bucketName)
+	putRet := kodo.PutRet{}
+	putExtra := kodo.RputExtra{
+		ChunkSize: 4 * 1024 * 1024, // 每段大小
+		TryTimes:  5,               // 尝试次数
+	}
+	err := bucket.RputWithoutKey(ctx, &putRet, uploadReader, fsize, &putExtra)
+	if err != nil {
+		return "", err
+	}
+
+	return putRet.Hash, nil
+}
+
+/**
+ * [UploadFile 上传文件]
+ * @param  string      bucketName [储存区域]
+ * @param  string      fileAddr   [本地文件地址]
+ * @return string, error          [七牛图片哈希值，错误值]
+ */
+func (this *QiniuSdk) UploadFile(bucketName, fileAddr string) (string, error) {
+	// 检查文件大小
+	err := this.checkFileSize(fileAddr)
+	if err != nil {
+		return "", err
+	}
+
+	bucket := this.getBucket(bucketName)
+	putRet := kodo.PutRet{}
+	err = bucket.PutFileWithoutKey(nil, &putRet, fileAddr, &kodo.PutExtra{})
+	if err != nil {
+		return "", err
+	}
+
+	return putRet.Hash, nil
+}
+
+/**
+ * [UploadString 上传文件到七牛--支持断点续传]
+ * @param  string      bucketName [储存区域]
+ * @param  []byte      data       [图片字节流]
+ * @return string, error          [图片哈希值,错误值]
+ */
+func (this *QiniuSdk) RuploadFile(bucketName, fileAddr string) (string, error) {
+	// 检查文件大小
+	err := this.checkFileSize(fileAddr)
+	if err != nil {
+		return "", err
+	}
+
+	// 上传
+	ctx := context.WithValue(context.Background(), 1, 1)
+	bucket := this.getBucket(bucketName)
+	putRet := kodo.PutRet{}
+	putExtra := kodo.RputExtra{
+		ChunkSize: 4 * 1024 * 1024, // 每段大小
+		TryTimes:  5,               // 尝试次数
+	}
+	err = bucket.RputFileWithoutKey(ctx, &putRet, fileAddr, &putExtra)
+	if err != nil {
+		return "", err
+	}
+
+	return putRet.Hash, nil
+}
+
+// 检查文件大小
+func (this *QiniuSdk) checkFileSize(fileAddr string) error {
+	fileInfo, err := os.Stat(fileAddr)
+	if err != nil {
+		return err
+	}
+	if fileInfo.Size() > maxSize {
+		return errors.New("上传图片太大！")
+	}
+	return nil
+}
+
+/**
  * [getBucket 指定储存区域]
  * @param  string     bucketName [储存区域]
  * @return Bucket                [返回储存区域]
@@ -65,23 +160,6 @@ func (this *QiniuSdk) getClient() *kodo.Client {
 		SecretKey: this.SecretKey,
 	}
 	return kodo.New(0, cfg)
-}
-
-/**
- * [UploadFile 上传文件]
- * @param  string      bucketName [储存区域]
- * @param  string      fileAddr   [本地文件地址]
- * @return string, error          [七牛图片哈希值，错误值]
- */
-func (this *QiniuSdk) UploadFile(bucketName string, fileAddr string) (string, error) {
-	bucket := this.getBucket(bucketName)
-	putRet := kodo.PutRet{}
-	err := bucket.PutFileWithoutKey(nil, &putRet, fileAddr, &kodo.PutExtra{})
-	if err != nil {
-		return "", err
-	}
-
-	return putRet.Hash, nil
 }
 
 /**
