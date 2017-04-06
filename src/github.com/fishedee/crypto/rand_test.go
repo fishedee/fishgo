@@ -41,4 +41,6 @@ func TestRand(t *testing.T) {
 			t.Errorf("invalid crypto rand digit", singleTestCase)
 		}
 	}
+
+	t.Log(CryptoRand(32))
 }

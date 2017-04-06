@@ -63,6 +63,24 @@ type WxSdkUserList struct {
 	NextOpenid string `json:"next_openid"`
 }
 
+type WxSdkTemplateMessage struct {
+	Touser      string                                     `json:"touser"`
+	TemplateId  string                                     `json:"template_id"`
+	Url         string                                     `json:"url"`
+	Miniprogram WxSdkTemplateMessageMiniprogram            `json:"miniprogram,omitempty"`
+	Data        map[string]WxSdkTemplateMessageDataContent `json:"data"`
+}
+
+type WxSdkTemplateMessageMiniprogram struct {
+	Appid    string `json:"appid"`
+	Pagepath string `json:"pagepath"`
+}
+
+type WxSdkTemplateMessageDataContent struct {
+	Value string `json:"value"`
+	Color string `json:"color"`
+}
+
 type WxSdkReceiveMessage struct {
 	ToUserName   string
 	FromUserName string
@@ -178,9 +196,10 @@ type wxSdkJsSignature struct {
 	Url         string
 }
 
-type wxSdkDownload struct {
+type WxSdkCommonResult struct {
 	Errcode int    `json:"errcode,omitempty"`
 	Errmsg  string `json:"errmsg,omitempty"`
+	MsgID   int    `json:"msgid,omitempty"`
 }
 
 type WxSdkError struct {
@@ -428,6 +447,29 @@ func (this *WxSdk) DelMenu(accessToken string) error {
 		return err
 	}
 	return nil
+}
+
+// 发送消息模板
+func (this *WxSdk) SendTemplateMessage(accessToken string, msgData WxSdkTemplateMessage) (WxSdkCommonResult, error) {
+
+	msgJson, err := EncodeJson(msgData)
+	if err != nil {
+		return WxSdkCommonResult{}, err
+	}
+
+	data, err := this.api("POST", "/cgi-bin/message/template/send", map[string]string{
+		"access_token": accessToken,
+	}, msgJson)
+	if err != nil {
+		return WxSdkCommonResult{}, err
+	}
+
+	result := WxSdkCommonResult{}
+	err = DecodeJson(data, &result)
+	if err != nil {
+		return WxSdkCommonResult{}, err
+	}
+	return result, nil
 }
 
 //手动拼接参数
