@@ -199,7 +199,7 @@ type wxSdkJsSignature struct {
 type WxSdkCommonResult struct {
 	Errcode int    `json:"errcode,omitempty"`
 	Errmsg  string `json:"errmsg,omitempty"`
-	MsgID   int    `json:"msgid,omitempty"`
+	MsgID   int64  `json:"msgid,omitempty"`
 }
 
 type WxSdkError struct {
