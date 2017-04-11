@@ -89,6 +89,7 @@ type WxSdkReceiveMessage struct {
 	CreateTime   int
 	MsgType      string
 	MsgId        int
+	MsgID        int
 	//文本消息
 	Content string
 	//图片消息
