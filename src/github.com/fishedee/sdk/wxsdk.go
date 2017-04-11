@@ -19,9 +19,11 @@ import (
 )
 
 type WxSdk struct {
-	AppId     string
-	AppSecret string
-	Token     string
+	AppId       string
+	AppSecret   string
+	Token       string
+	AccessToken string
+	JsApiTicket string
 }
 
 type WxSdkToken struct {
