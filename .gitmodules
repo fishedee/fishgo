@@ -196,3 +196,6 @@
 [submodule "src/github.com/djimenez/iconv-go"]
 	path = src/github.com/djimenez/iconv-go
 	url = git@github.com:djimenez/iconv-go.git
+[submodule "src/github.com/rakyll/hey"]
+	path = src/github.com/rakyll/hey
+	url = git@github.com:rakyll/hey.git
