@@ -45,10 +45,6 @@ func (this *AliAppClient) Pay(charge *common.Charge) (map[string]string, error) 
 	m["version"] = "1.0"
 	m["notify_url"] = charge.CallbackURL
 	m["sign_type"] = "RSA"
-	//m["subject"] = charge.Describe
-	//m["out_trade_no"] = charge.TradeNum
-	//m["product_code"] = "QUICK_MSECURITY_PAY"
-	//m["total_amount"] = fmt.Sprintf("%.2f", charge.MoneyFee)
 	bizContent["subject"] = TruncatedText(charge.Describe,32)
 	bizContent["out_trade_no"] = charge.TradeNum
 	bizContent["product_code"] = "QUICK_MSECURITY_PAY"
@@ -62,12 +58,15 @@ func (this *AliAppClient) Pay(charge *common.Charge) (map[string]string, error) 
 
 	m["sign"] = this.GenSign(m)
 
+	fmt.Println(m)
+
 	return map[string]string{"orderString":this.ToURL(m)}, nil
 }
 
 // GenSign 产生签名
 func (this *AliAppClient) GenSign(m map[string]string) string {
 	var data []string
+
 	for k, v := range m {
 		if v != "" && k != "sign" {
 			data = append(data, fmt.Sprintf(`%s=%s`, k, v))
@@ -86,7 +85,7 @@ func (this *AliAppClient) GenSign(m map[string]string) string {
 	if err != nil {
 		panic(err)
 	}
-	return url.QueryEscape(base64.StdEncoding.EncodeToString(signByte))
+	return base64.StdEncoding.EncodeToString(signByte)
 }
 
 // CheckSign 检测签名
@@ -115,3 +114,4 @@ func (this *AliAppClient) ToURL(m map[string]string) string {
 	}
 	return strings.Join(buf, "&")
 }
+
