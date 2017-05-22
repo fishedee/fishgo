@@ -9,11 +9,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/fishedee/sdk/pay/common"
+	"github.com/go-errors/errors"
 	"net/url"
 	"sort"
 	"strings"
 	"time"
-	"github.com/go-errors/errors"
 )
 
 var defaultAliAppClient *AliAppClient
@@ -45,22 +45,20 @@ func (this *AliAppClient) Pay(charge *common.Charge) (map[string]string, error) 
 	m["version"] = "1.0"
 	m["notify_url"] = charge.CallbackURL
 	m["sign_type"] = "RSA"
-	bizContent["subject"] = TruncatedText(charge.Describe,32)
+	bizContent["subject"] = TruncatedText(charge.Describe, 32)
 	bizContent["out_trade_no"] = charge.TradeNum
 	bizContent["product_code"] = "QUICK_MSECURITY_PAY"
 	bizContent["total_amount"] = fmt.Sprintf("%.2f", charge.MoneyFee)
 
 	bizContentJson, err := json.Marshal(bizContent)
 	if err != nil {
-		return map[string]string{}, errors.New("json.Marshal: "+err.Error())
+		return map[string]string{}, errors.New("json.Marshal: " + err.Error())
 	}
 	m["biz_content"] = string(bizContentJson)
 
 	m["sign"] = this.GenSign(m)
 
-	fmt.Println(m)
-
-	return map[string]string{"orderString":this.ToURL(m)}, nil
+	return map[string]string{"orderString": this.ToURL(m)}, nil
 }
 
 // GenSign 产生签名
@@ -114,4 +112,3 @@ func (this *AliAppClient) ToURL(m map[string]string) string {
 	}
 	return strings.Join(buf, "&")
 }
-

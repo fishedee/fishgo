@@ -35,30 +35,33 @@ type AliWebPayResult struct {
 	AliQueryResult
 }
 
+type FundBill struct {
+	FundChannel string `json:"fundChannel"`
+	Amount      string `json:"amount"`
+}
+
 type AliQueryResult struct {
-	TradeNo        string `json:"trade_no"`
-	OutTradeNo     string `json:"out_trade_no"`
-	OpenID         string `json:"open_id"`
-	BuyerLogonID   string `json:"buyer_logon_id"`
-	TradeStatus    string `json:"trade_status"`
-	TotalAmount    string `json:"total_amount"`
-	ReceiptAmount  string `json:"receipt_amount"`
-	BuyerPayAmount string `json:"BuyerPayAmount"`
-	PointAmount    string `json:"point_amount"`
-	InvoiceAmount  string `json:"invoice_amount"`
-	SendPayDate    string `json:"send_pay_date"`
-	AlipayStoreID  string `json:"alipay_store_id"`
-	StoreID        string `json:"store_id"`
-	TerminalID     string `json:"terminal_id"`
-	FundBillList   []struct {
-		FundChannel string `json:"fund_channel"`
-		Amount      string `json:"amount"`
-	} `json:"fund_bill_list"`
-	StoreName           string `json:"store_name"`
-	BuyerUserID         string `json:"buyer_user_id"`
-	DiscountGoodsDetail string `json:"discount_goods_detail"`
-	IndustrySepcDetail  string `json:"industry_sepc_detail"`
-	PassbackParams      string `json:"passback_params"`
+	TradeNo             string     `json:"trade_no"`
+	OutTradeNo          string     `json:"out_trade_no"`
+	OpenID              string     `json:"open_id"`
+	BuyerLogonID        string     `json:"buyer_logon_id"`
+	TradeStatus         string     `json:"trade_status"`
+	TotalAmount         string     `json:"total_amount"`
+	ReceiptAmount       string     `json:"receipt_amount"`
+	BuyerPayAmount      string     `json:"BuyerPayAmount"`
+	PointAmount         string     `json:"point_amount"`
+	InvoiceAmount       string     `json:"invoice_amount"`
+	SendPayDate         string     `json:"send_pay_date"`
+	AlipayStoreID       string     `json:"alipay_store_id"`
+	StoreID             string     `json:"store_id"`
+	TerminalID          string     `json:"terminal_id"`
+	FundBillListStr     string     `json:"fund_bill_list"`
+	FundBillList        []FundBill `json:"-"`
+	StoreName           string     `json:"store_name"`
+	BuyerUserID         string     `json:"buyer_user_id"`
+	DiscountGoodsDetail string     `json:"discount_goods_detail"`
+	IndustrySepcDetail  string     `json:"industry_sepc_detail"`
+	PassbackParams      string     `json:"passback_params"`
 }
 
 type AliWebQueryResult struct {

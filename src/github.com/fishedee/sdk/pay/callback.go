@@ -4,13 +4,15 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
-	"github.com/fishedee/sdk/pay/client"
-	"github.com/fishedee/sdk/pay/common"
-	"github.com/fishedee/sdk/pay/util"
 	"io/ioutil"
 	"net/http"
 	"sort"
 	"strings"
+
+	"github.com/fishedee/encoding"
+	"github.com/fishedee/sdk/pay/client"
+	"github.com/fishedee/sdk/pay/common"
+	"github.com/fishedee/sdk/pay/util"
 )
 
 func AliWebCallback(w http.ResponseWriter, r *http.Request) (*common.AliWebPayResult, error) {
@@ -48,6 +50,11 @@ func AliWebCallback(w http.ResponseWriter, r *http.Request) (*common.AliWebPayRe
 
 // 支付宝app支付回调
 func AliAppCallback(w http.ResponseWriter, r *http.Request) (*common.AliWebPayResult, error) {
+	var result string
+	defer func() {
+		w.Write([]byte(result))
+	}()
+
 	var m = make(map[string]string)
 	var signSlice []string
 	r.ParseForm()
@@ -61,19 +68,25 @@ func AliAppCallback(w http.ResponseWriter, r *http.Request) (*common.AliWebPayRe
 	sort.Strings(signSlice)
 	signData := strings.Join(signSlice, "&")
 	if m["sign_type"] != "RSA" {
+		result = "error"
 		panic("签名类型未知")
 	}
 
 	client.DefaultAliAppClient().CheckSign(signData, m["sign"])
 
-	var aliPay common.AliWebPayResult
-	err := util.MapStringToStruct(m, &aliPay)
+	mByte, err := encoding.EncodeJson(m)
 	if err != nil {
-		w.Write([]byte("error"))
+		result = "error"
 		panic(err)
 	}
 
-	w.Write([]byte("success"))
+	var aliPay common.AliWebPayResult
+	err = encoding.DecodeJson(mByte, &aliPay)
+	if err != nil {
+		result = "error"
+		panic(fmt.Sprintf("m is %v, err is %v", m, err))
+	}
+	result = "success"
 	return &aliPay, nil
 }
 
@@ -121,9 +134,9 @@ func WeChatWebCallback(w http.ResponseWriter, r *http.Request) (*common.WeChatPa
 
 	key := client.DefaultWechatAppClient().Key
 
-	mySign ,err := client.WechatGenSign(key,m)
+	mySign, err := client.WechatGenSign(key, m)
 	if err != nil {
-		return &reXML,err
+		return &reXML, err
 	}
 
 	if mySign != m["sign"] {
@@ -177,9 +190,9 @@ func WeChatAppCallback(w http.ResponseWriter, r *http.Request) (*common.WeChatPa
 
 	key := client.DefaultWechatAppClient().Key
 
-	mySign ,err := client.WechatGenSign(key,m)
+	mySign, err := client.WechatGenSign(key, m)
 	if err != nil {
-		return &reXML,err
+		return &reXML, err
 	}
 
 	if mySign != m["sign"] {
