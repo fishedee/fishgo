@@ -3,6 +3,7 @@ package client
 import (
 	"bytes"
 	"crypto/md5"
+	"encoding/json"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -107,12 +108,24 @@ func GetAlipay(url string) (common.AliWebQueryResult, error) {
 	if err != nil {
 		return xmlRe, errors.New("xml.Unmarshal: " + err.Error())
 	}
-
-	//if xmlRe.IsSuccess != "T" {
-	//	// 通信失败
-	//	return xmlRe, errors.New("HTTPSC.GetData.通信失败: " + xmlRe.ErrorMsg)
-	//}
 	return xmlRe, nil
+}
+
+//对支付宝者查订单
+func GetAlipayApp(urls string) (common.AliWebAppQueryResult, error) {
+	var aliPay common.AliWebAppQueryResult
+
+	re, err := HTTPSC.GetData(urls)
+	if err != nil {
+		return aliPay, errors.New("HTTPSC.PostData: " + err.Error())
+	}
+
+	err = json.Unmarshal(re, &aliPay)
+	if err != nil {
+		panic(fmt.Sprintf("re is %v, err is %v", re, err))
+	}
+
+	return aliPay, nil
 }
 
 // ToURL

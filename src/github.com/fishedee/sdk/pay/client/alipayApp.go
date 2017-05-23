@@ -61,6 +61,30 @@ func (this *AliAppClient) Pay(charge *common.Charge) (map[string]string, error) 
 	return map[string]string{"orderString": this.ToURL(m)}, nil
 }
 
+// 订单查询
+func (this *AliAppClient) QueryOrder(outTradeNo string) (common.AliWebAppQueryResult, error) {
+	var m = make(map[string]string)
+	m["method"] = "alipay.trade.query"
+	m["app_id"] = this.AppID
+	m["format"] = "JSON"
+	m["charset"] = "utf-8"
+	m["timestamp"] = time.Now().Format("2006-01-02 15:04:05")
+	m["version"] = "1.0"
+	m["sign_type"] = "RSA"
+	bizContent := map[string]string{"out_trade_no": outTradeNo}
+	bizContentJson, err := json.Marshal(bizContent)
+	if err != nil {
+		return common.AliWebAppQueryResult{}, errors.New("json.Marshal: " + err.Error())
+	}
+	m["biz_content"] = string(bizContentJson)
+	sign := this.GenSign(m)
+	m["sign"] = sign
+
+	url := fmt.Sprintf("%s?%s", "https://openapi.alipay.com/gateway.do", this.ToURL(m))
+
+	return GetAlipayApp(url)
+}
+
 // GenSign 产生签名
 func (this *AliAppClient) GenSign(m map[string]string) string {
 	var data []string
@@ -83,6 +107,7 @@ func (this *AliAppClient) GenSign(m map[string]string) string {
 	if err != nil {
 		panic(err)
 	}
+
 	return base64.StdEncoding.EncodeToString(signByte)
 }
 

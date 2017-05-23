@@ -89,3 +89,31 @@ type AliWebQueryResult struct {
 		} `xml:"trade"`
 	} `xml:"response"`
 }
+
+type AliWebAppQueryResult struct {
+	AlipayTradeQueryResponse struct {
+		Code                string `json:"code"`
+		Msg                 string `json:"msg"`
+		SubCode             string `json:"sub_code"`
+		SubMsg              string `json:"sub_msg"`
+		TradeNo             string `json:"trade_no"`
+		OutTradeNo          string `json:"out_trade_no"`
+		OpenId              string `json:"open_id"`
+		BuyerLogonId        string `json:"buyer_logon_id"`
+		TradeStatus         string `json:"trade_status"`
+		TotalAmount         string `json:"total_amount"`
+		ReceiptAmount       string `json:"receipt_amount"`
+		BuyerPayAmount      string `json:"buyer_pay_amount"`
+		PointAmount         string `json:"point_amount"`
+		InvoiceAmount       string `json:"invoice_amount"`
+		SendPayDate         string `json:"send_pay_date"`
+		AlipayStoreId       string `json:"alipay_store_id"`
+		StoreId             string `json:"store_id"`
+		TerminalId          string `json:"terminal_id"`
+		StoreName           string `json:"store_name"`
+		BuyerUserId         string `json:"buyer_user_id"`
+		DiscountGoodsDetail string `json:"discount_goods_detail"`
+		IndustrySepcDetail  string `json:"industry_sepc_detail"`
+	} `json:"alipay_trade_query_response"`
+	Sign string `json:"sign"`
+}
