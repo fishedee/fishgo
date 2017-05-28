@@ -86,6 +86,7 @@ func (this *handlerType) handleRequest(request *http.Request, response http.Resp
 	url = strings.ToLower(strings.Trim(url, "/"))
 	method, isExist := this.routerControllerMethod[url]
 	if isExist == false {
+		globalBasic.Log.Error("file not found : %s", url)
 		response.WriteHeader(404)
 		response.Write([]byte("file not found"))
 		return
