@@ -4,12 +4,14 @@ import (
 	"errors"
 	"net"
 	"net/http"
+	"sync"
 
 	"github.com/gorilla/websocket"
 )
 
 type Websocket struct {
-	conn *websocket.Conn
+	conn      *websocket.Conn
+	writeLock sync.Mutex
 }
 
 // 创建一个连接
@@ -42,6 +44,9 @@ func (this *Websocket) WriteMessage(messageType int, data []byte) error {
 	if this.conn == nil {
 		return errors.New("还未初始化连接！")
 	}
+	this.writeLock.Lock()
+	defer this.writeLock.Unlock()
+
 	return this.conn.WriteMessage(messageType, data)
 }
 
