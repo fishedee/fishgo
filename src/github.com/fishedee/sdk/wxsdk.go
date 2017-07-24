@@ -12,6 +12,10 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"crypto/aes"
+	"crypto/cipher"
+	"encoding/base64"
+	"encoding/json"
 
 	. "github.com/fishedee/encoding"
 	. "github.com/fishedee/language"
@@ -54,6 +58,27 @@ type WxSdkUserInfo struct {
 	UnionId       string `json:"unionid"`
 	Remark        string `json:"remark"`
 	GroupId       int    `json:"groupid"`
+}
+
+type WxMiniProgramSession struct {
+	OpenId        string `json:"openid"`
+	SessionKey    string    `json:"session_key"`
+}
+
+type WxMiniProgramUserInfo struct {
+	OpenID    string `json:"openId"`
+	UnionID   string `json:"unionId"`
+	NickName  string `json:"nickName"`
+	Gender    int    `json:"gender"`
+	City      string `json:"city"`
+	Province  string `json:"province"`
+	Country   string `json:"country"`
+	AvatarURL string `json:"avatarUrl"`
+	Language  string `json:"language"`
+	Watermark struct {
+		Timestamp int64  `json:"timestamp"`
+		AppID     string `json:"appid"`
+	} `json:"watermark"`
 }
 
 type WxSdkUserList struct {
@@ -590,6 +615,56 @@ func (this *WxSdk) GetJsConfig(jsApiTicket string, url string) (WxSdkJsConfig, e
 	return jsConfig, nil
 }
 
+
+func (this *WxSdk) GetSessionByMiniProgram(code string) (WxMiniProgramSession, error) {
+	result := WxMiniProgramSession{}
+	err := this.apiJson("GET", "/sns/jscode2session", map[string]string{
+		"appid":      this.AppId,
+		"secret":     this.AppSecret,
+		"js_code":    code,
+		"grant_type": "authorization_code",
+	}, nil, &result)
+	if err != nil {
+		return WxMiniProgramSession{}, err
+	}
+	return result, nil
+}
+
+// 小程序解密用户信息
+func (this *WxSdk) DecryptByMiniProgram(sessionKey,encryptedData, iv string) (*WxMiniProgramUserInfo, error) {
+	aesKey, err := base64.StdEncoding.DecodeString(sessionKey)
+	if err != nil {
+		return nil, errors.New("sessionKey:"+sessionKey+",err:"+err.Error())
+	}
+	cipherText, err := base64.StdEncoding.DecodeString(encryptedData)
+	if err != nil {
+		return nil, errors.New("encryptedData:"+sessionKey+",err:"+err.Error())
+	}
+	ivBytes, err := base64.StdEncoding.DecodeString(iv)
+	if err != nil {
+		return nil, errors.New("iv:"+sessionKey+",err:"+err.Error())
+	}
+	block, err := aes.NewCipher(aesKey)
+	if err != nil {
+		return nil, err
+	}
+	mode := cipher.NewCBCDecrypter(block, ivBytes)
+	mode.CryptBlocks(cipherText, cipherText)
+	cipherText, err = pkcs7Unpad(cipherText, block.BlockSize())
+	if err != nil {
+		return nil, err
+	}
+	var userInfo WxMiniProgramUserInfo
+	err = json.Unmarshal(cipherText, &userInfo)
+	if err != nil {
+		return nil, err
+	}
+	if userInfo.Watermark.AppID != this.AppId {
+		return nil, errors.New("app id not match")
+	}
+	return &userInfo, nil
+}
+
 func (this *WxSdk) getSignature(jsSignature wxSdkJsSignature) string {
 	signature := ""
 	signature = "jsapi_ticket=" + jsSignature.JsApiTicket + "&noncestr=" + jsSignature.NonceStr + "&timestamp=" + jsSignature.Timestamp + "&url=" + jsSignature.Url
@@ -611,4 +686,25 @@ func (this *WxSdk) sha1(data string) string {
 	t := sha1.New()
 	io.WriteString(t, data)
 	return fmt.Sprintf("%x", t.Sum(nil))
+}
+
+// pkcs7Unpad returns slice of the original data without padding
+func pkcs7Unpad(data []byte, blockSize int) ([]byte, error) {
+	if blockSize <= 0 {
+		return nil, errors.New("invalid block size")
+	}
+	if len(data)%blockSize != 0 || len(data) == 0 {
+		return nil, errors.New("invalid PKCS7 data")
+	}
+	c := data[len(data)-1]
+	n := int(c)
+	if n == 0 || n > len(data) {
+		return nil, errors.New("invalid padding on input")
+	}
+	for i := 0; i < n; i++ {
+		if data[len(data)-n+i] != c {
+			return nil, errors.New("invalid padding on input")
+		}
+	}
+	return data[:len(data)-n], nil
 }
