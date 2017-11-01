@@ -11,19 +11,21 @@ type taskData struct {
 }
 
 type Task struct {
-	threadCount int
-	bufferCount int
-	taskChannel chan taskData
-	doneChannel []chan bool
-	handler     reflect.Value
-	isRunning   bool
-	isAutoStop  bool
-	allCount    int
-	finishCount int
-	countMutex  *sync.Mutex
-	taskLock    sync.Locker
-	taskCond    *sync.Cond
-	taskList    []taskData
+	threadCount     int
+	bufferCount     int
+	taskChannel     chan taskData
+	doneChannel     []chan bool
+	handler         reflect.Value
+	progressHandler func(int, int)
+	isRunning       bool
+	isAutoStop      bool
+	allCount        int
+	finishCount     int
+	progressMutex   *sync.Mutex
+	countMutex      *sync.Mutex
+	taskLock        sync.Locker
+	taskCond        *sync.Cond
+	taskList        []taskData
 }
 
 func NewTask() *Task {
@@ -71,6 +73,13 @@ func (this *Task) SetHandler(handler interface{}) {
 	this.handler = reflect.ValueOf(handler)
 }
 
+func (this *Task) SetProgressHandler(progressHandler func(int, int)) {
+	if this.isRunning {
+		return
+	}
+	this.progressHandler = progressHandler
+}
+
 func (this *Task) AddTask(data ...interface{}) {
 	if !this.isRunning {
 		return
@@ -94,6 +103,7 @@ func (this *Task) Start() {
 	}
 	this.allCount = 0
 	this.finishCount = 0
+	this.progressMutex = &sync.Mutex{}
 	this.countMutex = &sync.Mutex{}
 	this.taskChannel = make(chan taskData, this.bufferCount)
 	this.doneChannel = make([]chan bool, this.threadCount)
@@ -153,6 +163,11 @@ func (this *Task) Start() {
 				this.countMutex.Unlock()
 				if this.isAutoStop && this.finishCount == this.allCount {
 					this.Stop()
+				}
+				if this.progressHandler != nil {
+					this.progressMutex.Lock()
+					this.progressHandler(this.finishCount, this.allCount)
+					this.progressMutex.Unlock()
 				}
 			}
 			curDoneChannel <- true
