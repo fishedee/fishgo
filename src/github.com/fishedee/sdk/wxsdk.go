@@ -1,21 +1,23 @@
 package sdk
 
 import (
+	"bytes"
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/sha1"
+	"encoding/base64"
+	"encoding/json"
 	"encoding/xml"
 	"errors"
 	"fmt"
 	"io"
 	"math/rand"
 	"net/url"
+	"os/exec"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
-	"crypto/aes"
-	"crypto/cipher"
-	"encoding/base64"
-	"encoding/json"
 
 	. "github.com/fishedee/encoding"
 	. "github.com/fishedee/language"
@@ -61,8 +63,8 @@ type WxSdkUserInfo struct {
 }
 
 type WxMiniProgramSession struct {
-	OpenId        string `json:"openid"`
-	SessionKey    string    `json:"session_key"`
+	OpenId     string `json:"openid"`
+	SessionKey string `json:"session_key"`
 }
 
 type WxMiniProgramUserInfo struct {
@@ -90,6 +92,7 @@ type WxSdkUserList struct {
 	NextOpenid string `json:"next_openid"`
 }
 
+// 微信消息模板
 type WxSdkTemplateMessage struct {
 	Touser      string                                     `json:"touser"`
 	TemplateId  string                                     `json:"template_id"`
@@ -106,6 +109,59 @@ type WxSdkTemplateMessageMiniprogram struct {
 type WxSdkTemplateMessageDataContent struct {
 	Value string `json:"value"`
 	Color string `json:"color"`
+}
+
+// 微信素材列表
+type WxSdkSendBatchgetMaterial struct {
+	Type   string `json:"type"` // 对应WxSdkMaterialType
+	Offset int    `json:"offset"`
+	Count  int    `json:"count"`
+}
+
+var WxSdkMaterialType = struct {
+	Image string
+	Video string
+	Voice string
+	News  string
+}{
+	Image: "image",
+	Video: "video",
+	Voice: "voice",
+	News:  "news",
+}
+
+type WxSdkReceiveBatchgetMaterial struct {
+	TotalCount int `json:"total_count"`
+	ItemCount  int `json:"item_count"`
+	Item       []struct {
+		MediaId string `json:"media_id"`
+		Name    string `json:"name"`
+		Content []struct {
+			NewsItem []struct {
+				ThumbMediaId     string `json:"thumb_media_id"`
+				Title            string `json:"title"`
+				ShowCoverPic     string `json:"show_cover_pic"`
+				Author           string `json:"author"`
+				Content          string `json:"content"`
+				Digest           string `json:"digest"`
+				Url              string `json:"url"`
+				ContentSourceUrl string `json:"content_source_url"`
+			} `json:"news_item"`
+		} `json:"content"`
+		Url        string `json:"url"`
+		UpdateTime string `json:"update_time"`
+	} `json:"item"`
+}
+
+type WxSdkAddMaterial struct {
+	MediaId string `json:"media_id"`
+	Url     string `json:"url"`
+}
+
+type WxSdkReceiveMaterial struct {
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	DownUrl     string `json:"down_url"`
 }
 
 type WxSdkReceiveMessage struct {
@@ -152,7 +208,9 @@ type WxSdkSendVoiceMessage struct {
 }
 
 type WxSdkSendVideoMessage struct {
-	MediaId string `xml:"MediaId,omitempty"`
+	MediaId     string `xml:"MediaId,omitempty"`
+	Title       string `xml:"MediaId,title"`
+	Description string `xml:"MediaId,description"`
 }
 
 type WxSdkSendMusicMessage struct {
@@ -247,7 +305,7 @@ func (this *WxSdkError) Error() string {
 	return fmt.Sprintf("错误码为：%v，错误描述为：%v", this.Code, this.Message)
 }
 
-func (this *WxSdk) api(method string, url string, query interface{}, data interface{}) ([]byte, error) {
+func (this *WxSdk) api(method string, url string, query interface{}, dataType string, data interface{}) ([]byte, error) {
 	queryInfo, err := EncodeUrlQuery(query)
 	if err != nil {
 		return nil, err
@@ -261,6 +319,7 @@ func (this *WxSdk) api(method string, url string, query interface{}, data interf
 		ajaxOption := &Ajax{
 			Url:          url,
 			ResponseData: &result,
+			DataType:     dataType,
 		}
 		err = DefaultAjaxPool.Get(ajaxOption)
 	} else {
@@ -268,6 +327,7 @@ func (this *WxSdk) api(method string, url string, query interface{}, data interf
 			Url:          url,
 			Data:         data,
 			ResponseData: &result,
+			DataType:     dataType,
 		}
 		err = DefaultAjaxPool.Post(ajaxOption)
 	}
@@ -286,13 +346,13 @@ func (this *WxSdk) api(method string, url string, query interface{}, data interf
 	return result, nil
 }
 
-func (this *WxSdk) apiJson(method string, url string, query interface{}, data interface{}, responseData interface{}) error {
+func (this *WxSdk) apiJson(method string, url string, query interface{}, dataType string, data interface{}, responseData interface{}) error {
 	data, err := EncodeJson(data)
 	if err != nil {
 		return err
 	}
 
-	result, err := this.api(method, url, query, data)
+	result, err := this.api(method, url, query, dataType, data)
 	if err != nil {
 		return err
 	}
@@ -332,7 +392,7 @@ func (this *WxSdk) GetAccessToken() (WxSdkToken, error) {
 		"grant_type": "client_credential",
 		"appid":      this.AppId,
 		"secret":     this.AppSecret,
-	}, nil, &result)
+	}, "", nil, &result)
 	if err != nil {
 		return WxSdkToken{}, err
 	}
@@ -343,19 +403,112 @@ func (this *WxSdk) GetServerIp(accessToken string) (WxSdkServerIp, error) {
 	result := WxSdkServerIp{}
 	err := this.apiJson("GET", "/cgi-bin/getcallbackip", map[string]string{
 		"access_token": accessToken,
-	}, nil, &result)
+	}, "", nil, &result)
 	if err != nil {
 		return WxSdkServerIp{}, err
 	}
 	return result, nil
 }
 
-//素材接口
+// 获取素材列表
+func (this *WxSdk) GetBatchgetMaterial(data WxSdkSendBatchgetMaterial) (WxSdkReceiveBatchgetMaterial, error) {
+	var result WxSdkReceiveBatchgetMaterial
+	err := this.apiJson("POST", "/cgi-bin/material/batchget_material", map[string]string{
+		"access_token": this.AccessToken,
+	}, "", data, &result)
+	if err != nil {
+		return result, err
+	}
+	return result, nil
+}
+
+// 添加素材
+// 参数 fileAddress 上传文件的本地地址
+// 参数 materialType WxSdkMaterialType类型
+// 参数 title 多媒体标题
+// 参数 introduction 多媒体描述
+func (this *WxSdk) AddMaterial(fileAddress, materialType, title, introduction string) (WxSdkAddMaterial, error) {
+
+	var result WxSdkAddMaterial
+
+	description := struct {
+		Title        string `json:"title"`
+		Introduction string `json:"introduction"`
+	}{
+		Title:        title,
+		Introduction: introduction,
+	}
+
+	descriptionJson, err := EncodeJson(description)
+	if err != nil {
+		return result, err
+	}
+
+	cmd := exec.Command("curl", "https://api.weixin.qq.com/cgi-bin/material/add_material?access_token="+this.AccessToken+"&type="+materialType,
+		"-F", "media=@"+fileAddress,
+		"-F", "description="+string(descriptionJson))
+	cmd.Stdin = strings.NewReader("some input")
+	var outCmd bytes.Buffer
+	var errCmd bytes.Buffer
+	cmd.Stdout = &outCmd
+	cmd.Stderr = &errCmd
+	err = cmd.Run()
+	println(string(outCmd.Bytes()))
+	if err != nil {
+		return result, errors.New("err:" + err.Error() + ",errCmd:" + string(errCmd.Bytes()) + ",outCmd:" + string(outCmd.Bytes()))
+	}
+
+	var errInfo struct {
+		ErrorCode int    `json:"errcode"`
+		ErrorMsg  string `json:"errmsg"`
+	}
+
+	err = DecodeJson(outCmd.Bytes(), &errInfo)
+	if err != nil {
+		return result, err
+	}
+
+	if errInfo.ErrorCode != 0 {
+		return result, &WxSdkError{Code: errInfo.ErrorCode, Message: errInfo.ErrorMsg}
+	}
+
+	err = DecodeJson(outCmd.Bytes(), &result)
+	return result, err
+
+}
+
+// 获取素材接口
+// 参数 mediaId 多媒体的media_id
+func (this *WxSdk) GetMaterial(mediaId string) (WxSdkReceiveMaterial, error) {
+	var result WxSdkReceiveMaterial
+	err := NewAjaxPool(&AjaxPoolOption{}).Post(&Ajax{
+		Url: "https://api.weixin.qq.com/cgi-bin/material/get_material?access_token=" + this.AccessToken,
+		Data: map[string]interface{}{
+			"media_id": mediaId,
+		},
+		ResponseDataType: "json",
+		ResponseData:     &result,
+	})
+	return result, err
+}
+
+// 删除素材列表
+func (this *WxSdk) DelMaterial(mediaId string) ([]byte, error) {
+	return this.api("POST", "/cgi-bin/material/del_material",
+		map[string]string{
+			"access_token": this.AccessToken,
+		}, "json",
+		map[string]string{
+			"media_id": mediaId,
+		})
+}
+
+//获取素材接口
 func (this *WxSdk) DownloadMedia(accessToken, mediaId string) ([]byte, error) {
 	return this.api("GET", "/cgi-bin/media/get", map[string]string{
 		"access_token": accessToken,
 		"media_id":     mediaId,
-	}, nil)
+	}, "", nil)
 }
 
 //用户接口
@@ -365,7 +518,7 @@ func (this *WxSdk) GetUserInfo(accessToken, openId string) (WxSdkUserInfo, error
 		"access_token": accessToken,
 		"openid":       openId,
 		"lang":         "zh_CN",
-	}, nil, &result)
+	}, "", nil, &result)
 	if err != nil {
 		return WxSdkUserInfo{}, err
 	}
@@ -380,7 +533,7 @@ func (this *WxSdk) GetUserList(accessToken, next_openid string) (WxSdkUserList, 
 		argv["next_openid"] = next_openid
 	}
 	result := WxSdkUserList{}
-	err := this.apiJson("GET", "/cgi-bin/user/get", argv, nil, &result)
+	err := this.apiJson("GET", "/cgi-bin/user/get", argv, "", nil, &result)
 	if err != nil {
 		return WxSdkUserList{}, err
 	}
@@ -440,7 +593,7 @@ func (this *WxSdk) SendPairMessage(requestUrl *url.URL) ([]byte, error) {
 func (this *WxSdk) SetMenu(accessToken string, data string) error {
 	_, err := this.api("POST", "/cgi-bin/menu/create", map[string]string{
 		"access_token": accessToken,
-	}, data)
+	}, "", data)
 	if err != nil {
 		return err
 	}
@@ -450,7 +603,7 @@ func (this *WxSdk) SetMenu(accessToken string, data string) error {
 func (this *WxSdk) GetMenu(accessToken string) (string, error) {
 	data, err := this.api("GET", "/cgi-bin/menu/get", map[string]string{
 		"access_token": accessToken,
-	}, nil)
+	}, "", nil)
 	if err != nil {
 		return "", err
 	}
@@ -470,7 +623,7 @@ func (this *WxSdk) GetMenu(accessToken string) (string, error) {
 func (this *WxSdk) DelMenu(accessToken string) error {
 	_, err := this.api("GET", "/cgi-bin/menu/delete", map[string]string{
 		"access_token": accessToken,
-	}, nil)
+	}, "", nil)
 	if err != nil {
 		return err
 	}
@@ -480,22 +633,23 @@ func (this *WxSdk) DelMenu(accessToken string) error {
 // 发送消息模板
 func (this *WxSdk) SendTemplateMessage(accessToken string, msgData WxSdkTemplateMessage) (WxSdkCommonResult, error) {
 
+	result := WxSdkCommonResult{}
+
 	msgJson, err := EncodeJson(msgData)
 	if err != nil {
-		return WxSdkCommonResult{}, err
+		return result, err
 	}
 
 	data, err := this.api("POST", "/cgi-bin/message/template/send", map[string]string{
 		"access_token": accessToken,
-	}, msgJson)
+	}, "", msgJson)
 	if err != nil {
-		return WxSdkCommonResult{}, err
+		return result, err
 	}
 
-	result := WxSdkCommonResult{}
 	err = DecodeJson(data, &result)
 	if err != nil {
-		return WxSdkCommonResult{}, err
+		return result, err
 	}
 	return result, nil
 }
@@ -558,7 +712,7 @@ func (this *WxSdk) GetOauthToken(code string) (WxSdkOauthToken, error) {
 		"secret":     this.AppSecret,
 		"code":       code,
 		"grant_type": "authorization_code",
-	}, nil, &result)
+	}, "", nil, &result)
 	if err != nil {
 		return WxSdkOauthToken{}, err
 	}
@@ -571,7 +725,7 @@ func (this *WxSdk) GetOauthUserInfo(accessToken, openid string) (WxSdkOauthUserI
 		"access_token": accessToken,
 		"openid":       openid,
 		"lang":         "zh_CN",
-	}, nil, &result)
+	}, "", nil, &result)
 	if err != nil {
 		return WxSdkOauthUserInfo{}, err
 	}
@@ -584,7 +738,7 @@ func (this *WxSdk) GetJsApiTicket(accessToken string) (WxSdkJsTicket, error) {
 	err := this.apiJson("GET", "/cgi-bin/ticket/getticket", map[string]string{
 		"access_token": accessToken,
 		"type":         "jsapi",
-	}, nil, &result)
+	}, "", nil, &result)
 	if err != nil {
 		return WxSdkJsTicket{}, err
 	}
@@ -615,7 +769,6 @@ func (this *WxSdk) GetJsConfig(jsApiTicket string, url string) (WxSdkJsConfig, e
 	return jsConfig, nil
 }
 
-
 func (this *WxSdk) GetSessionByMiniProgram(code string) (WxMiniProgramSession, error) {
 	result := WxMiniProgramSession{}
 	err := this.apiJson("GET", "/sns/jscode2session", map[string]string{
@@ -623,7 +776,7 @@ func (this *WxSdk) GetSessionByMiniProgram(code string) (WxMiniProgramSession, e
 		"secret":     this.AppSecret,
 		"js_code":    code,
 		"grant_type": "authorization_code",
-	}, nil, &result)
+	}, "", nil, &result)
 	if err != nil {
 		return WxMiniProgramSession{}, err
 	}
@@ -631,18 +784,18 @@ func (this *WxSdk) GetSessionByMiniProgram(code string) (WxMiniProgramSession, e
 }
 
 // 小程序解密用户信息
-func (this *WxSdk) DecryptByMiniProgram(sessionKey,encryptedData, iv string) (*WxMiniProgramUserInfo, error) {
+func (this *WxSdk) DecryptByMiniProgram(sessionKey, encryptedData, iv string) (*WxMiniProgramUserInfo, error) {
 	aesKey, err := base64.StdEncoding.DecodeString(sessionKey)
 	if err != nil {
-		return nil, errors.New("sessionKey:"+sessionKey+",err:"+err.Error())
+		return nil, errors.New("sessionKey:" + sessionKey + ",err:" + err.Error())
 	}
 	cipherText, err := base64.StdEncoding.DecodeString(encryptedData)
 	if err != nil {
-		return nil, errors.New("encryptedData:"+sessionKey+",err:"+err.Error())
+		return nil, errors.New("encryptedData:" + sessionKey + ",err:" + err.Error())
 	}
 	ivBytes, err := base64.StdEncoding.DecodeString(iv)
 	if err != nil {
-		return nil, errors.New("iv:"+sessionKey+",err:"+err.Error())
+		return nil, errors.New("iv:" + sessionKey + ",err:" + err.Error())
 	}
 	block, err := aes.NewCipher(aesKey)
 	if err != nil {
