@@ -53,7 +53,7 @@ func NewProcessSupervisor() *Supervisor {
 			return err
 		}
 		go func() {
-			_ = <-taskInfo.stoppingChan
+			<-taskInfo.stoppingChan
 			process.Kill()
 		}()
 		go func() {
@@ -83,11 +83,13 @@ func NewThreadSupervisor() *Supervisor {
 		for _, argv := range argvs {
 			argvValue = append(argvValue, reflect.ValueOf(argv))
 		}
+
 		go func() {
 			funValue.Call(argvValue)
 			state := supervisor.GetState(taskInfo.taskId)
 			if state == SupervisorStateEnum.STATE_RUNNING {
 				go func() {
+					//调用StopAndWait，是保证能清理taskId相关信息，以及在abortHandler回调时进程的状态是exited的
 					supervisor.StopAndWait(taskInfo.taskId)
 					if supervisor.abortHandler != nil {
 						supervisor.abortHandler(taskInfo.taskId)
@@ -109,7 +111,9 @@ func (this *Supervisor) Start(taskId int, name interface{}, argv ...interface{})
 		return errors.New("已停止的任务才能启动!")
 	}
 	taskInfo = &SupervisorTaskInfo{}
-	taskInfo.stoppingChan = make(chan bool, 2)
+	//stoppingChan设置为非阻塞，是为了实现threadSupervisor的异步stop
+	taskInfo.stoppingChan = make(chan bool, 1)
+	//exitChan设置为非阻塞，是为了让工作进程更快地退出，避免等待wait调用时才能退出
 	taskInfo.exitChan = make(chan bool, 1)
 	taskInfo.taskId = taskId
 	taskInfo.state = SupervisorStateEnum.STATE_STARTING
