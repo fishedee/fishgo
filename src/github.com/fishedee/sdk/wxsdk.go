@@ -248,6 +248,23 @@ type WxSdkSendMessage struct {
 	Articles     []WxSdkSendArticleMessage `xml:"Articles,omitempty"`
 }
 
+type WxSdkSendQrcode struct {
+	ExpireSeconds int    `json:"expire_seconds"`
+	ActionName    string `json:"action_name"`
+	ActionInfo    struct {
+		Scene struct {
+			SceneId  int    `json:"scene_id,omitempty"`
+			SceneStr string `json:"scene_str,omitempty"`
+		} `json:"scene"`
+	} `json:"action_info"`
+}
+
+type WxSdkReceiveQrcode struct {
+	Ticket        string `json:"ticket"`
+	ExpireSeconds int    `json:"expire_seconds"`
+	Url           string `json:"url"`
+}
+
 type WxSdkOauthToken struct {
 	AccessToken  string `json:"access_token"`
 	ExpiresIn    int    `json:"expires_in"`
@@ -347,6 +364,7 @@ func (this *WxSdk) api(method string, url string, query interface{}, dataType st
 }
 
 func (this *WxSdk) apiJson(method string, url string, query interface{}, dataType string, data interface{}, responseData interface{}) error {
+
 	data, err := EncodeJson(data)
 	if err != nil {
 		return err
@@ -356,6 +374,7 @@ func (this *WxSdk) apiJson(method string, url string, query interface{}, dataTyp
 	if err != nil {
 		return err
 	}
+
 	err = DecodeJson(result, responseData)
 	if err != nil {
 		return err
@@ -453,7 +472,7 @@ func (this *WxSdk) AddMaterial(fileAddress, materialType, title, introduction st
 	cmd.Stdout = &outCmd
 	cmd.Stderr = &errCmd
 	err = cmd.Run()
-	println(string(outCmd.Bytes()))
+
 	if err != nil {
 		return result, errors.New("err:" + err.Error() + ",errCmd:" + string(errCmd.Bytes()) + ",outCmd:" + string(outCmd.Bytes()))
 	}
@@ -730,6 +749,16 @@ func (this *WxSdk) GetOauthUserInfo(accessToken, openid string) (WxSdkOauthUserI
 		return WxSdkOauthUserInfo{}, err
 	}
 	return result, nil
+}
+
+// 创建二维码
+func (this *WxSdk) AddQrcode(data WxSdkSendQrcode) (WxSdkReceiveQrcode, error) {
+	result := WxSdkReceiveQrcode{}
+
+	err := this.apiJson("POST", "/cgi-bin/qrcode/create", map[string]string{
+		"access_token": this.AccessToken,
+	}, "", data, &result)
+	return result, err
 }
 
 //Js接口
