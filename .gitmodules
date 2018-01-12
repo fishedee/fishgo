@@ -109,9 +109,6 @@
 [submodule "src/qiniupkg.com/x"]
 	path = src/qiniupkg.com/x
 	url = git@github.com:qiniu/x.git
-[submodule "src/github.com/davecheney/profile"]
-	path = src/github.com/davecheney/profile
-	url = git@github.com:davecheney/profile.git
 [submodule "src/github.com/lxn/walk"]
 	path = src/github.com/lxn/walk
 	url = git@github.com:lxn/walk.git
@@ -172,9 +169,6 @@
 [submodule "src/github.com/TrueFurby/go-callvis"]
 	path = src/github.com/TrueFurby/go-callvis
 	url = git@github.com:TrueFurby/go-callvis.git
-[submodule "src/github.com/winlinvip/go-fdkaac"]
-	path = src/github.com/winlinvip/go-fdkaac
-	url = git@github.com:winlinvip/go-fdkaac.git
 [submodule "src/github.com/boombuler/barcode"]
 	path = src/github.com/boombuler/barcode
 	url = git@github.com:boombuler/barcode.git
@@ -199,3 +193,6 @@
 [submodule "src/github.com/rakyll/hey"]
 	path = src/github.com/rakyll/hey
 	url = git@github.com:rakyll/hey.git
+[submodule "src/qiniupkg.com/x"]
+	path = src/qiniupkg.com/x
+	url = git@github.com:qiniu/x.git
