@@ -134,7 +134,7 @@ func (this *RedisQueueStore) consumeData(topicId string, timeout int) (interface
 func (this *RedisQueueStore) Consume(topicId string, listener QueueListener) error {
 	go func() {
 		for {
-			data, err := this.consumeData(topicId, 10)
+			data, err := this.consumeData(topicId, 2)
 			if err != nil {
 				if strings.Index(err.Error(), "get on closed pool") != -1 {
 					return

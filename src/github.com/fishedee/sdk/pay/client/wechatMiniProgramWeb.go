@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/fishedee/sdk/pay/common"
 	"github.com/fishedee/sdk/pay/util"
+	. "github.com/fishedee/language"
 	"time"
 )
 
@@ -36,7 +37,7 @@ func (this *WechatMiniProgramClient) Pay(charge *common.Charge) (map[string]stri
 	m["nonce_str"] = util.RandomStr()
 	m["body"] = TruncatedText(charge.Describe, 32)
 	m["out_trade_no"] = charge.TradeNum
-	m["total_fee"] = fmt.Sprintf("%d", int(charge.MoneyFee*100))
+	m["total_fee"] = fmt.Sprintf("%d", int(MulDecimal(charge.MoneyFee,float64(100))))
 	m["spbill_create_ip"] = util.LocalIP()
 	m["notify_url"] = charge.CallbackURL
 	m["trade_type"] = "JSAPI"
