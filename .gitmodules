@@ -196,3 +196,6 @@
 [submodule "src/qiniupkg.com/x"]
 	path = src/qiniupkg.com/x
 	url = git@github.com:qiniu/x.git
+[submodule "src/gopkg.in/gomail.v2"]
+	path = src/gopkg.in/gomail.v2
+	url = git@github.com:go-gomail/gomail.git
