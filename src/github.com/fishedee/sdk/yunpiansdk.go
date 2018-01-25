@@ -12,13 +12,30 @@ type YunpianSdk struct {
 	ApiSecert string
 }
 
+type YunpianSdkSendVoiceResult struct {
+	Count int     `json:"count"`
+	Fee   float64 `json:"fee"`
+	Sid   string  `json:"sid"`
+}
+
 type YunpianSdkSendSmsResult struct {
 	Count  int     `json:"count"`
-	Fee    float64 `json:"count"`
-	Unit   string  `json:"count"`
-	Mobile string  `json:"count"`
-	Sid    int     `json:"count"`
+	Fee    float64 `json:"fee"`
+	Unit   string  `json:"unit"`
+	Mobile string  `json:"mobile"`
+	Sid    int     `json:"sid"`
 }
+
+type YunpianSdkSingleStatusResult struct {
+	Sid             string `json:"sid"`
+	Uid             string `json:"uid"`
+	UserReceiveTime string `json:"user_receive_time"`
+	ErrorMsg        string `json:"error_msg"`
+	Mobile          string `json:"mobile"`
+	ReportStatus    string `json:"report_status"`
+}
+
+type YunpianSdkStatusResult []YunpianSdkSingleStatusResult
 
 type YunpianSdkError struct {
 	Code int    `json:"code"`
@@ -40,7 +57,7 @@ func (this *YunpianSdkError) Error() string {
 func (this *YunpianSdk) api(url string, data interface{}, responseData interface{}) error {
 	var dataByte []byte
 	err := DefaultAjaxPool.Post(&Ajax{
-		Url:          "https://sms.yunpian.com" + url,
+		Url:          url,
 		Data:         data,
 		DataType:     "url",
 		ResponseData: &dataByte,
@@ -60,9 +77,32 @@ func (this *YunpianSdk) api(url string, data interface{}, responseData interface
 	return nil
 }
 
+func (this *YunpianSdk) DecodeSmsStatus(smsStatus string) (YunpianSdkStatusResult, error) {
+	var result YunpianSdkStatusResult
+	err := DecodeJson([]byte(smsStatus), &result)
+	if err != nil {
+		return YunpianSdkStatusResult{}, err
+	}
+	return result, err
+}
+
+func (this *YunpianSdk) SendVoice(mobile string, code string, callBackUrl string) (YunpianSdkSendVoiceResult, error) {
+	var result YunpianSdkSendVoiceResult
+	err := this.api("https://voice.yunpian.com/v2/voice/send.json", map[string]string{
+		"apikey":       this.ApiKey,
+		"mobile":       mobile,
+		"code":         code,
+		"callback_url": callBackUrl,
+	}, &result)
+	if err != nil {
+		return YunpianSdkSendVoiceResult{}, err
+	}
+	return result, err
+}
+
 func (this *YunpianSdk) SendSms(mobile string, text string) (YunpianSdkSendSmsResult, error) {
 	var result YunpianSdkSendSmsResult
-	err := this.api("/v2/sms/single_send.json", map[string]string{
+	err := this.api("https://sms.yunpian.com/v2/sms/single_send.json", map[string]string{
 		"apikey": this.ApiKey,
 		"mobile": mobile,
 		"text":   text,
@@ -76,7 +116,7 @@ func (this *YunpianSdk) SendSms(mobile string, text string) (YunpianSdkSendSmsRe
 // 批量发送短信
 func (this *YunpianSdk) SendMsgs(mobile string, text string) (YunpianSdkSendSmsResult, error) {
 	var result YunpianSdkSendSmsResult
-	err := this.api("/v2/sms/batch_send.json", map[string]string{
+	err := this.api("https://sms.yunpian.com/v2/sms/batch_send.json", map[string]string{
 		"apikey": this.ApiKey,
 		"mobile": mobile,
 		"text":   text,
