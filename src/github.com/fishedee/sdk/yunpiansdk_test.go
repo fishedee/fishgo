@@ -41,10 +41,10 @@ func TestYunpianSdkSendVoice(t *testing.T) {
 
 func TestYunpianSdkDecodeSmsStatus(t *testing.T) {
 	sdk := &YunpianSdk{}
-	result, err := sdk.DecodeSmsStatus(`[{"sid":9527,"uid":null,"user_receive_time":"2014-03-17 22:55:21","error_msg":"DELIVRD","mobile":"15205201314","report_status":"SUCCESS"},{"sid":9528,"uid":null,"user_receive_time":"2014-03-17 22:55:23","error_msg":"DELIVRD","mobile":"15212341234","report_status":"SUCCESS"}]`)
+	result, err := sdk.DecodeVoiceStatus(`[{"sid":9527,"uid":null,"user_receive_time":"2014-03-17 22:55:21","error_msg":"DELIVRD","mobile":"15205201314","report_status":"SUCCESS"},{"sid":9528,"uid":null,"user_receive_time":"2014-03-17 22:55:23","error_msg":"DELIVRD","mobile":"15212341234","report_status":"SUCCESS"}]`)
 	assertYunpianSdkEqual(t, err == nil, true)
-	assertYunpianSdkEqual(t, result, YunpianSdkStatusResult([]YunpianSdkSingleStatusResult{
-		YunpianSdkSingleStatusResult{
+	assertYunpianSdkEqual(t, result, YunpianSdkVoiceStatusResult([]YunpianSdkSingleVoiceStatusResult{
+		YunpianSdkSingleVoiceStatusResult{
 			Sid:             "9527",
 			Uid:             "",
 			UserReceiveTime: "2014-03-17 22:55:21",
@@ -52,7 +52,7 @@ func TestYunpianSdkDecodeSmsStatus(t *testing.T) {
 			Mobile:          "15205201314",
 			ReportStatus:    "SUCCESS",
 		},
-		YunpianSdkSingleStatusResult{
+		YunpianSdkSingleVoiceStatusResult{
 			Sid:             "9528",
 			Uid:             "",
 			UserReceiveTime: "2014-03-17 22:55:23",

@@ -26,7 +26,7 @@ type YunpianSdkSendSmsResult struct {
 	Sid    int     `json:"sid"`
 }
 
-type YunpianSdkSingleStatusResult struct {
+type YunpianSdkSingleVoiceStatusResult struct {
 	Sid             string `json:"sid"`
 	Uid             string `json:"uid"`
 	UserReceiveTime string `json:"user_receive_time"`
@@ -35,7 +35,7 @@ type YunpianSdkSingleStatusResult struct {
 	ReportStatus    string `json:"report_status"`
 }
 
-type YunpianSdkStatusResult []YunpianSdkSingleStatusResult
+type YunpianSdkVoiceStatusResult []YunpianSdkSingleVoiceStatusResult
 
 type YunpianSdkError struct {
 	Code int    `json:"code"`
@@ -77,11 +77,11 @@ func (this *YunpianSdk) api(url string, data interface{}, responseData interface
 	return nil
 }
 
-func (this *YunpianSdk) DecodeSmsStatus(smsStatus string) (YunpianSdkStatusResult, error) {
-	var result YunpianSdkStatusResult
-	err := DecodeJson([]byte(smsStatus), &result)
+func (this *YunpianSdk) DecodeVoiceStatus(voiceStatus string) (YunpianSdkVoiceStatusResult, error) {
+	var result YunpianSdkVoiceStatusResult
+	err := DecodeJson([]byte(voiceStatus), &result)
 	if err != nil {
-		return YunpianSdkStatusResult{}, err
+		return YunpianSdkVoiceStatusResult{}, err
 	}
 	return result, err
 }
