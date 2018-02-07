@@ -5,10 +5,10 @@ import (
 	"github.com/astaxie/beego/config"
 	. "github.com/fishedee/language"
 	"os"
-	"path"
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Config interface {
@@ -33,7 +33,10 @@ func checkFileExist(path string) bool {
 	}
 }
 
-func NewIniConfig(file string) (Configure, error) {
+func NewConfig(driver string, file string) (Config, error) {
+	if driver != "ini" {
+		return nil, errors.New("drvier is not ini!")
+	}
 	configer, err := config.NewConfig("ini", file)
 	if err != nil {
 		return nil, err
@@ -82,6 +85,12 @@ func (this *configImplement) GetBool(key string) bool {
 	return bool(vB)
 }
 
+func (this *configImplement) GetDuration(key string) time.Duration {
+	v := this.GetString(key)
+	vD, _ := time.ParseDuration(v)
+	return vD
+}
+
 func (this *configImplement) GetStruct(prefix string, data interface{}) {
 	structInfo := ArrayToMap(reflect.ValueOf(data).Elem().Interface(), "config").(map[string]interface{})
 	for key, value := range structInfo {
@@ -94,8 +103,10 @@ func (this *configImplement) GetStruct(prefix string, data interface{}) {
 			structInfo[key] = this.GetInt(prefixKey)
 		} else if _, isOk := value.(bool); isOk {
 			structInfo[key] = this.GetBool(prefixKey)
+		} else if _, isOk := value.(time.Duration); isOk {
+			structInfo[key] = this.GetDuration(prefixKey)
 		} else {
-			panic("invalid type of structInfo: " + prefix + "_" + key)
+			panic("invalid type of structInfo: " + prefixKey)
 		}
 	}
 	err := MapToArray(structInfo, data, "config")

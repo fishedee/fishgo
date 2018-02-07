@@ -27,11 +27,11 @@ type Log interface {
 
 type LogConfig struct {
 	Driver      string `json:"driver" config:"driver"`
-	Filename    string `json:"filename" config:"filename"`
-	Maxlines    int    `json:"maxlines" config:"maxlines"`
+	Filename    string `json:"filename" config:"file"`
+	Maxlines    int    `json:"maxlines" config:"maxline"`
 	Maxsize     int    `json:"maxsize" config:"maxsize"`
 	Daily       bool   `json:"daily" config:"daily"`
-	Maxdays     int    `json:"maxdays" config:"maxdays"`
+	Maxdays     int    `json:"maxdays" config:"maxday"`
 	Rotate      bool   `json:"rotate" config:"rotate"`
 	Level       string `json:"level" config:"level"`
 	PrettyPrint bool   `json:"prettyprint" config:"prettyprint"`
@@ -67,7 +67,7 @@ func NewLog(config LogConfig) (Log, error) {
 	if config.Driver == "" {
 		config.Driver = "console"
 	}
-	if config.Level == 0 {
+	if config.Level == "" {
 		config.Level = "debug"
 	}
 	configMap := ArrayToMap(config, "json").(map[string]interface{})
