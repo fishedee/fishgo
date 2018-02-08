@@ -199,3 +199,6 @@
 [submodule "src/gopkg.in/gomail.v2"]
 	path = src/gopkg.in/gomail.v2
 	url = git@github.com:go-gomail/gomail.git
+[submodule "src/github.com/jacobsa/go-serial"]
+	path = src/github.com/jacobsa/go-serial
+	url = git@github.com:jacobsa/go-serial.git
