@@ -1,48 +1,46 @@
 package container
 
-import (
-	"fmt"
-	. "github.com/fishedee/language"
-)
-
 type RadixFactory struct {
-	nodeNum   int
-	matchMode []int
-	root      *radixTreeNode
+	nodeNum int
+	root    *radixTreeNode
 }
 
 type radixTreeNode struct {
-	match    []interface{}
+	value    interface{}
 	children map[byte]*radixTreeNode
 }
 
-var RadixMatchMode struct {
-	EnumStruct
-	ALL    int `enum:"1,精确匹配"`
-	PREFIX int `enum:"2,前缀匹配"`
-}
-
-func NewRadixFactory(matchMode []int) *RadixFactory {
+func NewRadixFactory() *RadixFactory {
 	radixFactory := &RadixFactory{}
-	radixFactory.matchMode = matchMode
 	radixFactory.nodeNum = 0
 	radixFactory.root = &radixTreeNode{
-		match:    make([]interface{}, len(matchMode)),
+		value:    nil,
 		children: map[byte]*radixTreeNode{},
 	}
 	return radixFactory
 }
 
-func (this *RadixFactory) Insert(mode int, key string, value interface{}) error {
-	if mode < 0 || mode >= len(this.matchMode) {
-		return fmt.Errorf("invalid mode:%v,modeSize:%v", mode, len(this.matchMode))
-	}
+func (this *RadixFactory) Get(key string) interface{} {
 	current := this.root
-	for _, char := range []byte(key) {
+	for i := 0; i != len(key); i++ {
+		char := key[i]
+		child, isExist := current.children[char]
+		if isExist == false {
+			return nil
+		}
+		current = child
+	}
+	return current.value
+}
+
+func (this *RadixFactory) Set(key string, value interface{}) {
+	current := this.root
+	for i := 0; i != len(key); i++ {
+		char := key[i]
 		child, isExist := current.children[char]
 		if isExist == false {
 			child = &radixTreeNode{
-				match:    make([]interface{}, len(this.matchMode)),
+				value:    nil,
 				children: map[byte]*radixTreeNode{},
 			}
 			current.children[char] = child
@@ -50,24 +48,24 @@ func (this *RadixFactory) Insert(mode int, key string, value interface{}) error 
 		}
 		current = child
 	}
-	if current.match[mode] != nil {
-		return fmt.Errorf("already has exist!mode:%v,key:%v", mode, key)
-	}
-	current.match[mode] = value
-	return nil
+	current.value = value
 }
 
 func (this *RadixFactory) Create() *Radix {
-	radix := newRadix(this.matchMode)
+	radix := newRadix()
 	radix.build(this.root)
 	return radix
 }
 
 type Radix struct {
-	matchMode []int
-	base      []int
-	check     []int
-	value     [][]interface{}
+	base  []int
+	check []int
+	value []interface{}
+}
+
+type RadixMatch struct {
+	key   string
+	value interface{}
 }
 
 type radixArrayNode struct {
@@ -76,12 +74,11 @@ type radixArrayNode struct {
 	node   *radixTreeNode
 }
 
-func newRadix(matchMode []int) *Radix {
+func newRadix() *Radix {
 	radix := &Radix{}
-	radix.matchMode = matchMode
 	radix.base = []int{}
 	radix.check = []int{}
-	radix.value = [][]interface{}{}
+	radix.value = []interface{}{}
 	return radix
 }
 
@@ -93,7 +90,7 @@ func (this *Radix) build(root *radixTreeNode) {
 		node:   root,
 	})
 	this.setCheck(1, -1)
-	this.setValue(1, root.match)
+	this.setValue(1, root.value)
 	for queue.Len() != 0 {
 		top := queue.Pop().(*radixArrayNode)
 		freeOffset := this.findIndex(top.offset, top.node.children)
@@ -101,7 +98,7 @@ func (this *Radix) build(root *radixTreeNode) {
 		for next, child := range top.node.children {
 			childIndex := freeOffset + int(next)
 			this.setCheck(childIndex, top.index)
-			this.setValue(childIndex, child.match)
+			this.setValue(childIndex, child.value)
 			queue.Push(&radixArrayNode{
 				index:  childIndex,
 				offset: freeOffset,
@@ -144,7 +141,7 @@ func (this *Radix) expand(index int) {
 	newSize := index - len(this.check) + 1
 	newBase := make([]int, newSize)
 	newCheck := make([]int, newSize)
-	newValue := make([][]interface{}, newSize)
+	newValue := make([]interface{}, newSize)
 	this.base = append(this.base, newBase...)
 	this.check = append(this.check, newCheck...)
 	this.value = append(this.value, newValue...)
@@ -159,58 +156,55 @@ func (this *Radix) setCheck(index int, check int) {
 	this.expand(index)
 	this.check[index] = check
 }
-func (this *Radix) setValue(index int, value []interface{}) {
+func (this *Radix) setValue(index int, value interface{}) {
 	this.expand(index)
 	this.value[index] = value
 }
 
-func (this *Radix) Find(key string) []interface{} {
+func (this *Radix) ExactMatch(key string) interface{} {
 	length := len(this.check)
 	current := 1
-	result := make([]interface{}, len(this.matchMode))
-	hasAllMatch := true
 
-	for singleMatchIndex, singleMatchMode := range this.matchMode {
-		if singleMatchMode != RadixMatchMode.PREFIX {
-			continue
-		}
-		if this.value[current][singleMatchIndex] != nil {
-			result[singleMatchIndex] = this.value[current][singleMatchIndex]
-		}
-	}
-	for _, char := range []byte(key) {
-		next := this.base[current] + int(char)
+	for i := 0; i != len(key); i++ {
+		next := this.base[current] + int(key[i])
 		if next >= length {
-			hasAllMatch = false
-			break
+			return nil
 		}
 		if this.check[next] != current {
-			hasAllMatch = false
-			break
-		}
-		for singleMatchIndex, singleMatchMode := range this.matchMode {
-			if singleMatchMode != RadixMatchMode.PREFIX {
-				continue
-			}
-			if this.value[next][singleMatchIndex] != nil {
-				result[singleMatchIndex] = this.value[next][singleMatchIndex]
-			}
+			return nil
 		}
 		current = next
 	}
-	if hasAllMatch {
-		for singleMatchIndex, singleMatchMode := range this.matchMode {
-			if singleMatchMode != RadixMatchMode.ALL {
-				continue
-			}
-			if this.value[current][singleMatchIndex] != nil {
-				result[singleMatchIndex] = this.value[current][singleMatchIndex]
-			}
-		}
-	}
-	return result
+	return this.value[current]
 }
 
-func init() {
-	InitEnumStruct(&RadixMatchMode)
+func (this *Radix) PrefixMatch(key string) []RadixMatch {
+	length := len(this.check)
+	current := 1
+	result := []RadixMatch{}
+
+	if this.value[current] != nil {
+		result = append(result, RadixMatch{
+			key:   "",
+			value: this.value[current],
+		})
+	}
+
+	for i := 0; i != len(key); i++ {
+		next := this.base[current] + int(key[i])
+		if next >= length {
+			break
+		}
+		if this.check[next] != current {
+			break
+		}
+		if this.value[next] != nil {
+			result = append(result, RadixMatch{
+				key:   key[0 : i+1],
+				value: this.value[next],
+			})
+		}
+		current = next
+	}
+	return result
 }

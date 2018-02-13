@@ -7,114 +7,119 @@ import (
 )
 
 func TestRadixAllMatch(t *testing.T) {
-	radixFactory := NewRadixFactory([]int{RadixMatchMode.ALL})
+	radixFactory := NewRadixFactory()
 
 	testFoundData := []string{"a", "ab", "ba", "1", "2", "3c_4"}
 	testNotFoundData := []string{"c", "abc", "ac", "b", "bac", "_4", "c_", "a ", " a"}
 
 	for _, data := range testFoundData {
-		radixFactory.Insert(0, data, data+"_value")
+		radixFactory.Set(data, data+"_value")
 	}
 
 	radix := radixFactory.Create()
 	for _, data := range testFoundData {
-		result := radix.Find(data)
-		AssertEqual(t, result, []interface{}{data + "_value"})
+		result := radix.ExactMatch(data)
+		AssertEqual(t, result, data+"_value")
+		result2 := radixFactory.Get(data)
+		AssertEqual(t, result2, data+"_value")
 	}
 	for _, data := range testNotFoundData {
-		result := radix.Find(data)
-		AssertEqual(t, result, []interface{}{nil})
+		result := radix.ExactMatch(data)
+		AssertEqual(t, result, nil)
+		result2 := radixFactory.Get(data)
+		AssertEqual(t, result2, nil)
 	}
 }
 
 func TestRadixPrefixMatch(t *testing.T) {
-	radixFactory := NewRadixFactory([]int{RadixMatchMode.PREFIX})
+	radixFactory := NewRadixFactory()
 
 	testData := []string{"ab", "/ab", "cde", "abeg", "ac"}
-	testFoundData := map[string]string{
-		"ab":     "ab",
-		"abc":    "ab",
-		"/abc":   "/ab",
-		"cdef/g": "cde",
-		"abegh":  "abeg",
-		"ac":     "ac",
-		"acm":    "ac",
+	testFindData := map[string][]RadixMatch{
+		"ab": []RadixMatch{
+			{"ab", "ab_value"},
+		},
+		"abc": []RadixMatch{
+			{"ab", "ab_value"},
+		},
+		"/abc": []RadixMatch{
+			{"/ab", "/ab_value"},
+		},
+		"cdef/g": []RadixMatch{
+			{"cde", "cde_value"},
+		},
+		"abegh": []RadixMatch{
+			{"ab", "ab_value"},
+			{"abeg", "abeg_value"},
+		},
+		"ac": []RadixMatch{
+			{"ac", "ac_value"},
+		},
+		"acm": []RadixMatch{
+			{"ac", "ac_value"},
+		},
+		"a":   []RadixMatch{},
+		"/a":  []RadixMatch{},
+		"cck": []RadixMatch{},
+		"cd":  []RadixMatch{},
 	}
-	testNotFoundData := []string{"a", "/a", "cck", "cd"}
 
 	for _, data := range testData {
-		radixFactory.Insert(0, data, data+"_value")
+		radixFactory.Set(data, data+"_value")
 	}
 
 	radix := radixFactory.Create()
-	for key, value := range testFoundData {
-		result := radix.Find(key)
-		AssertEqual(t, result, []interface{}{value + "_value"})
+	for key, value := range testFindData {
+		result := radix.PrefixMatch(key)
+		AssertEqual(t, result, value)
 	}
-	for _, data := range testNotFoundData {
-		result := radix.Find(data)
-		AssertEqual(t, result, []interface{}{nil})
-	}
-}
-
-func TestRadixError(t *testing.T) {
-	radixFactory := NewRadixFactory([]int{RadixMatchMode.ALL, RadixMatchMode.PREFIX})
-
-	var err error
-
-	err = radixFactory.Insert(-1, "a", "a_value")
-	AssertEqual(t, err != nil, true)
-	err = radixFactory.Insert(2, "a", "a_value")
-	AssertEqual(t, err != nil, true)
-
-	err = radixFactory.Insert(0, "b", "b_value")
-	AssertEqual(t, err, nil)
-	err = radixFactory.Insert(1, "c", "c_value")
-	AssertEqual(t, err, nil)
-
-	err = radixFactory.Insert(0, "b", "b_value")
-	AssertEqual(t, err != nil, true)
-	err = radixFactory.Insert(1, "c", "c_value")
-	AssertEqual(t, err != nil, true)
 }
 
 func TestRadixFull(t *testing.T) {
-	radixFactory := NewRadixFactory([]int{RadixMatchMode.ALL, RadixMatchMode.PREFIX})
+	radixFactory := NewRadixFactory()
 
-	testData := []struct {
-		mode  int
-		key   string
-		value string
-	}{
-		{0, "", "index_all"},
-		{1, "", "index_prefix"},
-		{0, "abc", "abc_all"},
-		{0, "bc", "bc_all"},
-		{1, "bc", "bc_prefix"},
-		{0, "bcd", "bcd_all"},
-	}
-	testFindData := []struct {
-		key   string
-		value []interface{}
-	}{
-		{"", []interface{}{"index_all", "index_prefix"}},
-		{"abc", []interface{}{"abc_all", "index_prefix"}},
-		{"abcg", []interface{}{nil, "index_prefix"}},
-		{"b", []interface{}{nil, "index_prefix"}},
-		{"bc", []interface{}{"bc_all", "bc_prefix"}},
-		{"bcg", []interface{}{nil, "bc_prefix"}},
-		{"bcd", []interface{}{"bcd_all", "bc_prefix"}},
-		{"c", []interface{}{nil, "index_prefix"}},
+	testData := []string{"", "abc", "bc", "bcd"}
+	testFindData := map[string][]RadixMatch{
+		"": []RadixMatch{
+			{"", "_value"},
+		},
+		"abc": []RadixMatch{
+			{"", "_value"},
+			{"abc", "abc_value"},
+		},
+		"abcg": []RadixMatch{
+			{"", "_value"},
+			{"abc", "abc_value"},
+		},
+		"b": []RadixMatch{
+			{"", "_value"},
+		},
+		"bc": []RadixMatch{
+			{"", "_value"},
+			{"bc", "bc_value"},
+		},
+		"bcg": []RadixMatch{
+			{"", "_value"},
+			{"bc", "bc_value"},
+		},
+		"bcd": []RadixMatch{
+			{"", "_value"},
+			{"bc", "bc_value"},
+			{"bcd", "bcd_value"},
+		},
+		"c": []RadixMatch{
+			{"", "_value"},
+		},
 	}
 
-	for _, singleTestData := range testData {
-		radixFactory.Insert(singleTestData.mode, singleTestData.key, singleTestData.value)
+	for _, data := range testData {
+		radixFactory.Set(data, data+"_value")
 	}
 
 	radix := radixFactory.Create()
-	for _, singleFindData := range testFindData {
-		result := radix.Find(singleFindData.key)
-		AssertEqual(t, result, singleFindData.value)
+	for key, value := range testFindData {
+		result := radix.PrefixMatch(key)
+		AssertEqual(t, result, value)
 	}
 }
 
@@ -139,16 +144,16 @@ func getData(count int, size int) []string {
 func BenchmarkRadixSpeed(b *testing.B) {
 	insertData := getData(1000, 20)
 	findData := getData(b.N, 20)
-	radixFactory := NewRadixFactory([]int{RadixMatchMode.ALL})
+	radixFactory := NewRadixFactory()
 	for _, singleData := range insertData {
-		radixFactory.Insert(0, singleData, true)
+		radixFactory.Set(singleData, true)
 	}
 	radix := radixFactory.Create()
 
 	b.ResetTimer()
 	b.StartTimer()
 	for _, singleData := range findData {
-		radix.Find(singleData)
+		radix.ExactMatch(singleData)
 	}
 	b.StopTimer()
 }
