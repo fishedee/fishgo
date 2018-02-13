@@ -7,32 +7,32 @@ import (
 )
 
 func TestRadixAllMatch(t *testing.T) {
-	radixFactory := NewRadixFactory()
+	radixTree := NewRadixTree()
 
 	testFoundData := []string{"a", "ab", "ba", "1", "2", "3c_4"}
 	testNotFoundData := []string{"c", "abc", "ac", "b", "bac", "_4", "c_", "a ", " a"}
 
 	for _, data := range testFoundData {
-		radixFactory.Set(data, data+"_value")
+		radixTree.Set(data, data+"_value")
 	}
 
-	radix := radixFactory.Create()
+	radix := radixTree.ToRadixArray()
 	for _, data := range testFoundData {
 		result := radix.ExactMatch(data)
 		AssertEqual(t, result, data+"_value")
-		result2 := radixFactory.Get(data)
+		result2 := radixTree.Get(data)
 		AssertEqual(t, result2, data+"_value")
 	}
 	for _, data := range testNotFoundData {
 		result := radix.ExactMatch(data)
 		AssertEqual(t, result, nil)
-		result2 := radixFactory.Get(data)
+		result2 := radixTree.Get(data)
 		AssertEqual(t, result2, nil)
 	}
 }
 
 func TestRadixPrefixMatch(t *testing.T) {
-	radixFactory := NewRadixFactory()
+	radixTree := NewRadixTree()
 
 	testData := []string{"ab", "/ab", "cde", "abeg", "ac"}
 	testFindData := map[string][]RadixMatch{
@@ -65,10 +65,10 @@ func TestRadixPrefixMatch(t *testing.T) {
 	}
 
 	for _, data := range testData {
-		radixFactory.Set(data, data+"_value")
+		radixTree.Set(data, data+"_value")
 	}
 
-	radix := radixFactory.Create()
+	radix := radixTree.ToRadixArray()
 	for key, value := range testFindData {
 		result := radix.PrefixMatch(key)
 		AssertEqual(t, result, value)
@@ -76,7 +76,7 @@ func TestRadixPrefixMatch(t *testing.T) {
 }
 
 func TestRadixFull(t *testing.T) {
-	radixFactory := NewRadixFactory()
+	radixTree := NewRadixTree()
 
 	testData := []string{"", "abc", "bc", "bcd"}
 	testFindData := map[string][]RadixMatch{
@@ -113,10 +113,10 @@ func TestRadixFull(t *testing.T) {
 	}
 
 	for _, data := range testData {
-		radixFactory.Set(data, data+"_value")
+		radixTree.Set(data, data+"_value")
 	}
 
-	radix := radixFactory.Create()
+	radix := radixTree.ToRadixArray()
 	for key, value := range testFindData {
 		result := radix.PrefixMatch(key)
 		AssertEqual(t, result, value)
@@ -144,11 +144,11 @@ func getData(count int, size int) []string {
 func BenchmarkRadixSpeed(b *testing.B) {
 	insertData := getData(1000, 20)
 	findData := getData(b.N, 20)
-	radixFactory := NewRadixFactory()
+	radixTree := NewRadixTree()
 	for _, singleData := range insertData {
-		radixFactory.Set(singleData, true)
+		radixTree.Set(singleData, true)
 	}
-	radix := radixFactory.Create()
+	radix := radixTree.ToRadixArray()
 
 	b.ResetTimer()
 	b.StartTimer()

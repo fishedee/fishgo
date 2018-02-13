@@ -1,6 +1,6 @@
 package container
 
-type RadixFactory struct {
+type RadixTree struct {
 	nodeNum int
 	root    *radixTreeNode
 }
@@ -10,17 +10,17 @@ type radixTreeNode struct {
 	children map[byte]*radixTreeNode
 }
 
-func NewRadixFactory() *RadixFactory {
-	radixFactory := &RadixFactory{}
-	radixFactory.nodeNum = 0
-	radixFactory.root = &radixTreeNode{
+func NewRadixTree() *RadixTree {
+	radixTree := &RadixTree{}
+	radixTree.nodeNum = 0
+	radixTree.root = &radixTreeNode{
 		value:    nil,
 		children: map[byte]*radixTreeNode{},
 	}
-	return radixFactory
+	return radixTree
 }
 
-func (this *RadixFactory) Get(key string) interface{} {
+func (this *RadixTree) Get(key string) interface{} {
 	current := this.root
 	for i := 0; i != len(key); i++ {
 		char := key[i]
@@ -33,7 +33,7 @@ func (this *RadixFactory) Get(key string) interface{} {
 	return current.value
 }
 
-func (this *RadixFactory) Set(key string, value interface{}) {
+func (this *RadixTree) Set(key string, value interface{}) {
 	current := this.root
 	for i := 0; i != len(key); i++ {
 		char := key[i]
@@ -51,13 +51,13 @@ func (this *RadixFactory) Set(key string, value interface{}) {
 	current.value = value
 }
 
-func (this *RadixFactory) Create() *Radix {
-	radix := newRadix()
+func (this *RadixTree) ToRadixArray() *RadixArray {
+	radix := newRadixArray()
 	radix.build(this.root)
 	return radix
 }
 
-type Radix struct {
+type RadixArray struct {
 	base  []int
 	check []int
 	value []interface{}
@@ -74,15 +74,15 @@ type radixArrayNode struct {
 	node   *radixTreeNode
 }
 
-func newRadix() *Radix {
-	radix := &Radix{}
+func newRadixArray() *RadixArray {
+	radix := &RadixArray{}
 	radix.base = []int{}
 	radix.check = []int{}
 	radix.value = []interface{}{}
 	return radix
 }
 
-func (this *Radix) build(root *radixTreeNode) {
+func (this *RadixArray) build(root *radixTreeNode) {
 	queue := NewQueue()
 	queue.Push(&radixArrayNode{
 		index:  1,
@@ -109,7 +109,7 @@ func (this *Radix) build(root *radixTreeNode) {
 	}
 }
 
-func (this *Radix) findIndex(offset int, next map[byte]*radixTreeNode) int {
+func (this *RadixArray) findIndex(offset int, next map[byte]*radixTreeNode) int {
 	for {
 		isOk := true
 		for char, _ := range next {
@@ -127,14 +127,14 @@ func (this *Radix) findIndex(offset int, next map[byte]*radixTreeNode) int {
 	return offset
 }
 
-func (this *Radix) isExist(index int) bool {
+func (this *RadixArray) isExist(index int) bool {
 	if index < 0 || index >= len(this.check) {
 		return false
 	}
 	return this.check[index] != 0
 }
 
-func (this *Radix) expand(index int) {
+func (this *RadixArray) expand(index int) {
 	if index < len(this.check) {
 		return
 	}
@@ -147,21 +147,21 @@ func (this *Radix) expand(index int) {
 	this.value = append(this.value, newValue...)
 }
 
-func (this *Radix) setBase(index int, base int) {
+func (this *RadixArray) setBase(index int, base int) {
 	this.expand(index)
 	this.base[index] = base
 }
 
-func (this *Radix) setCheck(index int, check int) {
+func (this *RadixArray) setCheck(index int, check int) {
 	this.expand(index)
 	this.check[index] = check
 }
-func (this *Radix) setValue(index int, value interface{}) {
+func (this *RadixArray) setValue(index int, value interface{}) {
 	this.expand(index)
 	this.value[index] = value
 }
 
-func (this *Radix) ExactMatch(key string) interface{} {
+func (this *RadixArray) ExactMatch(key string) interface{} {
 	length := len(this.check)
 	current := 1
 
@@ -178,7 +178,7 @@ func (this *Radix) ExactMatch(key string) interface{} {
 	return this.value[current]
 }
 
-func (this *Radix) PrefixMatch(key string) []RadixMatch {
+func (this *RadixArray) PrefixMatch(key string) []RadixMatch {
 	length := len(this.check)
 	current := 1
 	result := []RadixMatch{}
