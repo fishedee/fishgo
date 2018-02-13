@@ -174,7 +174,7 @@ func (this *Radix) Find(key string) []interface{} {
 		if singleMatchMode != RadixMatchMode.PREFIX {
 			continue
 		}
-		if this.value[0][singleMatchIndex] != nil {
+		if this.value[current][singleMatchIndex] != nil {
 			result[singleMatchIndex] = this.value[current][singleMatchIndex]
 		}
 	}
