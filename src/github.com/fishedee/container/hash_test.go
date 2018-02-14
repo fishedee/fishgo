@@ -97,9 +97,9 @@ func getData(size int) []int {
 func BenchmarkHashIntSpeed(b *testing.B) {
 	insertData := getData(100)
 	findData := getData(b.N)
-	hash := NewHashList(100 * 5)
+	hash := NewHashList(100)
 	for _, singleData := range insertData {
-		hash.Set(singleData, "Hello World")
+		hash.Set(singleData, 0)
 	}
 	hashArray := hash.ToHashListArray()
 
@@ -114,9 +114,9 @@ func BenchmarkHashIntSpeed(b *testing.B) {
 func BenchmarkMapIntSpeed(b *testing.B) {
 	insertData := getData(100)
 	findData := getData(b.N)
-	mapper := map[int]string{}
+	mapper := map[int]int{}
 	for _, singleData := range insertData {
-		mapper[singleData] = "Hello World"
+		mapper[singleData] = 0
 	}
 
 	b.ResetTimer()

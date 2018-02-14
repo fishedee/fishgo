@@ -1,12 +1,9 @@
 package container
 
-var hashPrimeList = []int{
-	53, 97, 193, 389, 769,
-	1543, 3079, 6151, 12289, 24593,
-	49157, 98317, 196613, 393241,
-	786433, 1572869, 3145739, 6291469, 12582917,
-	25165843, 50331653, 100663319, 201326611, 402653189,
-	805306457, 1610612741, 3221225473, 4294967291,
+func hashInt(key int, mask int) int {
+	h := key * 0x9E3779B9
+	key = h ^ (h >> 16)
+	return key & mask
 }
 
 type hashListNode struct {
@@ -18,12 +15,14 @@ type hashListNode struct {
 type HashList struct {
 	slot     []*hashListNode
 	slotSize int
+	slotMask int
 	size     int
 }
 
 func NewHashList(size int) *HashList {
 	hashList := &HashList{}
 	hashList.slotSize = hashList.getSlotSize(size)
+	hashList.slotMask = hashList.slotSize - 1
 	hashList.slot = make([]*hashListNode, hashList.slotSize, hashList.slotSize)
 	headListNode := make([]hashListNode, hashList.slotSize, hashList.slotSize)
 	for i := 0; i != hashList.slotSize; i++ {
@@ -34,16 +33,17 @@ func NewHashList(size int) *HashList {
 }
 
 func (this *HashList) getSlotSize(size int) int {
-	for i := 0; i != len(hashPrimeList); i++ {
-		if hashPrimeList[i] > size {
-			return hashPrimeList[i]
+	size = int(float64(size) / 0.75)
+	for i := 2; ; i *= 2 {
+		if i > size {
+			return i
 		}
 	}
-	return hashPrimeList[len(hashPrimeList)-1]
+	panic("invalid slot size")
 }
 
 func (this *HashList) hash(key int) int {
-	return key % this.slotSize
+	return hashInt(key, this.slotMask)
 }
 
 func (this *HashList) find(key int) (*hashListNode, *hashListNode, *hashListNode) {
@@ -113,6 +113,7 @@ type hashListArrayNode struct {
 type HashListArray struct {
 	slot     [][]hashListArrayNode
 	slotSize int
+	slotMask int
 	size     int
 }
 
@@ -123,6 +124,7 @@ func newHashListArray() *HashListArray {
 
 func (this *HashListArray) build(slot []*hashListNode) {
 	this.slotSize = len(slot)
+	this.slotMask = this.slotSize - 1
 	this.slot = make([][]hashListArrayNode, this.slotSize, this.slotSize)
 	allCount := 0
 	for index, singleSlot := range slot {
@@ -142,7 +144,7 @@ func (this *HashListArray) build(slot []*hashListNode) {
 }
 
 func (this *HashListArray) Get(key int) interface{} {
-	hash := key % this.slotSize
+	hash := hashInt(key, this.slotMask)
 	slot := this.slot[hash]
 	for i := 0; i != len(slot); i++ {
 		if slot[i].key == key {
