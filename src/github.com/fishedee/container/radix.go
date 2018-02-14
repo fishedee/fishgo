@@ -1,13 +1,24 @@
 package container
 
+import (
+	. "github.com/fishedee/language"
+)
+
 type RadixTree struct {
 	nodeNum int
 	root    *radixTreeNode
 }
 
+type RadixTreeWalker func(key string, value interface{}, parentKey string, parentValue interface{})
+
 type radixTreeNode struct {
 	value    interface{}
 	children map[byte]*radixTreeNode
+}
+
+type radixWalk struct {
+	key  []byte
+	node *radixTreeNode
 }
 
 func NewRadixTree() *RadixTree {
@@ -18,6 +29,29 @@ func NewRadixTree() *RadixTree {
 		children: map[byte]*radixTreeNode{},
 	}
 	return radixTree
+}
+
+func (this *RadixTree) Walk(walker RadixTreeWalker) {
+	queue := NewQueue()
+	queue.Push(&radixWalk{
+		key:  []byte(""),
+		node: this.root,
+	})
+	walker("", this.root.value, "", nil)
+	for queue.Len() != 0 {
+		top := queue.Pop().(*radixWalk)
+		keySortInterface, _ := ArrayKeyAndValue(top.node.children)
+		keySort := keySortInterface.([]byte)
+		for _, next := range keySort {
+			child := top.node.children[next]
+			childKey := append(top.key, next)
+			walker(string(childKey), child.value, string(top.key), top.node.value)
+			queue.Push(&radixWalk{
+				key:  childKey,
+				node: child,
+			})
+		}
+	}
 }
 
 func (this *RadixTree) Get(key string) interface{} {
@@ -161,21 +195,43 @@ func (this *RadixArray) setValue(index int, value interface{}) {
 	this.value[index] = value
 }
 
-func (this *RadixArray) ExactMatch(key string) interface{} {
+func (this *RadixArray) singleMatch(key string) (interface{}, bool) {
 	length := len(this.check)
 	current := 1
+	var result interface{}
 
-	for i := 0; i != len(key); i++ {
+	if this.value[current] != nil {
+		result = this.value[current]
+	}
+
+	i := 0
+	for ; i != len(key); i++ {
 		next := this.base[current] + int(key[i])
 		if next >= length {
-			return nil
+			break
 		}
 		if this.check[next] != current {
-			return nil
+			break
 		}
 		current = next
+		if this.value[current] != nil {
+			result = this.value[current]
+		}
 	}
-	return this.value[current]
+	return result, i == len(key)
+}
+
+func (this *RadixArray) LongestPrefixMatch(key string) interface{} {
+	result, _ := this.singleMatch(key)
+	return result
+}
+
+func (this *RadixArray) ExactMatch(key string) interface{} {
+	result, isExact := this.singleMatch(key)
+	if isExact == false {
+		return nil
+	}
+	return result
 }
 
 func (this *RadixArray) PrefixMatch(key string) []RadixMatch {

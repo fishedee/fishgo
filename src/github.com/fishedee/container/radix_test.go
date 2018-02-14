@@ -72,6 +72,16 @@ func TestRadixPrefixMatch(t *testing.T) {
 	for key, value := range testFindData {
 		result := radix.PrefixMatch(key)
 		AssertEqual(t, result, value)
+
+		result2 := radix.LongestPrefixMatch(key)
+		var value2 interface{}
+		if len(value) == 0 {
+			value2 = nil
+		} else {
+			value2 = value[len(value)-1].value
+		}
+		AssertEqual(t, result2, value2)
+
 	}
 }
 
@@ -119,8 +129,52 @@ func TestRadixFull(t *testing.T) {
 	radix := radixTree.ToRadixArray()
 	for key, value := range testFindData {
 		result := radix.PrefixMatch(key)
-		AssertEqual(t, result, value)
+		AssertEqual(t, result, value, key)
+
+		result2 := radix.LongestPrefixMatch(key)
+		var value2 interface{}
+		if len(value) == 0 {
+			value2 = nil
+		} else {
+			value2 = value[len(value)-1].value
+		}
+		AssertEqual(t, result2, value2, key)
 	}
+}
+
+func TestRadixWalk(t *testing.T) {
+	radixTree := NewRadixTree()
+
+	testData := []string{"", "abc", "bc", "bcd"}
+	walkData := []struct {
+		key         string
+		value       interface{}
+		parentKey   string
+		parentValue interface{}
+	}{
+		{"", "_value", "", nil},
+		{"a", nil, "", "_value"},
+		{"b", nil, "", "_value"},
+		{"ab", nil, "a", nil},
+		{"bc", "bc_value", "b", nil},
+		{"abc", "abc_value", "ab", nil},
+		{"bcd", "bcd_value", "bc", "bc_value"},
+	}
+
+	for _, data := range testData {
+		radixTree.Set(data, data+"_value")
+	}
+
+	index := 0
+	radixTree.Walk(func(key string, value interface{}, parentKey string, parentValue interface{}) {
+		result := walkData[index]
+		index++
+		AssertEqual(t, result.key, key)
+		AssertEqual(t, result.value, value)
+		AssertEqual(t, result.parentKey, parentKey)
+		AssertEqual(t, result.parentValue, parentValue)
+	})
+	AssertEqual(t, index, len(walkData))
 }
 
 func getSingleData(count int) string {
