@@ -4,49 +4,49 @@ import (
 	. "github.com/fishedee/language"
 )
 
-type RadixTree struct {
+type TrieTree struct {
 	nodeNum int
-	root    *radixTreeNode
+	root    *trieTreeNode
 }
 
-type RadixTreeWalker func(key string, value interface{}, parentKey string, parentValue interface{})
+type TrieTreeWalker func(key string, value interface{}, parentKey string, parentValue interface{})
 
-type radixTreeNode struct {
+type trieTreeNode struct {
 	value    interface{}
-	children map[byte]*radixTreeNode
+	children map[byte]*trieTreeNode
 }
 
-type radixWalk struct {
+type trieWalk struct {
 	key  []byte
-	node *radixTreeNode
+	node *trieTreeNode
 }
 
-func NewRadixTree() *RadixTree {
-	radixTree := &RadixTree{}
-	radixTree.nodeNum = 0
-	radixTree.root = &radixTreeNode{
+func NewTrieTree() *TrieTree {
+	trieTree := &TrieTree{}
+	trieTree.nodeNum = 0
+	trieTree.root = &trieTreeNode{
 		value:    nil,
-		children: map[byte]*radixTreeNode{},
+		children: map[byte]*trieTreeNode{},
 	}
-	return radixTree
+	return trieTree
 }
 
-func (this *RadixTree) Walk(walker RadixTreeWalker) {
+func (this *TrieTree) Walk(walker TrieTreeWalker) {
 	queue := NewQueue()
-	queue.Push(&radixWalk{
+	queue.Push(&trieWalk{
 		key:  []byte(""),
 		node: this.root,
 	})
 	walker("", this.root.value, "", nil)
 	for queue.Len() != 0 {
-		top := queue.Pop().(*radixWalk)
+		top := queue.Pop().(*trieWalk)
 		keySortInterface, _ := ArrayKeyAndValue(top.node.children)
 		keySort := keySortInterface.([]byte)
 		for _, next := range keySort {
 			child := top.node.children[next]
 			childKey := append(top.key, next)
 			walker(string(childKey), child.value, string(top.key), top.node.value)
-			queue.Push(&radixWalk{
+			queue.Push(&trieWalk{
 				key:  childKey,
 				node: child,
 			})
@@ -54,7 +54,7 @@ func (this *RadixTree) Walk(walker RadixTreeWalker) {
 	}
 }
 
-func (this *RadixTree) Get(key string) interface{} {
+func (this *TrieTree) Get(key string) interface{} {
 	current := this.root
 	for i := 0; i != len(key); i++ {
 		char := key[i]
@@ -67,15 +67,15 @@ func (this *RadixTree) Get(key string) interface{} {
 	return current.value
 }
 
-func (this *RadixTree) Set(key string, value interface{}) {
+func (this *TrieTree) Set(key string, value interface{}) {
 	current := this.root
 	for i := 0; i != len(key); i++ {
 		char := key[i]
 		child, isExist := current.children[char]
 		if isExist == false {
-			child = &radixTreeNode{
+			child = &trieTreeNode{
 				value:    nil,
-				children: map[byte]*radixTreeNode{},
+				children: map[byte]*trieTreeNode{},
 			}
 			current.children[char] = child
 			this.nodeNum++
@@ -85,40 +85,40 @@ func (this *RadixTree) Set(key string, value interface{}) {
 	current.value = value
 }
 
-func (this *RadixTree) ToRadixArray() *RadixArray {
-	radix := newRadixArray()
-	radix.build(this.root)
-	return radix
+func (this *TrieTree) ToTrieArray() *TrieArray {
+	trie := newTrieArray()
+	trie.build(this.root)
+	return trie
 }
 
-type RadixArray struct {
+type TrieArray struct {
 	base  []int
 	check []int
 	value []interface{}
 }
 
-type RadixMatch struct {
+type TrieMatch struct {
 	key   string
 	value interface{}
 }
 
-type radixArrayNode struct {
+type trieArrayNode struct {
 	index  int
 	offset int
-	node   *radixTreeNode
+	node   *trieTreeNode
 }
 
-func newRadixArray() *RadixArray {
-	radix := &RadixArray{}
-	radix.base = []int{}
-	radix.check = []int{}
-	radix.value = []interface{}{}
-	return radix
+func newTrieArray() *TrieArray {
+	trie := &TrieArray{}
+	trie.base = []int{}
+	trie.check = []int{}
+	trie.value = []interface{}{}
+	return trie
 }
 
-func (this *RadixArray) build(root *radixTreeNode) {
+func (this *TrieArray) build(root *trieTreeNode) {
 	queue := NewQueue()
-	queue.Push(&radixArrayNode{
+	queue.Push(&trieArrayNode{
 		index:  1,
 		offset: 0,
 		node:   root,
@@ -126,14 +126,14 @@ func (this *RadixArray) build(root *radixTreeNode) {
 	this.setCheck(1, -1)
 	this.setValue(1, root.value)
 	for queue.Len() != 0 {
-		top := queue.Pop().(*radixArrayNode)
+		top := queue.Pop().(*trieArrayNode)
 		freeOffset := this.findIndex(top.offset, top.node.children)
 		this.setBase(top.index, freeOffset)
 		for next, child := range top.node.children {
 			childIndex := freeOffset + int(next)
 			this.setCheck(childIndex, top.index)
 			this.setValue(childIndex, child.value)
-			queue.Push(&radixArrayNode{
+			queue.Push(&trieArrayNode{
 				index:  childIndex,
 				offset: freeOffset,
 				node:   child,
@@ -143,7 +143,7 @@ func (this *RadixArray) build(root *radixTreeNode) {
 	}
 }
 
-func (this *RadixArray) findIndex(offset int, next map[byte]*radixTreeNode) int {
+func (this *TrieArray) findIndex(offset int, next map[byte]*trieTreeNode) int {
 	for {
 		isOk := true
 		for char, _ := range next {
@@ -161,14 +161,14 @@ func (this *RadixArray) findIndex(offset int, next map[byte]*radixTreeNode) int 
 	return offset
 }
 
-func (this *RadixArray) isExist(index int) bool {
+func (this *TrieArray) isExist(index int) bool {
 	if index < 0 || index >= len(this.check) {
 		return false
 	}
 	return this.check[index] != 0
 }
 
-func (this *RadixArray) expand(index int) {
+func (this *TrieArray) expand(index int) {
 	if index < len(this.check) {
 		return
 	}
@@ -181,21 +181,21 @@ func (this *RadixArray) expand(index int) {
 	this.value = append(this.value, newValue...)
 }
 
-func (this *RadixArray) setBase(index int, base int) {
+func (this *TrieArray) setBase(index int, base int) {
 	this.expand(index)
 	this.base[index] = base
 }
 
-func (this *RadixArray) setCheck(index int, check int) {
+func (this *TrieArray) setCheck(index int, check int) {
 	this.expand(index)
 	this.check[index] = check
 }
-func (this *RadixArray) setValue(index int, value interface{}) {
+func (this *TrieArray) setValue(index int, value interface{}) {
 	this.expand(index)
 	this.value[index] = value
 }
 
-func (this *RadixArray) singleMatch(key string) (interface{}, bool) {
+func (this *TrieArray) singleMatch(key string) (interface{}, bool) {
 	length := len(this.check)
 	current := 1
 	var result interface{}
@@ -221,12 +221,12 @@ func (this *RadixArray) singleMatch(key string) (interface{}, bool) {
 	return result, i == len(key)
 }
 
-func (this *RadixArray) LongestPrefixMatch(key string) interface{} {
+func (this *TrieArray) LongestPrefixMatch(key string) interface{} {
 	result, _ := this.singleMatch(key)
 	return result
 }
 
-func (this *RadixArray) ExactMatch(key string) interface{} {
+func (this *TrieArray) ExactMatch(key string) interface{} {
 	result, isExact := this.singleMatch(key)
 	if isExact == false {
 		return nil
@@ -234,13 +234,13 @@ func (this *RadixArray) ExactMatch(key string) interface{} {
 	return result
 }
 
-func (this *RadixArray) PrefixMatch(key string) []RadixMatch {
+func (this *TrieArray) PrefixMatch(key string) []TrieMatch {
 	length := len(this.check)
 	current := 1
-	result := []RadixMatch{}
+	result := []TrieMatch{}
 
 	if this.value[current] != nil {
-		result = append(result, RadixMatch{
+		result = append(result, TrieMatch{
 			key:   "",
 			value: this.value[current],
 		})
@@ -255,7 +255,7 @@ func (this *RadixArray) PrefixMatch(key string) []RadixMatch {
 			break
 		}
 		if this.value[next] != nil {
-			result = append(result, RadixMatch{
+			result = append(result, TrieMatch{
 				key:   key[0 : i+1],
 				value: this.value[next],
 			})

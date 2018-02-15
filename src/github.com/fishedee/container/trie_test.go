@@ -6,74 +6,74 @@ import (
 	"testing"
 )
 
-func TestRadixAllMatch(t *testing.T) {
-	radixTree := NewRadixTree()
+func TestTrieAllMatch(t *testing.T) {
+	trieTree := NewTrieTree()
 
 	testFoundData := []string{"a", "ab", "ba", "1", "2", "3c_4"}
 	testNotFoundData := []string{"c", "abc", "ac", "b", "bac", "_4", "c_", "a ", " a"}
 
 	for _, data := range testFoundData {
-		radixTree.Set(data, data+"_value")
+		trieTree.Set(data, data+"_value")
 	}
 
-	radix := radixTree.ToRadixArray()
+	trie := trieTree.ToTrieArray()
 	for _, data := range testFoundData {
-		result := radix.ExactMatch(data)
+		result := trie.ExactMatch(data)
 		AssertEqual(t, result, data+"_value")
-		result2 := radixTree.Get(data)
+		result2 := trieTree.Get(data)
 		AssertEqual(t, result2, data+"_value")
 	}
 	for _, data := range testNotFoundData {
-		result := radix.ExactMatch(data)
+		result := trie.ExactMatch(data)
 		AssertEqual(t, result, nil)
-		result2 := radixTree.Get(data)
+		result2 := trieTree.Get(data)
 		AssertEqual(t, result2, nil)
 	}
 }
 
-func TestRadixPrefixMatch(t *testing.T) {
-	radixTree := NewRadixTree()
+func TestTriePrefixMatch(t *testing.T) {
+	trieTree := NewTrieTree()
 
 	testData := []string{"ab", "/ab", "cde", "abeg", "ac"}
-	testFindData := map[string][]RadixMatch{
-		"ab": []RadixMatch{
+	testFindData := map[string][]TrieMatch{
+		"ab": []TrieMatch{
 			{"ab", "ab_value"},
 		},
-		"abc": []RadixMatch{
+		"abc": []TrieMatch{
 			{"ab", "ab_value"},
 		},
-		"/abc": []RadixMatch{
+		"/abc": []TrieMatch{
 			{"/ab", "/ab_value"},
 		},
-		"cdef/g": []RadixMatch{
+		"cdef/g": []TrieMatch{
 			{"cde", "cde_value"},
 		},
-		"abegh": []RadixMatch{
+		"abegh": []TrieMatch{
 			{"ab", "ab_value"},
 			{"abeg", "abeg_value"},
 		},
-		"ac": []RadixMatch{
+		"ac": []TrieMatch{
 			{"ac", "ac_value"},
 		},
-		"acm": []RadixMatch{
+		"acm": []TrieMatch{
 			{"ac", "ac_value"},
 		},
-		"a":   []RadixMatch{},
-		"/a":  []RadixMatch{},
-		"cck": []RadixMatch{},
-		"cd":  []RadixMatch{},
+		"a":   []TrieMatch{},
+		"/a":  []TrieMatch{},
+		"cck": []TrieMatch{},
+		"cd":  []TrieMatch{},
 	}
 
 	for _, data := range testData {
-		radixTree.Set(data, data+"_value")
+		trieTree.Set(data, data+"_value")
 	}
 
-	radix := radixTree.ToRadixArray()
+	trie := trieTree.ToTrieArray()
 	for key, value := range testFindData {
-		result := radix.PrefixMatch(key)
+		result := trie.PrefixMatch(key)
 		AssertEqual(t, result, value)
 
-		result2 := radix.LongestPrefixMatch(key)
+		result2 := trie.LongestPrefixMatch(key)
 		var value2 interface{}
 		if len(value) == 0 {
 			value2 = nil
@@ -85,53 +85,53 @@ func TestRadixPrefixMatch(t *testing.T) {
 	}
 }
 
-func TestRadixFull(t *testing.T) {
-	radixTree := NewRadixTree()
+func TestTrieFull(t *testing.T) {
+	trieTree := NewTrieTree()
 
 	testData := []string{"", "abc", "bc", "bcd"}
-	testFindData := map[string][]RadixMatch{
-		"": []RadixMatch{
+	testFindData := map[string][]TrieMatch{
+		"": []TrieMatch{
 			{"", "_value"},
 		},
-		"abc": []RadixMatch{
-			{"", "_value"},
-			{"abc", "abc_value"},
-		},
-		"abcg": []RadixMatch{
+		"abc": []TrieMatch{
 			{"", "_value"},
 			{"abc", "abc_value"},
 		},
-		"b": []RadixMatch{
+		"abcg": []TrieMatch{
+			{"", "_value"},
+			{"abc", "abc_value"},
+		},
+		"b": []TrieMatch{
 			{"", "_value"},
 		},
-		"bc": []RadixMatch{
+		"bc": []TrieMatch{
 			{"", "_value"},
 			{"bc", "bc_value"},
 		},
-		"bcg": []RadixMatch{
+		"bcg": []TrieMatch{
 			{"", "_value"},
 			{"bc", "bc_value"},
 		},
-		"bcd": []RadixMatch{
+		"bcd": []TrieMatch{
 			{"", "_value"},
 			{"bc", "bc_value"},
 			{"bcd", "bcd_value"},
 		},
-		"c": []RadixMatch{
+		"c": []TrieMatch{
 			{"", "_value"},
 		},
 	}
 
 	for _, data := range testData {
-		radixTree.Set(data, data+"_value")
+		trieTree.Set(data, data+"_value")
 	}
 
-	radix := radixTree.ToRadixArray()
+	trie := trieTree.ToTrieArray()
 	for key, value := range testFindData {
-		result := radix.PrefixMatch(key)
+		result := trie.PrefixMatch(key)
 		AssertEqual(t, result, value, key)
 
-		result2 := radix.LongestPrefixMatch(key)
+		result2 := trie.LongestPrefixMatch(key)
 		var value2 interface{}
 		if len(value) == 0 {
 			value2 = nil
@@ -142,8 +142,8 @@ func TestRadixFull(t *testing.T) {
 	}
 }
 
-func TestRadixWalk(t *testing.T) {
-	radixTree := NewRadixTree()
+func TestTrieWalk(t *testing.T) {
+	trieTree := NewTrieTree()
 
 	testData := []string{"", "abc", "bc", "bcd"}
 	walkData := []struct {
@@ -162,11 +162,11 @@ func TestRadixWalk(t *testing.T) {
 	}
 
 	for _, data := range testData {
-		radixTree.Set(data, data+"_value")
+		trieTree.Set(data, data+"_value")
 	}
 
 	index := 0
-	radixTree.Walk(func(key string, value interface{}, parentKey string, parentValue interface{}) {
+	trieTree.Walk(func(key string, value interface{}, parentKey string, parentValue interface{}) {
 		result := walkData[index]
 		index++
 		AssertEqual(t, result.key, key)
@@ -195,19 +195,19 @@ func getData(count int, size int) []string {
 	return result
 }
 
-func BenchmarkRadixSpeed(b *testing.B) {
+func BenchmarkTrieSpeed(b *testing.B) {
 	insertData := getData(1000, 20)
 	findData := getData(b.N, 20)
-	radixTree := NewRadixTree()
+	trieTree := NewTrieTree()
 	for _, singleData := range insertData {
-		radixTree.Set(singleData, true)
+		trieTree.Set(singleData, true)
 	}
-	radix := radixTree.ToRadixArray()
+	trie := trieTree.ToTrieArray()
 
 	b.ResetTimer()
 	b.StartTimer()
 	for _, singleData := range findData {
-		radix.ExactMatch(singleData)
+		trie.ExactMatch(singleData)
 	}
 	b.StopTimer()
 }
