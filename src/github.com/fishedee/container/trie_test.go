@@ -9,8 +9,8 @@ import (
 func TestTrieAllMatch(t *testing.T) {
 	trieTree := NewTrieTree()
 
-	testFoundData := []string{"a", "ab", "ba", "1", "2", "3c_4"}
-	testNotFoundData := []string{"c", "abc", "ac", "b", "bac", "_4", "c_", "a ", " a"}
+	testFoundData := []string{"a", "ab", "ba", "1", "2", "3c_4", "你", "a你", "你好"}
+	testNotFoundData := []string{"c", "abc", "ac", "b", "bac", "_4", "c_", "a ", " a", "你a", "好"}
 
 	for _, data := range testFoundData {
 		trieTree.Set(data, data+"_value")
@@ -34,7 +34,7 @@ func TestTrieAllMatch(t *testing.T) {
 func TestTriePrefixMatch(t *testing.T) {
 	trieTree := NewTrieTree()
 
-	testData := []string{"ab", "/ab", "cde", "abeg", "ac"}
+	testData := []string{"ab", "/ab", "cde", "abeg", "ac", "a你", "你", "你好", "你去"}
 	testFindData := map[string][]TrieMatch{
 		"ab": []TrieMatch{
 			{"ab", "ab_value"},
@@ -58,6 +58,27 @@ func TestTriePrefixMatch(t *testing.T) {
 		"acm": []TrieMatch{
 			{"ac", "ac_value"},
 		},
+		"a你": []TrieMatch{
+			{"a你", "a你_value"},
+		},
+		"你": []TrieMatch{
+			{"你", "你_value"},
+		},
+		"你a": []TrieMatch{
+			{"你", "你_value"},
+		},
+		"你好": []TrieMatch{
+			{"你", "你_value"},
+			{"你好", "你好_value"},
+		},
+		"你好吗": []TrieMatch{
+			{"你", "你_value"},
+			{"你好", "你好_value"},
+		},
+		"你去": []TrieMatch{
+			{"你", "你_value"},
+			{"你去", "你去_value"},
+		},
 		"a":   []TrieMatch{},
 		"/a":  []TrieMatch{},
 		"cck": []TrieMatch{},
@@ -73,7 +94,7 @@ func TestTriePrefixMatch(t *testing.T) {
 		result := trie.PrefixMatch(key)
 		AssertEqual(t, result, value)
 
-		result2 := trie.LongestPrefixMatch(key)
+		_, result2 := trie.LongestPrefixMatch(key)
 		var value2 interface{}
 		if len(value) == 0 {
 			value2 = nil
@@ -131,7 +152,7 @@ func TestTrieFull(t *testing.T) {
 		result := trie.PrefixMatch(key)
 		AssertEqual(t, result, value, key)
 
-		result2 := trie.LongestPrefixMatch(key)
+		_, result2 := trie.LongestPrefixMatch(key)
 		var value2 interface{}
 		if len(value) == 0 {
 			value2 = nil
@@ -145,7 +166,7 @@ func TestTrieFull(t *testing.T) {
 func TestTrieWalk(t *testing.T) {
 	trieTree := NewTrieTree()
 
-	testData := []string{"", "abc", "bc", "bcd"}
+	testData := []string{"", "abc", "bc", "bcd", "b你", "a你好", "a你去"}
 	walkData := []struct {
 		key         string
 		value       interface{}
@@ -156,8 +177,12 @@ func TestTrieWalk(t *testing.T) {
 		{"a", nil, "", "_value"},
 		{"b", nil, "", "_value"},
 		{"ab", nil, "a", nil},
+		{"a你", nil, "a", nil},
 		{"bc", "bc_value", "b", nil},
+		{"b你", "b你_value", "b", nil},
 		{"abc", "abc_value", "ab", nil},
+		{"a你去", "a你去_value", "a你", nil},
+		{"a你好", "a你好_value", "a你", nil},
 		{"bcd", "bcd_value", "bc", "bc_value"},
 	}
 
@@ -169,10 +194,10 @@ func TestTrieWalk(t *testing.T) {
 	trieTree.Walk(func(key string, value interface{}, parentKey string, parentValue interface{}) {
 		result := walkData[index]
 		index++
-		AssertEqual(t, result.key, key)
-		AssertEqual(t, result.value, value)
-		AssertEqual(t, result.parentKey, parentKey)
-		AssertEqual(t, result.parentValue, parentValue)
+		AssertEqual(t, result.key, key, index)
+		AssertEqual(t, result.value, value, index)
+		AssertEqual(t, result.parentKey, parentKey, index)
+		AssertEqual(t, result.parentValue, parentValue, index)
 	})
 	AssertEqual(t, index, len(walkData))
 }

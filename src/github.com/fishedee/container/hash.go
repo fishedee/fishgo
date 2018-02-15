@@ -1,8 +1,6 @@
 package container
 
 func hashInt(key int, mask int) int {
-	h := key * 0x9E3779B9
-	key = h ^ (h >> 16)
 	return key & mask
 }
 

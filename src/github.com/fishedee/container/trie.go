@@ -1,7 +1,8 @@
 package container
 
 import (
-	. "github.com/fishedee/language"
+	"sort"
+	"unicode/utf8"
 )
 
 type TrieTree struct {
@@ -13,11 +14,11 @@ type TrieTreeWalker func(key string, value interface{}, parentKey string, parent
 
 type trieTreeNode struct {
 	value    interface{}
-	children map[byte]*trieTreeNode
+	children map[rune]*trieTreeNode
 }
 
 type trieWalk struct {
-	key  []byte
+	key  string
 	node *trieTreeNode
 }
 
@@ -26,7 +27,7 @@ func NewTrieTree() *TrieTree {
 	trieTree.nodeNum = 0
 	trieTree.root = &trieTreeNode{
 		value:    nil,
-		children: map[byte]*trieTreeNode{},
+		children: map[rune]*trieTreeNode{},
 	}
 	return trieTree
 }
@@ -34,18 +35,21 @@ func NewTrieTree() *TrieTree {
 func (this *TrieTree) Walk(walker TrieTreeWalker) {
 	queue := NewQueue()
 	queue.Push(&trieWalk{
-		key:  []byte(""),
+		key:  "",
 		node: this.root,
 	})
 	walker("", this.root.value, "", nil)
 	for queue.Len() != 0 {
 		top := queue.Pop().(*trieWalk)
-		keySortInterface, _ := ArrayKeyAndValue(top.node.children)
-		keySort := keySortInterface.([]byte)
+		var keySort []int
+		for key, _ := range top.node.children {
+			keySort = append(keySort, int(key))
+		}
+		sort.Ints(keySort)
 		for _, next := range keySort {
-			child := top.node.children[next]
-			childKey := append(top.key, next)
-			walker(string(childKey), child.value, string(top.key), top.node.value)
+			child := top.node.children[rune(next)]
+			childKey := top.key + string(rune(next))
+			walker(childKey, child.value, top.key, top.node.value)
 			queue.Push(&trieWalk{
 				key:  childKey,
 				node: child,
@@ -56,8 +60,7 @@ func (this *TrieTree) Walk(walker TrieTreeWalker) {
 
 func (this *TrieTree) Get(key string) interface{} {
 	current := this.root
-	for i := 0; i != len(key); i++ {
-		char := key[i]
+	for _, char := range key {
 		child, isExist := current.children[char]
 		if isExist == false {
 			return nil
@@ -69,13 +72,12 @@ func (this *TrieTree) Get(key string) interface{} {
 
 func (this *TrieTree) Set(key string, value interface{}) {
 	current := this.root
-	for i := 0; i != len(key); i++ {
-		char := key[i]
+	for _, char := range key {
 		child, isExist := current.children[char]
 		if isExist == false {
 			child = &trieTreeNode{
 				value:    nil,
-				children: map[byte]*trieTreeNode{},
+				children: map[rune]*trieTreeNode{},
 			}
 			current.children[char] = child
 			this.nodeNum++
@@ -95,6 +97,7 @@ type TrieArray struct {
 	base  []int
 	check []int
 	value []interface{}
+	dict  *HashListArray
 }
 
 type TrieMatch struct {
@@ -117,6 +120,8 @@ func newTrieArray() *TrieArray {
 }
 
 func (this *TrieArray) build(root *trieTreeNode) {
+	dict := map[rune]int{}
+
 	queue := NewQueue()
 	queue.Push(&trieArrayNode{
 		index:  1,
@@ -127,10 +132,10 @@ func (this *TrieArray) build(root *trieTreeNode) {
 	this.setValue(1, root.value)
 	for queue.Len() != 0 {
 		top := queue.Pop().(*trieArrayNode)
-		freeOffset := this.findIndex(top.offset, top.node.children)
+		freeOffset := this.findIndex(top.offset, top.node.children, dict)
 		this.setBase(top.index, freeOffset)
 		for next, child := range top.node.children {
-			childIndex := freeOffset + int(next)
+			childIndex := freeOffset + dict[next]
 			this.setCheck(childIndex, top.index)
 			this.setValue(childIndex, child.value)
 			queue.Push(&trieArrayNode{
@@ -139,15 +144,28 @@ func (this *TrieArray) build(root *trieTreeNode) {
 				node:   child,
 			})
 		}
-
 	}
+
+	hashList := NewHashList(len(dict) * 2)
+	for key, value := range dict {
+		hashList.Set(int(key), value)
+	}
+	this.dict = hashList.ToHashListArray()
 }
 
-func (this *TrieArray) findIndex(offset int, next map[byte]*trieTreeNode) int {
+func (this *TrieArray) findIndex(offset int, next map[rune]*trieTreeNode, dict map[rune]int) int {
+
+	for char, _ := range next {
+		_, isExist := dict[char]
+		if isExist == false {
+			dict[char] = len(dict) + 1
+		}
+	}
+
 	for {
 		isOk := true
 		for char, _ := range next {
-			index := offset + int(char)
+			index := offset + dict[char]
 			if this.isExist(index) {
 				isOk = false
 				break
@@ -195,7 +213,7 @@ func (this *TrieArray) setValue(index int, value interface{}) {
 	this.value[index] = value
 }
 
-func (this *TrieArray) singleMatch(key string) (interface{}, bool) {
+func (this *TrieArray) LongestPrefixMatch(key string) (string, interface{}) {
 	length := len(this.check)
 	current := 1
 	var result interface{}
@@ -204,34 +222,34 @@ func (this *TrieArray) singleMatch(key string) (interface{}, bool) {
 		result = this.value[current]
 	}
 
-	i := 0
-	for ; i != len(key); i++ {
-		next := this.base[current] + int(key[i])
+	index := 0
+	for _, char := range key {
+		charId := this.dict.Get(int(char))
+		if charId == nil {
+			break
+		}
+		next := this.base[current] + charId.(int)
 		if next >= length {
 			break
 		}
 		if this.check[next] != current {
 			break
 		}
+		index += utf8.RuneLen(char)
 		current = next
 		if this.value[current] != nil {
 			result = this.value[current]
 		}
 	}
-	return result, i == len(key)
-}
-
-func (this *TrieArray) LongestPrefixMatch(key string) interface{} {
-	result, _ := this.singleMatch(key)
-	return result
+	return key[0:index], result
 }
 
 func (this *TrieArray) ExactMatch(key string) interface{} {
-	result, isExact := this.singleMatch(key)
-	if isExact == false {
+	resultKey, resultValue := this.LongestPrefixMatch(key)
+	if len(resultKey) != len(key) {
 		return nil
 	}
-	return result
+	return resultValue
 }
 
 func (this *TrieArray) PrefixMatch(key string) []TrieMatch {
@@ -246,17 +264,23 @@ func (this *TrieArray) PrefixMatch(key string) []TrieMatch {
 		})
 	}
 
-	for i := 0; i != len(key); i++ {
-		next := this.base[current] + int(key[i])
+	index := 0
+	for _, char := range key {
+		dictId := this.dict.Get(int(char))
+		if dictId == nil {
+			break
+		}
+		next := this.base[current] + dictId.(int)
 		if next >= length {
 			break
 		}
 		if this.check[next] != current {
 			break
 		}
+		index += utf8.RuneLen(char)
 		if this.value[next] != nil {
 			result = append(result, TrieMatch{
-				key:   key[0 : i+1],
+				key:   key[0:index],
 				value: this.value[next],
 			})
 		}
