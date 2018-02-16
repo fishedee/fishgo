@@ -7,7 +7,7 @@ import (
 
 func Explode(input string, separator string) []string {
 	dataResult := strings.Split(input, separator)
-	dataResultNew := []string{}
+	dataResultNew := make([]string, 0, len(dataResult))
 	for _, singleResult := range dataResult {
 		singleResult = strings.Trim(singleResult, " ")
 		if len(singleResult) == 0 {
@@ -24,7 +24,7 @@ func Implode(data []string, separator string) string {
 
 func ExplodeInt(input string, separator string) []int {
 	dataResult := strings.Split(input, separator)
-	dataResultNew := []int{}
+	dataResultNew := make([]int, 0, len(dataResult))
 	for _, singleResult := range dataResult {
 		singleResult = strings.Trim(singleResult, " ")
 		if len(singleResult) == 0 {
@@ -40,7 +40,7 @@ func ExplodeInt(input string, separator string) []int {
 }
 
 func ImplodeInt(data []int, separator string) string {
-	result := []string{}
+	result := make([]string, 0, len(data))
 	for _, singleData := range data {
 		result = append(result, strconv.Itoa(singleData))
 	}

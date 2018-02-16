@@ -1,6 +1,7 @@
 package router
 
 import (
+	"fmt"
 	. "github.com/fishedee/container"
 	. "github.com/fishedee/language"
 	"net/http"
@@ -44,7 +45,7 @@ func (this *Router) combineParent(current routerFactoryPathInfo, parent routerFa
 	for method, parentMethodInfo := range parent {
 		currentMethodInfo, isExist := current[method]
 		if isExist == false {
-			current[method] = currentMethodInfo
+			current[method] = parentMethodInfo
 			continue
 		}
 		//合并urlPrefixHandler
@@ -150,7 +151,7 @@ func (this *Router) change(pathInfo routerFactoryPathInfo) routerPathInfo {
 	methodLen := routerMethod.PATCH - routerMethod.HEAD + 2
 	var result routerPathInfo
 	result = make([]routerHandler, methodLen, methodLen)
-	for i := 0; i != len(result); i++ {
+	for i := routerMethod.HEAD; i <= routerMethod.PATCH; i++ {
 		methodPathInfo := pathInfo[i]
 		result[i] = this.changeMethod(methodPathInfo)
 	}
@@ -160,9 +161,16 @@ func (this *Router) change(pathInfo routerFactoryPathInfo) routerPathInfo {
 func (this *Router) build(trieTree *TrieTree) *TrieArray {
 	myTrieTree := NewTrieTree()
 	trieTree.Walk(func(key string, value interface{}, parentKey string, parentValue interface{}) {
+		if value == nil {
+			value = routerFactoryPathInfo{}
+		}
+		if parentValue == nil {
+			parentValue = routerFactoryPathInfo{}
+		}
 		currentPathInfo := value.(routerFactoryPathInfo)
 		parentPathInfo := parentValue.(routerFactoryPathInfo)
 		this.combineParent(currentPathInfo, parentPathInfo)
+		trieTree.Set(key, currentPathInfo)
 		newPathInfo := this.change(currentPathInfo)
 		myTrieTree.Set(key, newPathInfo)
 	})
@@ -170,13 +178,16 @@ func (this *Router) build(trieTree *TrieTree) *TrieArray {
 }
 
 func (this *Router) findHandler(url string, method int) (routerHandlerFunc, map[string]string, routerHandlerFunc) {
+	urlSegment := Explode(url, "/")
+	url = Implode(urlSegment, "/")
 	handlerKey, handlerValue := this.trie.LongestPrefixMatch(strings.ToLower(url))
+
 	handler := handlerValue.(routerPathInfo)[method]
+	fmt.Println(url, handlerKey, handler, method)
 	if handler.urlExactHandler != nil && len(handlerKey) == len(url) {
 		return handler.urlExactHandler, nil, handler.notFoundPrefixHandler
 	}
 	if len(handler.urlPrefixHandler) != 0 {
-		urlSegment := Explode(url, "/")
 		urlPrefixHandler, isExist := handler.urlPrefixHandler[len(urlSegment)]
 		if isExist {
 			urlParam := map[string]string{}
@@ -193,7 +204,7 @@ func (this *Router) findHandler(url string, method int) (routerHandlerFunc, map[
 }
 
 func (this *Router) ServeHttp(w http.ResponseWriter, r *http.Request) {
-	url := strings.ToLower(r.URL.Path)
+	url := r.URL.Path
 	method, isExist := this.methodMap[r.Method]
 	if isExist == false {
 		panic("unsupport method " + r.Method)
@@ -293,7 +304,7 @@ func (this *RouterFactory) changeUrlPrefix(priority int, path string, handler in
 		param:   map[int]string{},
 		handler: handler,
 	}
-	path = "/" + Implode(pathInfo[0:singlePathIndex], "/")
+	path = Implode(pathInfo[0:singlePathIndex], "/")
 	for ; singlePathIndex != len(pathInfo); singlePathIndex++ {
 		if pathInfo[singlePathIndex][0] != ':' {
 			panic("invalid path : " + path)
@@ -305,8 +316,8 @@ func (this *RouterFactory) changeUrlPrefix(priority int, path string, handler in
 
 func (this *RouterFactory) addSingleRoute(method int, priority int, path string, handler interface{}) {
 	//处理path
-	pathInfo := Explode(strings.ToLower(path), "/")
-	path = "/" + Implode(pathInfo, "/")
+	pathInfo := Explode(strings.ToLower(this.basePath+"/"+path), "/")
+	path = Implode(pathInfo, "/")
 
 	//处理特殊的url前缀逻辑
 	priority, path, handler = this.changeUrlPrefix(priority, path, handler)
@@ -403,7 +414,7 @@ func (this *RouterFactory) Any(path string, handler interface{}) *RouterFactory 
 
 func (this *RouterFactory) rejustPath(path string) string {
 	pathInfo := Explode(strings.ToLower(path), "/")
-	newPath := "/" + Implode(pathInfo, "/")
+	newPath := Implode(pathInfo, "/")
 	return newPath
 }
 
@@ -442,11 +453,11 @@ func (this *RouterFactory) createHandler(middlewares []RouterMiddleware, handler
 		allHandler = append(allHandler, curHandler)
 	}
 	resultHandler := allHandler[len(allHandler)-1]
-	httpHandler, isOk := resultHandler.(routerFactoryHandlerFunc)
+	httpHandler, isOk := resultHandler.(func(w http.ResponseWriter, r *http.Request, param map[string]string))
 	if isOk == false {
 		panic("handler must be routerFactoryHandlerFunc type")
 	}
-	return httpHandler
+	return routerFactoryHandlerFunc(httpHandler)
 }
 
 func (this *RouterFactory) buildTrie(trieTree *TrieTree, rootMiddleware []RouterMiddleware) {
@@ -467,8 +478,7 @@ func (this *RouterFactory) buildTrie(trieTree *TrieTree, rootMiddleware []Router
 				methodMapper.notFoundPrefixHandler = this.createHandler(middlewares, methodMapper.notFoundPrefixHandler)
 			}
 		}
-		absolutePath := this.rejustPath(this.basePath + "/" + path)
-		trieTree.Set(absolutePath, mapper)
+		trieTree.Set(path, mapper)
 	}
 
 	for _, singleGroup := range this.group {
