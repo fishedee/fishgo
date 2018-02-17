@@ -108,6 +108,7 @@ func TestRouterUrl(t *testing.T) {
 		{
 			[]interface{}{
 				[]interface{}{4, "/"},
+				[]interface{}{3, "/"},
 
 				[]interface{}{1, "/a/b/c"},
 				[]interface{}{1, "/a/b/c"},
@@ -126,12 +127,12 @@ func TestRouterUrl(t *testing.T) {
 				[]interface{}{4, "/a/d"},
 			},
 			[]interface{}{
-				[]interface{}{"/", "/_4"},
+				[]interface{}{"/", "/_3"},
 				[]interface{}{"/a/b/c", "/a/b/c_1"},
 				[]interface{}{"/a/e/f", "/a/e/:mcId_1"},
 				[]interface{}{"/a/c/d", "/a/:userId/:mcId_1"},
 				[]interface{}{"/a/d", "/a/d_3"},
-				[]interface{}{"/b", "/_4"},
+				[]interface{}{"/b", "/_3"},
 			},
 		},
 		//大小写不敏感
@@ -263,36 +264,154 @@ func TestRouterMethod(t *testing.T) {
 	}
 }
 
-type testObject struct {
-}
-
-func (this *testObject) Do1(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("do1"))
-}
-
-func (this *testObject) Do2_Json(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("do2"))
-}
-
-func (this *testObject) Do3_Html_Go(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("do3"))
-}
-
-func TestRouterObject(t *testing.T) {
+func TestRouterStatic(t *testing.T) {
 	routerFactory := NewRouterFactory()
-	routerFactory.GET("/a", &testObject{})
-	routerFactory.GET("/", &testObject{})
+	routerFactory.NotFound(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("404"))
+	})
+	routerFactory.Static("/", "./testdata")
+	routerFactory.Static("/mj", "./testdata")
+	routerFactory.Group("/mc", func(routerFactory2 *RouterFactory) {
+		routerFactory2.Static("/", "./testdata")
+		routerFactory2.Static("/jk", "./testdata")
+		routerFactory2.Group("/mu", func(routerFactory3 *RouterFactory) {
+			routerFactory3.Static("/", "./testdata")
+		})
+	})
+
+	router := routerFactory.Create()
+
 	testCase := []struct {
 		url  string
 		data string
 	}{
-		{"/do1", "do1"},
-		{"/do2", "do2"},
-		{"/do3", "do3"},
-		{"/a/do1", "do1"},
-		{"/a/do2", "do2"},
-		{"/a/do3", "do3"},
+		{"/a.html", "hello a"},
+		{"/b.html", "hello b"},
+		{"/c/d.html", "hello d"},
+		{"/e.html", "404"},
+		{"/mj/a.html", "hello a"},
+		{"/mj/b.html", "hello b"},
+		{"/mj/c/d.html", "hello d"},
+		{"/mj/e.html", "404"},
+		{"/mc/a.html", "hello a"},
+		{"/mc/b.html", "hello b"},
+		{"/mc/c/d.html", "hello d"},
+		{"/mc/e.html", "404"},
+		{"/mc/mu/a.html", "hello a"},
+		{"/mc/mu/b.html", "hello b"},
+		{"/mc/mu/c/d.html", "hello d"},
+		{"/mc/mu/e.html", "404"},
+		{"/mc/jk/a.html", "hello a"},
+		{"/mc/jk/b.html", "hello b"},
+		{"/mc/jk/c/d.html", "hello d"},
+		{"/mc/jk/e.html", "404"},
 	}
+	for index, singleTestCase := range testCase {
+		r, _ := http.NewRequest("GET", singleTestCase.url, nil)
+		w := &fakeWriter{}
+		router.ServeHttp(w, r)
+		AssertEqual(t, w.Read(), singleTestCase.data, index)
+	}
+}
+
+func TestRouterUrlPrefixParam(t *testing.T) {
+	insertData := []string{
+		"/",
+		"/a",
+		"/a/:userId",
+		"/a/:userId/:typeId",
+		"/b",
+		"/b/mc/:fishId",
+		"/b/:typeId/:userId",
+	}
+	findData := []struct {
+		url   string
+		param map[string]string
+	}{
+		{"/", nil},
+		{"/a", nil},
+		{"/b", nil},
+		{"/a/mc", map[string]string{
+			"userId": "mc",
+		}},
+		{"/a/mc/jk", map[string]string{
+			"userId": "mc",
+			"typeId": "jk",
+		}},
+		{"/b/mc/jk", map[string]string{
+			"fishId": "jk",
+		}},
+		{"/b/bj/jk", map[string]string{
+			"typeId": "bj",
+			"userId": "jk",
+		}},
+	}
+
+	routerFactory := NewRouterFactory()
+	check := make(chan map[string]string, 10)
+	for _, data := range insertData {
+		routerFactory.GET(data, func(w http.ResponseWriter, r *http.Request, param map[string]string) {
+			check <- param
+		})
+	}
+	router := routerFactory.Create()
+	for _, data := range findData {
+		r, _ := http.NewRequest("GET", data.url, nil)
+		w := &fakeWriter{}
+		router.ServeHttp(w, r)
+		AssertEqual(t, len(check), 1)
+		AssertEqual(t, <-check, data.param)
+	}
+}
+
+func TestRouterMiddleware(t *testing.T) {
+	newMiddleware := func(data string) RouterMiddleware {
+		return func(handler []interface{}) interface{} {
+			last := handler[len(handler)-1].(func(w http.ResponseWriter, r *http.Request, param map[string]string))
+			return func(w http.ResponseWriter, r *http.Request, param map[string]string) {
+				w.Write([]byte(data))
+				last(w, r, param)
+			}
+		}
+	}
+	doNothing := func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("fish"))
+	}
+	routerFactory := NewRouterFactory()
+	routerFactory.NotFound(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("404"))
+	})
+	routerFactory.
+		Use(newMiddleware("mid1_")).
+		Use(newMiddleware("mid2_")).
+		GET("/a", doNothing).
+		GET("/b", doNothing).
+		Group("/c", func(routerFactory2 *RouterFactory) {
+			routerFactory2.
+				Use(newMiddleware("mid3_")).
+				GET("/d", doNothing).
+				GET("/e", doNothing)
+		}).
+		Group("/", func(routerFactory2 *RouterFactory) {
+			routerFactory2.
+				Use(newMiddleware("mid4_")).
+				GET("/f", doNothing).
+				GET("/g", doNothing)
+		})
+	testCase := []struct {
+		url  string
+		data string
+	}{
+		{"/", "mid1_mid2_404"},
+		{"/a", "mid1_mid2_fish"},
+		{"/b", "mid1_mid2_fish"},
+		{"/f", "mid1_mid2_mid4_fish"},
+		{"/g", "mid1_mid2_mid4_fish"},
+		{"/h", "mid1_mid2_404"},
+		{"/c/d", "mid1_mid2_mid3_fish"},
+		{"/c/e", "mid1_mid2_mid3_fish"},
+	}
+
 	router := routerFactory.Create()
 	for _, singleTestCase := range testCase {
 		r, _ := http.NewRequest("GET", singleTestCase.url, nil)
@@ -300,25 +419,4 @@ func TestRouterObject(t *testing.T) {
 		router.ServeHttp(w, r)
 		AssertEqual(t, w.Read(), singleTestCase.data)
 	}
-}
-
-func TestRouterStatic404(t *testing.T) {
-
-}
-
-func TestRouterUrlPrefixParam(t *testing.T) {
-
-}
-
-func TestRouterGroup(t *testing.T) {
-	/*
-		routerFactory := NewRouterFactory()
-		addGroupRoute := func(group []string, path string) {
-			routerFactoryHandler.Group
-		}
-		routerFactory.addRoute(routerMethod.GET, priority, path, handler)
-	*/
-	//group操作，路由与中间件
-	//http方法指向
-	//object路由生成
 }

@@ -5,7 +5,6 @@ import (
 	. "github.com/fishedee/container"
 	. "github.com/fishedee/language"
 	"net/http"
-	"reflect"
 	"strings"
 )
 
@@ -114,7 +113,7 @@ func (this *Router) catchNotFound(in interface{}, isCatch bool) routerHandlerFun
 	} else {
 		return func(w http.ResponseWriter, r *http.Request, param map[string]string) int {
 			fakeWriter := newRouterResponseWriter(w)
-			origin(w, r, param)
+			origin(fakeWriter, r, param)
 			return fakeWriter.GetStatus()
 		}
 	}
@@ -183,7 +182,6 @@ func (this *Router) findHandler(url string, method int) (routerHandlerFunc, map[
 	handlerKey, handlerValue := this.trie.LongestPrefixMatch(strings.ToLower(url))
 
 	handler := handlerValue.(routerPathInfo)[method]
-	fmt.Println(url, handlerKey, handler, method)
 	if handler.urlExactHandler != nil && len(handlerKey) == len(url) {
 		return handler.urlExactHandler, nil, handler.notFoundPrefixHandler
 	}
@@ -254,30 +252,26 @@ type routerFactoryHandler struct {
 type routerFactoryPathInfo map[int]*routerFactoryHandler
 
 func NewRouterFactory() *RouterFactory {
+	routerFactory := newRouterFactory("")
+	routerFactory.NotFound(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(404)
+		w.Write([]byte("404 page not found By Fish"))
+	})
+	return routerFactory
+}
+
+func newRouterFactory(basePath string) *RouterFactory {
 	routerFactory := &RouterFactory{}
-	routerFactory.basePath = "/"
+	routerFactory.basePath = basePath
 	routerFactory.middleware = []RouterMiddleware{}
 	routerFactory.tree = map[string]routerFactoryPathInfo{}
 	routerFactory.group = []*RouterFactory{}
-	routerFactory.NotFound(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("404 page not found By Fish"))
-		w.WriteHeader(404)
-	})
 	return routerFactory
 }
 
 func (this *RouterFactory) Use(middleware RouterMiddleware) *RouterFactory {
 	this.middleware = append(this.middleware, middleware)
 	return this
-}
-
-func (this *RouterFactory) isPublic(name string) bool {
-	fisrtStr := name[0:1]
-	if fisrtStr >= "A" && fisrtStr <= "Z" {
-		return true
-	} else {
-		return false
-	}
 }
 
 func (this *RouterFactory) changeUrlPrefix(priority int, path string, handler interface{}) (int, string, interface{}) {
@@ -287,7 +281,7 @@ func (this *RouterFactory) changeUrlPrefix(priority int, path string, handler in
 	}
 
 	//过滤前缀url逻辑
-	pathInfo := Explode(strings.ToLower(path), "/")
+	pathInfo := Explode(path, "/")
 
 	var singlePathIndex = 0
 	for ; singlePathIndex != len(pathInfo); singlePathIndex++ {
@@ -316,12 +310,13 @@ func (this *RouterFactory) changeUrlPrefix(priority int, path string, handler in
 
 func (this *RouterFactory) addSingleRoute(method int, priority int, path string, handler interface{}) {
 	//处理path
-	pathInfo := Explode(strings.ToLower(this.basePath+"/"+path), "/")
+	pathInfo := Explode(this.basePath+"/"+path, "/")
 	path = Implode(pathInfo, "/")
 
 	//处理特殊的url前缀逻辑
 	priority, path, handler = this.changeUrlPrefix(priority, path, handler)
 
+	path = strings.ToLower(path)
 	treeInfo, isExist := this.tree[path]
 	if isExist == false {
 		treeInfo = routerFactoryPathInfo{}
@@ -349,25 +344,7 @@ func (this *RouterFactory) addSingleRoute(method int, priority int, path string,
 }
 
 func (this *RouterFactory) addRoute(method int, priority int, path string, handler interface{}) {
-	handlerValue := reflect.ValueOf(handler)
-	handlerType := handlerValue.Type()
-	if handlerType.Kind() == reflect.Func {
-		this.addSingleRoute(method, priority, path, handler)
-	} else if handlerType.Kind() == reflect.Ptr &&
-		handlerType.Elem().Kind() == reflect.Struct {
-		methodNum := handlerValue.NumMethod()
-		for i := 0; i != methodNum; i++ {
-			methodHandler := handlerType.Method(i)
-			methodName := methodHandler.Name
-			if this.isPublic(methodName) == false {
-				continue
-			}
-			methodNameArray := Explode(methodName, "_")
-			this.addSingleRoute(method, priority, path+"/"+methodNameArray[0], handlerValue.Method(i).Interface())
-		}
-	} else {
-		panic("invalid handler type " + handlerType.String())
-	}
+	this.addSingleRoute(method, priority, path, handler)
 }
 
 func (this *RouterFactory) HEAD(path string, handler interface{}) *RouterFactory {
@@ -420,7 +397,8 @@ func (this *RouterFactory) rejustPath(path string) string {
 
 func (this *RouterFactory) Static(path string, dir string) *RouterFactory {
 	absolutePath := this.rejustPath(this.basePath + "/" + path)
-	handler := http.StripPrefix(absolutePath, http.FileServer(http.Dir(dir)))
+	handler := http.StripPrefix("/"+absolutePath, http.FileServer(http.Dir(dir)))
+	fmt.Println(path)
 	this.addRoute(routerMethod.HEAD, 3, path, handler)
 	this.addRoute(routerMethod.GET, 3, path, handler)
 	return this
@@ -434,14 +412,12 @@ func (this *RouterFactory) NotFound(handler interface{}) *RouterFactory {
 }
 
 func (this *RouterFactory) Group(basePath string, handler func(r *RouterFactory)) *RouterFactory {
-	groupFactory := NewRouterFactory()
-
-	groupFactory.basePath = this.rejustPath(this.basePath + "/" + basePath)
+	realBasePath := this.rejustPath(this.basePath + "/" + basePath)
+	groupFactory := newRouterFactory(realBasePath)
 
 	this.group = append(this.group, groupFactory)
 
 	handler(groupFactory)
-
 	return this
 }
 

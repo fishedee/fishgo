@@ -12,6 +12,8 @@ func NewNoParamMiddleware() RouterMiddleware {
 			netHandler = handler
 		} else if handler2, isNoParam := last.(func(w http.ResponseWriter, r *http.Request)); isNoParam == true {
 			netHandler = handler2
+		} else if handler3, isNoParam := last.(http.Handler); isNoParam == true {
+			netHandler = handler3.ServeHTTP
 		} else {
 			return last
 		}
