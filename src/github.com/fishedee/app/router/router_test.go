@@ -1,8 +1,8 @@
 package router
 
 import (
-	//"fmt"
-	//. "github.com/fishedee/assert"
+	"fmt"
+	. "github.com/fishedee/assert"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"testing"
@@ -29,7 +29,6 @@ func (this *fakeWriter) Read() string {
 	return this.result
 }
 
-/*
 func TestRouterUrl(t *testing.T) {
 	testCase := []struct {
 		insertData interface{}
@@ -80,6 +79,7 @@ func TestRouterUrl(t *testing.T) {
 				[]interface{}{"/ab/10001/10002", "/ab/10001/10002_1"},
 				[]interface{}{"/ab/10001/10002/mc", "404"},
 				[]interface{}{"/ab/mc/jk/mc", "404"},
+				[]interface{}{"/aj/123", "404"},
 			},
 		},
 		//前缀静态匹配
@@ -137,19 +137,6 @@ func TestRouterUrl(t *testing.T) {
 				[]interface{}{"/b", "/_3"},
 			},
 		},
-		//大小写不敏感
-		{
-			[]interface{}{
-				[]interface{}{1, "/Ab/b"},
-				[]interface{}{1, "/BC"},
-			},
-			[]interface{}{
-				[]interface{}{"/aB/b", "/Ab/b_1"},
-				[]interface{}{"/ab/b", "/Ab/b_1"},
-				[]interface{}{"/Bc", "/BC_1"},
-				[]interface{}{"/bc", "/BC_1"},
-			},
-		},
 		//不正常url拼接
 		{
 			[]interface{}{
@@ -161,15 +148,14 @@ func TestRouterUrl(t *testing.T) {
 			[]interface{}{
 				[]interface{}{"/", "_1"},
 				[]interface{}{"", "_1"},
-				[]interface{}{"///", "_1"},
-				[]interface{}{" / / / ", "_1"},
+				[]interface{}{"//", "_1"},
 				[]interface{}{"/b/c", "b/c_1"},
 				[]interface{}{"b/c", "b/c_1"},
-				[]interface{}{"b/c//", "b/c_1"},
+				[]interface{}{"b/c/", "b/c_1"},
 				[]interface{}{"/b/c/a", "b/c//a_1"},
-				[]interface{}{"/b//c/a/", "b/c//a_1"},
+				[]interface{}{"/b/c/a/", "b/c//a_1"},
 				[]interface{}{"/b/g", "//b///g//_1"},
-				[]interface{}{"/b/g//", "//b///g//_1"},
+				[]interface{}{"/b/g/", "//b///g//_1"},
 			},
 		},
 	}
@@ -422,42 +408,76 @@ func TestRouterMiddleware(t *testing.T) {
 		AssertEqual(t, w.Read(), singleTestCase.data)
 	}
 }
-*/
 
-var testUrl = "/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa"
-
-func BenchmarkRouterBasic(b *testing.B) {
+func benchmarkRouterBasic(b *testing.B, insertData []string, findData []string) {
 	routerFactory := NewRouterFactory()
-	routerFactory.NotFound(func(w http.ResponseWriter, r *http.Request) {
-	})
-	routerFactory.GET(testUrl, func(w http.ResponseWriter, r *http.Request) {
-	})
+	doNothing := func(w http.ResponseWriter, r *http.Request) {
+	}
+	routerFactory.NotFound(doNothing)
+	for _, data := range insertData {
+		routerFactory.GET(data, doNothing)
+	}
+
+	r, _ := http.NewRequest("GET", "", nil)
+	w := &fakeWriter{}
 	router := routerFactory.Create()
 
-	r, _ := http.NewRequest("GET", testUrl, nil)
-	w := &fakeWriter{}
-
 	b.ResetTimer()
-	b.StartTimer()
 	for i := 0; i != b.N; i++ {
+		single := findData[i%len(findData)]
+		r.URL.Path = single
 		router.ServeHttp(w, r)
 	}
-	b.StopTimer()
 }
 
-func BenchmarkGinBasic(b *testing.B) {
+func benchmarkGinBasic(b *testing.B, insertData []string, findData []string) {
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
-	router.GET(testUrl, func(c *gin.Context) {
-	})
+	doNothing := func(c *gin.Context) {
+	}
+	for _, data := range insertData {
+		router.GET(data, doNothing)
+	}
 
-	r, _ := http.NewRequest("GET", testUrl, nil)
+	r, _ := http.NewRequest("GET", "", nil)
 	w := &fakeWriter{}
 
 	b.ResetTimer()
-	b.StartTimer()
 	for i := 0; i != b.N; i++ {
+		single := findData[i%len(findData)]
+		r.URL.Path = single
 		router.ServeHTTP(w, r)
 	}
-	b.StopTimer()
+}
+
+func BenchmarkRouterShort(b *testing.B) {
+	testUrl := "/abc"
+	benchmarkRouterBasic(b, []string{testUrl}, []string{testUrl})
+}
+
+func BenchmarkGinShort(b *testing.B) {
+	testUrl := "/abc"
+	benchmarkGinBasic(b, []string{testUrl}, []string{testUrl})
+}
+
+func BenchmarkRouterLong(b *testing.B) {
+	testUrl := "/abc/12312313/adf/asdf/asdf/asdf/sdaf/asdf/abc/12312313/adf/asdf/asdf/asdf/sdaf/asdf/"
+	benchmarkRouterBasic(b, []string{testUrl}, []string{testUrl})
+}
+
+func BenchmarkGinLong(b *testing.B) {
+	testUrl := "/abc/12312313/adf/asdf/asdf/asdf/sdaf/asdf/abc/12312313/adf/asdf/asdf/asdf/sdaf/asdf/"
+	benchmarkGinBasic(b, []string{testUrl}, []string{testUrl})
+}
+
+func BenchmarkRouterParam(b *testing.B) {
+	insertUrl := "/user/:userId"
+	findUrl := "/user/123"
+	benchmarkRouterBasic(b, []string{insertUrl}, []string{findUrl})
+}
+
+func BenchmarkGinParam(b *testing.B) {
+	insertUrl := "/user/:userId"
+	findUrl := "/user/123"
+	benchmarkGinBasic(b, []string{insertUrl}, []string{findUrl})
 }

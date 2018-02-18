@@ -9,7 +9,7 @@ import (
 func TestTrieAllMatch(t *testing.T) {
 	trieTree := NewTrieTree()
 
-	testFoundData := []string{"a", "ab", "ba", "1", "2", "3c_4", "你", "a你", "你好"}
+	testFoundData := []string{"a", "ab", "ba", "1", "2", "3c_4", "你", "a你", "你好", "gm", "g"}
 	testNotFoundData := []string{"c", "abc", "ac", "b", "bac", "_4", "c_", "a ", " a", "你a", "好"}
 
 	for _, data := range testFoundData {

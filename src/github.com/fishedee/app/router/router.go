@@ -1,12 +1,9 @@
 package router
 
 import (
-	"fmt"
 	. "github.com/fishedee/container"
 	. "github.com/fishedee/language"
 	"net/http"
-	"strings"
-	"unsafe"
 )
 
 type Router struct {
@@ -177,26 +174,8 @@ func (this *Router) build(trieTree *TrieTree) *TrieArray {
 	return myTrieTree.ToTrieArray()
 }
 
-func (this *Router) toString(b []byte) string {
-	return *(*string)(unsafe.Pointer(&b))
-}
-
-func (this *Router) normalUrl(url string) (bool, string) {
+func (this *Router) normalUrl(url string, a int) string {
 	urlLen := len(url)
-	prev := -3
-	for i := 0; i != urlLen; i++ {
-		char := url[i]
-		if char >= 'A' && char <= 'Z' {
-			return false, ""
-		} else if char == '/' {
-			if i-prev <= 1 {
-				return false, ""
-			}
-			prev = i
-		} else if char == ' ' {
-			return false, ""
-		}
-	}
 	begin := 0
 	end := urlLen
 	if urlLen > 0 && url[0] == '/' {
@@ -205,45 +184,28 @@ func (this *Router) normalUrl(url string) (bool, string) {
 	if urlLen >= 2 && url[end-1] == '/' {
 		end--
 	}
-	return true, url[begin:end]
-}
-
-func (this *Router) changeUrl(url string) string {
-	pathInfo := Explode(url, "/")
-	return strings.ToLower(Implode(pathInfo, "/"))
-}
-
-func (this *Router) parseUrl(url string) string {
-	isNormal, normalUrl := this.normalUrl(url)
-	if isNormal {
-		return normalUrl
-	}
-	return this.changeUrl(url)
-}
-
-func (this *Router) parseParam(url string, param map[int]string) map[string]string {
-	return nil
+	return url[begin:end]
 }
 
 func (this *Router) findHandler(url string, method int) (routerHandlerFunc, map[string]string, routerHandlerFunc) {
-	searchUrl := this.parseUrl(url)
+	searchUrl := this.normalUrl(url, 1)
 	handlerKey, handlerValue := this.trie.LongestPrefixMatch(searchUrl)
-
 	handler := handlerValue.(routerPathInfo)[method]
-	if handler.urlExactHandler != nil && len(handlerKey) == len(searchUrl) {
+	isExact := len(handlerKey) == len(searchUrl)
+	isPrefix := isExact ||
+		(len(handlerKey) != 0 && handlerKey[len(handlerKey)-1] == '/') ||
+		(len(searchUrl) != 0 && searchUrl[len(handlerKey)] == '/')
+	if handler.urlExactHandler != nil && isExact {
 		return handler.urlExactHandler, nil, handler.notFoundPrefixHandler
 	}
-	if len(handler.urlPrefixHandler) != 0 {
-		//urlSegment := Explode(url, "/")
-		urlPrefixHandler, isExist := handler.urlPrefixHandler[1]
+	if len(handler.urlPrefixHandler) != 0 && isPrefix {
+		urlSegment := Explode(url, "/")
+		urlPrefixHandler, isExist := handler.urlPrefixHandler[len(urlSegment)]
 		if isExist {
 			urlParam := map[string]string{}
-			urlParam["123"] = "456"
-			/*
-				for index, key := range urlPrefixHandler.param {
-					urlParam[key] = urlSegment[index]
-				}
-			*/
+			for index, key := range urlPrefixHandler.param {
+				urlParam[key] = urlSegment[index]
+			}
 			return urlPrefixHandler.handler, urlParam, handler.notFoundPrefixHandler
 		}
 	}
@@ -255,11 +217,32 @@ func (this *Router) findHandler(url string, method int) (routerHandlerFunc, map[
 
 func (this *Router) ServeHttp(w http.ResponseWriter, r *http.Request) {
 	url := r.URL.Path
-	method, isExist := this.methodMap[r.Method]
-	if isExist == false {
+	var methodInt int
+	switch r.Method {
+	case "HEAD":
+		methodInt = routerMethod.HEAD
+		break
+	case "OPTIONS":
+		methodInt = routerMethod.OPTIONS
+		break
+	case "GET":
+		methodInt = routerMethod.GET
+		break
+	case "POST":
+		methodInt = routerMethod.POST
+		break
+	case "DELETE":
+		methodInt = routerMethod.DELETE
+		break
+	case "PUT":
+		methodInt = routerMethod.PUT
+		break
+	case "PATCH":
+		methodInt = routerMethod.PATCH
+	default:
 		panic("unsupport method " + r.Method)
 	}
-	handler, param, notFoundHandler := this.findHandler(url, method)
+	handler, param, notFoundHandler := this.findHandler(url, methodInt)
 	status := handler(w, r, param)
 	if status == 404 {
 		notFoundHandler(w, r, param)
@@ -368,7 +351,6 @@ func (this *RouterFactory) addSingleRoute(method int, priority int, path string,
 	//处理特殊的url前缀逻辑
 	priority, path, handler = this.changeUrlPrefix(priority, path, handler)
 
-	path = strings.ToLower(path)
 	treeInfo, isExist := this.tree[path]
 	if isExist == false {
 		treeInfo = routerFactoryPathInfo{}
@@ -442,7 +424,7 @@ func (this *RouterFactory) Any(path string, handler interface{}) *RouterFactory 
 }
 
 func (this *RouterFactory) rejustPath(path string) string {
-	pathInfo := Explode(strings.ToLower(path), "/")
+	pathInfo := Explode(path, "/")
 	newPath := Implode(pathInfo, "/")
 	return newPath
 }
@@ -450,7 +432,6 @@ func (this *RouterFactory) rejustPath(path string) string {
 func (this *RouterFactory) Static(path string, dir string) *RouterFactory {
 	absolutePath := this.rejustPath(this.basePath + "/" + path)
 	handler := http.StripPrefix("/"+absolutePath, http.FileServer(http.Dir(dir)))
-	fmt.Println(path)
 	this.addRoute(routerMethod.HEAD, 3, path, handler)
 	this.addRoute(routerMethod.GET, 3, path, handler)
 	return this

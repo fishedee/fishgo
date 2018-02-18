@@ -119,7 +119,7 @@ func (this *TrieTree) Set(key string, value interface{}) {
 			insertChild := &trieTreeNode{
 				segment:  key[i+1:],
 				value:    value,
-				children: nil,
+				children: map[byte]*trieTreeNode{},
 			}
 			current.segment = segment[:j]
 			current.value = nil
@@ -147,6 +147,7 @@ func (this *TrieTree) Set(key string, value interface{}) {
 			current.children = map[byte]*trieTreeNode{
 				segment[j]: newChild,
 			}
+			break
 		}
 		char := key[0]
 		key = key[1:]

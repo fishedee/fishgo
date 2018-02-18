@@ -29,8 +29,8 @@ func analyseObjectRouter(factory *RouterFactory, name string) (func(path string,
 	method := factory.Any
 	functionName := "/"
 
-	nameArray := Explode(name, "_")
-	router, isExist := methodFunction[strings.ToLower(nameArray[0])]
+	nameArray := Explode(strings.ToLower(name), "_")
+	router, isExist := methodFunction[nameArray[0]]
 	if isExist == true {
 		method = router
 		if len(nameArray) == 1 {
