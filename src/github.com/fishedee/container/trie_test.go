@@ -34,7 +34,7 @@ func TestTrieAllMatch(t *testing.T) {
 func TestTriePrefixMatch(t *testing.T) {
 	trieTree := NewTrieTree()
 
-	testData := []string{"ab", "/ab", "cde", "abeg", "ac", "a你", "你", "你好", "你去", "hmkl", "hmgc", "hub"}
+	testData := []string{"ab", "/ab", "cde", "abeg", "ac", "a你", "你", "你好", "你去", "hm", "hmgch", "hmgbd"}
 	testFindData := map[string][]TrieMatch{
 		"ab": []TrieMatch{
 			{"ab", "ab_value"},
@@ -83,10 +83,9 @@ func TestTriePrefixMatch(t *testing.T) {
 		"/a":  []TrieMatch{},
 		"cck": []TrieMatch{},
 		"cd":  []TrieMatch{},
-		"hub": []TrieMatch{
-			{"hub", "hub_value"},
+		"hmgb": []TrieMatch{
+			{"hm", "hm_value"},
 		},
-		"hu": []TrieMatch{},
 	}
 
 	for _, data := range testData {
@@ -98,13 +97,20 @@ func TestTriePrefixMatch(t *testing.T) {
 		result := trie.PrefixMatch(key)
 		AssertEqual(t, result, value)
 
-		_, result2 := trie.LongestPrefixMatch(key)
+		resultKey2, resultValue2 := trie.LongestPrefixMatch(key)
+		var result2 interface{}
+		if resultValue2 != nil {
+			result2 = TrieMatch{resultKey2, resultValue2}
+		} else {
+			result2 = nil
+		}
 		var value2 interface{}
 		if len(value) == 0 {
 			value2 = nil
 		} else {
-			value2 = value[len(value)-1].Value
+			value2 = value[len(value)-1]
 		}
+
 		AssertEqual(t, result2, value2)
 
 	}
@@ -226,7 +232,7 @@ func getData(prefix string, count int, size int) []string {
 
 func benchmarkTrieSpeed(prefix string, b *testing.B, length int) {
 	insertData := getData(prefix, 1000, length)
-	findData := getData(prefix, b.N, length)
+	findData := getData(prefix, 1000, length)
 	trieTree := NewTrieTree()
 	for _, singleData := range insertData {
 		trieTree.Set(singleData, true)
@@ -234,27 +240,25 @@ func benchmarkTrieSpeed(prefix string, b *testing.B, length int) {
 	trie := trieTree.ToTrieArray()
 
 	b.ResetTimer()
-	b.StartTimer()
-	for _, singleData := range findData {
-		trie.ExactMatch(singleData)
+	for i := 0; i < b.N; i++ {
+		single := findData[i%len(findData)]
+		trie.ExactMatch(single)
 	}
-	b.StopTimer()
 }
 
 func benchmarkMapSpeed(prefix string, b *testing.B, length int) {
 	insertData := getData(prefix, 1000, length)
-	findData := getData(prefix, b.N, length)
+	findData := getData(prefix, 1000, length)
 	mapper := map[string]bool{}
 	for _, singleData := range insertData {
 		mapper[singleData] = true
 	}
 
 	b.ResetTimer()
-	b.StartTimer()
-	for _, singleData := range findData {
-		_, _ = mapper[singleData]
+	for i := 0; i != b.N; i++ {
+		single := findData[i%len(findData)]
+		_, _ = mapper[single]
 	}
-	b.StopTimer()
 }
 
 func BenchmarkTrieSpeedShort(b *testing.B) {

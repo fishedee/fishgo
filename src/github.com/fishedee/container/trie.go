@@ -1,6 +1,7 @@
 package container
 
 import (
+	//"fmt"
 	"sort"
 )
 
@@ -224,6 +225,7 @@ func (this *TrieArray) build(root *trieTreeNode) {
 			})
 		}
 	}
+	//fmt.Println(len(this.data))
 }
 
 func (this *TrieArray) findIndex(offset int, next map[byte]*trieTreeNode) int {
@@ -279,7 +281,10 @@ func (this *TrieArray) setSegment(index int, segment string) {
 	this.data[index].segment = segment
 }
 
-func (this *TrieArray) find(key string, finder func(key string, value interface{})) {
+func (this *TrieArray) LongestPrefixMatch(key string) (string, interface{}) {
+	var resultValue interface{}
+	var resultKey string
+
 	length := len(this.data)
 	current := 1
 	origin := key
@@ -294,7 +299,8 @@ func (this *TrieArray) find(key string, finder func(key string, value interface{
 		if len(key) >= len(segment) {
 			key = key[len(segment):]
 			if this.data[current].value != nil {
-				finder(origin[0:len(origin)-len(key)], this.data[current].value)
+				resultKey = origin[0 : len(origin)-len(key)]
+				resultValue = this.data[current].value
 			}
 		}
 		if len(key) == 0 {
@@ -312,16 +318,6 @@ func (this *TrieArray) find(key string, finder func(key string, value interface{
 		current = next
 		key = key[1:]
 	}
-}
-
-func (this *TrieArray) LongestPrefixMatch(key string) (string, interface{}) {
-	var resultValue interface{}
-	var resultKey string
-
-	this.find(key, func(key string, value interface{}) {
-		resultKey = key
-		resultValue = value
-	})
 
 	return resultKey, resultValue
 }
@@ -337,12 +333,41 @@ func (this *TrieArray) ExactMatch(key string) interface{} {
 func (this *TrieArray) PrefixMatch(key string) []TrieMatch {
 	result := []TrieMatch{}
 
-	this.find(key, func(key string, value interface{}) {
-		result = append(result, TrieMatch{
-			Key:   key,
-			Value: value,
-		})
-	})
+	length := len(this.data)
+	current := 1
+	origin := key
+	for {
+		segment := this.data[current].segment
+		if len(key) < len(segment) {
+			break
+		}
+		if key[:len(segment)] != segment {
+			break
+		}
+		if len(key) >= len(segment) {
+			key = key[len(segment):]
+			if this.data[current].value != nil {
+				result = append(result, TrieMatch{
+					Key:   origin[0 : len(origin)-len(key)],
+					Value: this.data[current].value,
+				})
+			}
+		}
+		if len(key) == 0 {
+			break
+		}
+
+		char := key[0]
+		next := this.data[current].base + int(char)
+		if next >= length {
+			break
+		}
+		if this.data[next].check != current {
+			break
+		}
+		current = next
+		key = key[1:]
+	}
 
 	return result
 }
