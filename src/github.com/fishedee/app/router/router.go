@@ -6,6 +6,7 @@ import (
 	. "github.com/fishedee/language"
 	"net/http"
 	"strings"
+	"unsafe"
 )
 
 type Router struct {
@@ -176,22 +177,73 @@ func (this *Router) build(trieTree *TrieTree) *TrieArray {
 	return myTrieTree.ToTrieArray()
 }
 
+func (this *Router) toString(b []byte) string {
+	return *(*string)(unsafe.Pointer(&b))
+}
+
+func (this *Router) normalUrl(url string) (bool, string) {
+	urlLen := len(url)
+	prev := -3
+	for i := 0; i != urlLen; i++ {
+		char := url[i]
+		if char >= 'A' && char <= 'Z' {
+			return false, ""
+		} else if char == '/' {
+			if i-prev <= 1 {
+				return false, ""
+			}
+			prev = i
+		} else if char == ' ' {
+			return false, ""
+		}
+	}
+	begin := 0
+	end := urlLen
+	if urlLen > 0 && url[0] == '/' {
+		begin++
+	}
+	if urlLen >= 2 && url[end-1] == '/' {
+		end--
+	}
+	return true, url[begin:end]
+}
+
+func (this *Router) changeUrl(url string) string {
+	pathInfo := Explode(url, "/")
+	return strings.ToLower(Implode(pathInfo, "/"))
+}
+
+func (this *Router) parseUrl(url string) string {
+	isNormal, normalUrl := this.normalUrl(url)
+	if isNormal {
+		return normalUrl
+	}
+	return this.changeUrl(url)
+}
+
+func (this *Router) parseParam(url string, param map[int]string) map[string]string {
+	return nil
+}
+
 func (this *Router) findHandler(url string, method int) (routerHandlerFunc, map[string]string, routerHandlerFunc) {
-	urlSegment := Explode(url, "/")
-	url = Implode(urlSegment, "/")
-	handlerKey, handlerValue := this.trie.LongestPrefixMatch(strings.ToLower(url))
+	searchUrl := this.parseUrl(url)
+	handlerKey, handlerValue := this.trie.LongestPrefixMatch(searchUrl)
 
 	handler := handlerValue.(routerPathInfo)[method]
-	if handler.urlExactHandler != nil && len(handlerKey) == len(url) {
+	if handler.urlExactHandler != nil && len(handlerKey) == len(searchUrl) {
 		return handler.urlExactHandler, nil, handler.notFoundPrefixHandler
 	}
 	if len(handler.urlPrefixHandler) != 0 {
-		urlPrefixHandler, isExist := handler.urlPrefixHandler[len(urlSegment)]
+		//urlSegment := Explode(url, "/")
+		urlPrefixHandler, isExist := handler.urlPrefixHandler[1]
 		if isExist {
 			urlParam := map[string]string{}
-			for index, key := range urlPrefixHandler.param {
-				urlParam[key] = urlSegment[index]
-			}
+			urlParam["123"] = "456"
+			/*
+				for index, key := range urlPrefixHandler.param {
+					urlParam[key] = urlSegment[index]
+				}
+			*/
 			return urlPrefixHandler.handler, urlParam, handler.notFoundPrefixHandler
 		}
 	}

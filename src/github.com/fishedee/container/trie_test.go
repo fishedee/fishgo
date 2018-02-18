@@ -34,7 +34,7 @@ func TestTrieAllMatch(t *testing.T) {
 func TestTriePrefixMatch(t *testing.T) {
 	trieTree := NewTrieTree()
 
-	testData := []string{"ab", "/ab", "cde", "abeg", "ac", "a你", "你", "你好", "你去"}
+	testData := []string{"ab", "/ab", "cde", "abeg", "ac", "a你", "你", "你好", "你去", "hmkl", "hmgc", "hub"}
 	testFindData := map[string][]TrieMatch{
 		"ab": []TrieMatch{
 			{"ab", "ab_value"},
@@ -83,6 +83,10 @@ func TestTriePrefixMatch(t *testing.T) {
 		"/a":  []TrieMatch{},
 		"cck": []TrieMatch{},
 		"cd":  []TrieMatch{},
+		"hub": []TrieMatch{
+			{"hub", "hub_value"},
+		},
+		"hu": []TrieMatch{},
 	}
 
 	for _, data := range testData {
@@ -99,7 +103,7 @@ func TestTriePrefixMatch(t *testing.T) {
 		if len(value) == 0 {
 			value2 = nil
 		} else {
-			value2 = value[len(value)-1].value
+			value2 = value[len(value)-1].Value
 		}
 		AssertEqual(t, result2, value2)
 
@@ -157,7 +161,7 @@ func TestTrieFull(t *testing.T) {
 		if len(value) == 0 {
 			value2 = nil
 		} else {
-			value2 = value[len(value)-1].value
+			value2 = value[len(value)-1].Value
 		}
 		AssertEqual(t, result2, value2, key)
 	}
@@ -166,6 +170,7 @@ func TestTrieFull(t *testing.T) {
 func TestTrieWalk(t *testing.T) {
 	trieTree := NewTrieTree()
 
+	invalidUtf8 := string([]byte{97, 228, 189, 160, 229})
 	testData := []string{"", "abc", "bc", "bcd", "b你", "a你好", "a你去"}
 	walkData := []struct {
 		key         string
@@ -176,13 +181,12 @@ func TestTrieWalk(t *testing.T) {
 		{"", "_value", "", nil},
 		{"a", nil, "", "_value"},
 		{"b", nil, "", "_value"},
-		{"ab", nil, "a", nil},
-		{"a你", nil, "a", nil},
+		{"abc", "abc_value", "a", nil},
+		{invalidUtf8, nil, "a", nil},
 		{"bc", "bc_value", "b", nil},
 		{"b你", "b你_value", "b", nil},
-		{"abc", "abc_value", "ab", nil},
-		{"a你去", "a你去_value", "a你", nil},
-		{"a你好", "a你好_value", "a你", nil},
+		{"a你去", "a你去_value", invalidUtf8, nil},
+		{"a你好", "a你好_value", invalidUtf8, nil},
 		{"bcd", "bcd_value", "bc", "bc_value"},
 	}
 
@@ -212,17 +216,17 @@ func getSingleData(count int) string {
 	return string(result)
 }
 
-func getData(count int, size int) []string {
+func getData(prefix string, count int, size int) []string {
 	result := []string{}
 	for i := 0; i != count; i++ {
-		result = append(result, getSingleData(size))
+		result = append(result, prefix+getSingleData(size))
 	}
 	return result
 }
 
-func BenchmarkTrieSpeed(b *testing.B) {
-	insertData := getData(1000, 20)
-	findData := getData(b.N, 20)
+func benchmarkTrieSpeed(prefix string, b *testing.B, length int) {
+	insertData := getData(prefix, 1000, length)
+	findData := getData(prefix, b.N, length)
 	trieTree := NewTrieTree()
 	for _, singleData := range insertData {
 		trieTree.Set(singleData, true)
@@ -237,9 +241,9 @@ func BenchmarkTrieSpeed(b *testing.B) {
 	b.StopTimer()
 }
 
-func BenchmarkMapSpeed(b *testing.B) {
-	insertData := getData(1000, 20)
-	findData := getData(b.N, 20)
+func benchmarkMapSpeed(prefix string, b *testing.B, length int) {
+	insertData := getData(prefix, 1000, length)
+	findData := getData(prefix, b.N, length)
 	mapper := map[string]bool{}
 	for _, singleData := range insertData {
 		mapper[singleData] = true
@@ -251,4 +255,36 @@ func BenchmarkMapSpeed(b *testing.B) {
 		_, _ = mapper[singleData]
 	}
 	b.StopTimer()
+}
+
+func BenchmarkTrieSpeedShort(b *testing.B) {
+	benchmarkTrieSpeed("", b, 20)
+}
+
+func BenchmarkMapSpeedShort(b *testing.B) {
+	benchmarkMapSpeed("", b, 20)
+}
+
+func BenchmarkTrieSpeedLong(b *testing.B) {
+	benchmarkTrieSpeed("", b, 100)
+}
+
+func BenchmarkMapSpeedLong(b *testing.B) {
+	benchmarkMapSpeed("", b, 100)
+}
+
+func BenchmarkTrieSpeedPrefixLong(b *testing.B) {
+	benchmarkTrieSpeed("/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/", b, 100)
+}
+
+func BenchmarkMapSpeedPrefixLong(b *testing.B) {
+	benchmarkMapSpeed("/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/", b, 100)
+}
+
+func BenchmarkTrieSpeedPrefixLong2(b *testing.B) {
+	benchmarkTrieSpeed("/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/", b, 0)
+}
+
+func BenchmarkMapSpeedPrefixLong2(b *testing.B) {
+	benchmarkMapSpeed("/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/", b, 0)
 }

@@ -2,43 +2,41 @@ package container
 
 import (
 	"sort"
-	"unicode/utf8"
 )
 
 type TrieTree struct {
-	nodeNum int
-	root    *trieTreeNode
+	root *trieTreeNode
 }
 
 type TrieTreeWalker func(key string, value interface{}, parentKey string, parentValue interface{})
 
 type trieTreeNode struct {
+	segment  string
 	value    interface{}
-	children map[rune]*trieTreeNode
+	children map[byte]*trieTreeNode
 }
 
 type trieWalk struct {
-	key  string
+	key  []byte
 	node *trieTreeNode
 }
 
 func NewTrieTree() *TrieTree {
 	trieTree := &TrieTree{}
-	trieTree.nodeNum = 0
-	trieTree.root = &trieTreeNode{
-		value:    nil,
-		children: map[rune]*trieTreeNode{},
-	}
+	trieTree.root = nil
 	return trieTree
 }
 
 func (this *TrieTree) Walk(walker TrieTreeWalker) {
+	if this.root == nil {
+		return
+	}
 	queue := NewQueue()
 	queue.Push(&trieWalk{
-		key:  "",
+		key:  []byte(this.root.segment),
 		node: this.root,
 	})
-	walker("", this.root.value, "", nil)
+	walker(this.root.segment, this.root.value, "", nil)
 	for queue.Len() != 0 {
 		top := queue.Pop().(*trieWalk)
 		var keySort []int
@@ -47,9 +45,13 @@ func (this *TrieTree) Walk(walker TrieTreeWalker) {
 		}
 		sort.Ints(keySort)
 		for _, next := range keySort {
-			child := top.node.children[rune(next)]
-			childKey := top.key + string(rune(next))
-			walker(childKey, child.value, top.key, top.node.value)
+			nextChar := byte(next)
+			child := top.node.children[nextChar]
+			childKey := make([]byte, 0, len(top.key)+1+len(child.segment))
+			childKey = append(childKey, top.key...)
+			childKey = append(childKey, nextChar)
+			childKey = append(childKey, []byte(child.segment)...)
+			walker(string(childKey), child.value, string(top.key), top.node.value)
 			queue.Push(&trieWalk{
 				key:  childKey,
 				node: child,
@@ -59,32 +61,105 @@ func (this *TrieTree) Walk(walker TrieTreeWalker) {
 }
 
 func (this *TrieTree) Get(key string) interface{} {
+	if this.root == nil {
+		return nil
+	}
 	current := this.root
-	for _, char := range key {
-		child, isExist := current.children[char]
+	for {
+		segment := current.segment
+		if len(key) < len(segment) {
+			return nil
+		}
+		if key[:len(segment)] != segment {
+			return nil
+		}
+		if len(key) == len(segment) {
+			return current.value
+		}
+		char := key[len(segment)]
+		next, isExist := current.children[char]
 		if isExist == false {
 			return nil
 		}
-		current = child
+		current = next
+		key = key[len(segment)+1:]
 	}
-	return current.value
+	return nil
 }
 
 func (this *TrieTree) Set(key string, value interface{}) {
+	if this.root == nil {
+		this.root = &trieTreeNode{
+			segment:  key,
+			value:    value,
+			children: map[byte]*trieTreeNode{},
+		}
+		return
+	}
 	current := this.root
-	for _, char := range key {
+	for {
+		i := 0
+		j := 0
+		segment := current.segment
+		for i < len(key) && j < len(segment) {
+			if key[i] != segment[j] {
+				break
+			}
+			i++
+			j++
+		}
+		if i < len(key) && j < len(segment) {
+			//分裂成三个节点
+			newChild := &trieTreeNode{
+				segment:  segment[j+1:],
+				value:    current.value,
+				children: current.children,
+			}
+			insertChild := &trieTreeNode{
+				segment:  key[i+1:],
+				value:    value,
+				children: nil,
+			}
+			current.segment = segment[:j]
+			current.value = nil
+			current.children = map[byte]*trieTreeNode{
+				segment[j]: newChild,
+				key[i]:     insertChild,
+			}
+			break
+		} else if i == len(key) && j == len(segment) {
+			//正好是当前节点
+			current.value = value
+			break
+		} else if i < len(key) && j == len(segment) {
+			//复用当前节点
+			key = key[i:]
+		} else {
+			//分裂成两个节点
+			newChild := &trieTreeNode{
+				segment:  segment[j+1:],
+				value:    current.value,
+				children: current.children,
+			}
+			current.segment = segment[:j]
+			current.value = value
+			current.children = map[byte]*trieTreeNode{
+				segment[j]: newChild,
+			}
+		}
+		char := key[0]
+		key = key[1:]
 		child, isExist := current.children[char]
 		if isExist == false {
-			child = &trieTreeNode{
-				value:    nil,
-				children: map[rune]*trieTreeNode{},
+			current.children[char] = &trieTreeNode{
+				segment:  key,
+				value:    value,
+				children: map[byte]*trieTreeNode{},
 			}
-			current.children[char] = child
-			this.nodeNum++
+			break
 		}
 		current = child
 	}
-	current.value = value
 }
 
 func (this *TrieTree) ToTrieArray() *TrieArray {
@@ -94,17 +169,20 @@ func (this *TrieTree) ToTrieArray() *TrieArray {
 }
 
 type TrieArray struct {
-	base  []int
-	check []int
-	value []interface{}
-	dict  *HashListArray
+	data []trieArrayData
 }
 
 type TrieMatch struct {
-	key   string
-	value interface{}
+	Key   string
+	Value interface{}
 }
 
+type trieArrayData struct {
+	base    int
+	check   int
+	value   interface{}
+	segment string
+}
 type trieArrayNode struct {
 	index  int
 	offset int
@@ -113,15 +191,14 @@ type trieArrayNode struct {
 
 func newTrieArray() *TrieArray {
 	trie := &TrieArray{}
-	trie.base = []int{}
-	trie.check = []int{}
-	trie.value = []interface{}{}
+	trie.data = []trieArrayData{}
 	return trie
 }
 
 func (this *TrieArray) build(root *trieTreeNode) {
-	dict := map[rune]int{}
-
+	if root == nil {
+		return
+	}
 	queue := NewQueue()
 	queue.Push(&trieArrayNode{
 		index:  1,
@@ -130,14 +207,16 @@ func (this *TrieArray) build(root *trieTreeNode) {
 	})
 	this.setCheck(1, -1)
 	this.setValue(1, root.value)
+	this.setSegment(1, root.segment)
 	for queue.Len() != 0 {
 		top := queue.Pop().(*trieArrayNode)
-		freeOffset := this.findIndex(top.offset, top.node.children, dict)
+		freeOffset := this.findIndex(top.offset, top.node.children)
 		this.setBase(top.index, freeOffset)
 		for next, child := range top.node.children {
-			childIndex := freeOffset + dict[next]
+			childIndex := freeOffset + int(next)
 			this.setCheck(childIndex, top.index)
 			this.setValue(childIndex, child.value)
+			this.setSegment(childIndex, child.segment)
 			queue.Push(&trieArrayNode{
 				index:  childIndex,
 				offset: freeOffset,
@@ -145,27 +224,13 @@ func (this *TrieArray) build(root *trieTreeNode) {
 			})
 		}
 	}
-
-	hashList := NewHashList(len(dict) * 2)
-	for key, value := range dict {
-		hashList.Set(int(key), value)
-	}
-	this.dict = hashList.ToHashListArray()
 }
 
-func (this *TrieArray) findIndex(offset int, next map[rune]*trieTreeNode, dict map[rune]int) int {
-
-	for char, _ := range next {
-		_, isExist := dict[char]
-		if isExist == false {
-			dict[char] = len(dict) + 1
-		}
-	}
-
+func (this *TrieArray) findIndex(offset int, next map[byte]*trieTreeNode) int {
 	for {
 		isOk := true
 		for char, _ := range next {
-			index := offset + dict[char]
+			index := offset + int(char)
 			if this.isExist(index) {
 				isOk = false
 				break
@@ -180,68 +245,85 @@ func (this *TrieArray) findIndex(offset int, next map[rune]*trieTreeNode, dict m
 }
 
 func (this *TrieArray) isExist(index int) bool {
-	if index < 0 || index >= len(this.check) {
+	if index < 0 || index >= len(this.data) {
 		return false
 	}
-	return this.check[index] != 0
+	return this.data[index].check != 0
 }
 
 func (this *TrieArray) expand(index int) {
-	if index < len(this.check) {
+	if index < len(this.data) {
 		return
 	}
-	newSize := index - len(this.check) + 1
-	newBase := make([]int, newSize)
-	newCheck := make([]int, newSize)
-	newValue := make([]interface{}, newSize)
-	this.base = append(this.base, newBase...)
-	this.check = append(this.check, newCheck...)
-	this.value = append(this.value, newValue...)
+	newSize := index - len(this.data) + 1
+	newData := make([]trieArrayData, newSize)
+	this.data = append(this.data, newData...)
 }
 
 func (this *TrieArray) setBase(index int, base int) {
 	this.expand(index)
-	this.base[index] = base
+	this.data[index].base = base
 }
 
 func (this *TrieArray) setCheck(index int, check int) {
 	this.expand(index)
-	this.check[index] = check
+	this.data[index].check = check
 }
 func (this *TrieArray) setValue(index int, value interface{}) {
 	this.expand(index)
-	this.value[index] = value
+	this.data[index].value = value
 }
 
-func (this *TrieArray) LongestPrefixMatch(key string) (string, interface{}) {
-	length := len(this.check)
+func (this *TrieArray) setSegment(index int, segment string) {
+	this.expand(index)
+	this.data[index].segment = segment
+}
+
+func (this *TrieArray) find(key string, finder func(key string, value interface{})) {
+	length := len(this.data)
 	current := 1
-	var result interface{}
-
-	if this.value[current] != nil {
-		result = this.value[current]
-	}
-
-	index := 0
-	for _, char := range key {
-		charId := this.dict.Get(int(char))
-		if charId == nil {
+	origin := key
+	for {
+		segment := this.data[current].segment
+		if len(key) < len(segment) {
 			break
 		}
-		next := this.base[current] + charId.(int)
+		if key[:len(segment)] != segment {
+			break
+		}
+		if len(key) >= len(segment) {
+			key = key[len(segment):]
+			if this.data[current].value != nil {
+				finder(origin[0:len(origin)-len(key)], this.data[current].value)
+			}
+		}
+		if len(key) == 0 {
+			break
+		}
+
+		char := key[0]
+		next := this.data[current].base + int(char)
 		if next >= length {
 			break
 		}
-		if this.check[next] != current {
+		if this.data[next].check != current {
 			break
 		}
-		index += utf8.RuneLen(char)
 		current = next
-		if this.value[current] != nil {
-			result = this.value[current]
-		}
+		key = key[1:]
 	}
-	return key[0:index], result
+}
+
+func (this *TrieArray) LongestPrefixMatch(key string) (string, interface{}) {
+	var resultValue interface{}
+	var resultKey string
+
+	this.find(key, func(key string, value interface{}) {
+		resultKey = key
+		resultValue = value
+	})
+
+	return resultKey, resultValue
 }
 
 func (this *TrieArray) ExactMatch(key string) interface{} {
@@ -253,38 +335,14 @@ func (this *TrieArray) ExactMatch(key string) interface{} {
 }
 
 func (this *TrieArray) PrefixMatch(key string) []TrieMatch {
-	length := len(this.check)
-	current := 1
 	result := []TrieMatch{}
 
-	if this.value[current] != nil {
+	this.find(key, func(key string, value interface{}) {
 		result = append(result, TrieMatch{
-			key:   "",
-			value: this.value[current],
+			Key:   key,
+			Value: value,
 		})
-	}
+	})
 
-	index := 0
-	for _, char := range key {
-		dictId := this.dict.Get(int(char))
-		if dictId == nil {
-			break
-		}
-		next := this.base[current] + dictId.(int)
-		if next >= length {
-			break
-		}
-		if this.check[next] != current {
-			break
-		}
-		index += utf8.RuneLen(char)
-		if this.value[next] != nil {
-			result = append(result, TrieMatch{
-				key:   key[0:index],
-				value: this.value[next],
-			})
-		}
-		current = next
-	}
 	return result
 }

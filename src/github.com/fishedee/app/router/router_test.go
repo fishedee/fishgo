@@ -1,8 +1,9 @@
 package router
 
 import (
-	"fmt"
-	. "github.com/fishedee/assert"
+	//"fmt"
+	//. "github.com/fishedee/assert"
+	"github.com/gin-gonic/gin"
 	"net/http"
 	"testing"
 )
@@ -28,6 +29,7 @@ func (this *fakeWriter) Read() string {
 	return this.result
 }
 
+/*
 func TestRouterUrl(t *testing.T) {
 	testCase := []struct {
 		insertData interface{}
@@ -419,4 +421,43 @@ func TestRouterMiddleware(t *testing.T) {
 		router.ServeHttp(w, r)
 		AssertEqual(t, w.Read(), singleTestCase.data)
 	}
+}
+*/
+
+var testUrl = "/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa/abcefgdsfa"
+
+func BenchmarkRouterBasic(b *testing.B) {
+	routerFactory := NewRouterFactory()
+	routerFactory.NotFound(func(w http.ResponseWriter, r *http.Request) {
+	})
+	routerFactory.GET(testUrl, func(w http.ResponseWriter, r *http.Request) {
+	})
+	router := routerFactory.Create()
+
+	r, _ := http.NewRequest("GET", testUrl, nil)
+	w := &fakeWriter{}
+
+	b.ResetTimer()
+	b.StartTimer()
+	for i := 0; i != b.N; i++ {
+		router.ServeHttp(w, r)
+	}
+	b.StopTimer()
+}
+
+func BenchmarkGinBasic(b *testing.B) {
+	gin.SetMode(gin.ReleaseMode)
+	router := gin.New()
+	router.GET(testUrl, func(c *gin.Context) {
+	})
+
+	r, _ := http.NewRequest("GET", testUrl, nil)
+	w := &fakeWriter{}
+
+	b.ResetTimer()
+	b.StartTimer()
+	for i := 0; i != b.N; i++ {
+		router.ServeHTTP(w, r)
+	}
+	b.StopTimer()
 }

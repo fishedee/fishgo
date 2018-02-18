@@ -86,7 +86,7 @@ func TestHashListBasic(t *testing.T) {
 	AssertEqual(t, hashList.Len(), len(testData)-5)
 }
 
-func getData(size int) []int {
+func getHashData(size int) []int {
 	data := []int{}
 	for i := 0; i != size; i++ {
 		data = append(data, rand.Int())
@@ -95,8 +95,8 @@ func getData(size int) []int {
 }
 
 func BenchmarkHashIntSpeed(b *testing.B) {
-	insertData := getData(100)
-	findData := getData(b.N)
+	insertData := getHashData(100)
+	findData := getHashData(b.N)
 	hash := NewHashList(100)
 	for _, singleData := range insertData {
 		hash.Set(singleData, 0)
@@ -112,8 +112,8 @@ func BenchmarkHashIntSpeed(b *testing.B) {
 }
 
 func BenchmarkMapIntSpeed(b *testing.B) {
-	insertData := getData(100)
-	findData := getData(b.N)
+	insertData := getHashData(100)
+	findData := getHashData(b.N)
 	mapper := map[int]int{}
 	for _, singleData := range insertData {
 		mapper[singleData] = 0
