@@ -189,12 +189,16 @@ func (this *Router) normalUrl(url string, a int) string {
 
 func (this *Router) findHandler(url string, method int) (routerHandlerFunc, map[string]string, routerHandlerFunc) {
 	searchUrl := this.normalUrl(url, 1)
+	var isExact bool
+	var handlerValue interface{}
 	if len(searchUrl) != 0 {
-		searchUrl += "/"
+		handlerValue, isExact = this.trie.LongestPrefixMatchWithChar(searchUrl, '/')
+	} else {
+		var handlerKey string
+		handlerKey, handlerValue = this.trie.LongestPrefixMatch(searchUrl)
+		isExact = len(handlerKey) == len(searchUrl)
 	}
-	handlerKey, handlerValue := this.trie.LongestPrefixMatch(searchUrl)
 	handler := handlerValue.(routerPathInfo)[method]
-	isExact := len(handlerKey) == len(searchUrl)
 	if handler.urlExactHandler != nil && isExact {
 		return handler.urlExactHandler, nil, handler.notFoundPrefixHandler
 	}

@@ -282,6 +282,67 @@ func (this *TrieArray) setSegment(index int, segment string) {
 	this.data[index].segment = segment
 }
 
+func (this *TrieArray) LongestPrefixMatchWithChar(key string, extChar byte) (interface{}, bool) {
+	var resultValue interface{}
+
+	length := len(this.data)
+	current := 1
+	for {
+		segment := this.data[current].segment
+		if len(key)+1 < len(segment) {
+			return resultValue, false
+		} else if len(key)+1 == len(segment) {
+			if key != segment[0:len(key)] {
+				return resultValue, false
+			}
+			if extChar != segment[len(key)] {
+				return resultValue, false
+			}
+			if this.data[current].value != nil {
+				resultValue = this.data[current].value
+			}
+			return resultValue, true
+		}
+
+		if key[:len(segment)] != segment {
+			return resultValue, false
+		}
+		if this.data[current].value != nil {
+			resultValue = this.data[current].value
+		}
+		if len(key) == len(segment) {
+			char := extChar
+			next := this.data[current].base + int(char)
+			if next >= length {
+				return resultValue, false
+			}
+			if this.data[next].check != current {
+				return resultValue, false
+			}
+			current = next
+			if this.data[current].segment != "" {
+				return resultValue, false
+			}
+			if this.data[current].value != nil {
+				resultValue = this.data[current].value
+			}
+			return resultValue, true
+		} else {
+			key = key[len(segment):]
+			char := key[0]
+			next := this.data[current].base + int(char)
+			if next >= length {
+				return resultValue, false
+			}
+			if this.data[next].check != current {
+				return resultValue, false
+			}
+			current = next
+			key = key[1:]
+		}
+	}
+}
+
 func (this *TrieArray) LongestPrefixMatch(key string) (string, interface{}) {
 	var resultValue interface{}
 	var resultKey string
