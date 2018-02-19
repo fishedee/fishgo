@@ -165,6 +165,7 @@ func TestRouterUrl(t *testing.T) {
 				[]interface{}{"/b/c/a/", "b/c//a_1"},
 				[]interface{}{"/b/g", "//b///g//_1"},
 				[]interface{}{"/b/g/", "//b///g//_1"},
+				[]interface{}{"/b/g/?a=45", "//b///g//_1"},
 			},
 		},
 	}
@@ -323,38 +324,38 @@ func TestRouterUrlPrefixParam(t *testing.T) {
 	}
 	findData := []struct {
 		url   string
-		param map[string]string
+		param RouterParam
 	}{
 		{"/", nil},
 		{"/a", nil},
 		{"/b", nil},
-		{"/a/mc", map[string]string{
-			"userId": "mc",
+		{"/a/mc", RouterParam{
+			{"userId", "mc"},
 		}},
-		{"/a/mc/jk", map[string]string{
-			"userId": "mc",
-			"typeId": "jk",
+		{"/a/mc/jk", RouterParam{
+			{"userId", "mc"},
+			{"typeId", "jk"},
 		}},
-		{"/b/mc/jk", map[string]string{
-			"fishId": "jk",
+		{"/b/mc/jk", RouterParam{
+			{"fishId", "jk"},
 		}},
-		{"/b/bj/jk", map[string]string{
-			"typeId": "bj",
-			"userId": "jk",
+		{"/b/bj/jk", RouterParam{
+			{"typeId", "bj"},
+			{"userId", "jk"},
 		}},
-		{"/b/mc/jk/", map[string]string{
-			"fishId": "jk",
+		{"/b/mc/jk/", RouterParam{
+			{"fishId", "jk"},
 		}},
-		{"/b/bj/jk/", map[string]string{
-			"typeId": "bj",
-			"userId": "jk",
+		{"/b/bj/jk/", RouterParam{
+			{"typeId", "bj"},
+			{"userId", "jk"},
 		}},
 	}
 
 	routerFactory := NewRouterFactory()
-	check := make(chan map[string]string, 10)
+	check := make(chan RouterParam, 10)
 	for _, data := range insertData {
-		routerFactory.GET(data, func(w http.ResponseWriter, r *http.Request, param map[string]string) {
+		routerFactory.GET(data, func(w http.ResponseWriter, r *http.Request, param RouterParam) {
 			check <- param
 		})
 	}
@@ -371,8 +372,8 @@ func TestRouterUrlPrefixParam(t *testing.T) {
 func TestRouterMiddleware(t *testing.T) {
 	newMiddleware := func(data string) RouterMiddleware {
 		return func(handler []interface{}) interface{} {
-			last := handler[len(handler)-1].(func(w http.ResponseWriter, r *http.Request, param map[string]string))
-			return func(w http.ResponseWriter, r *http.Request, param map[string]string) {
+			last := handler[len(handler)-1].(func(w http.ResponseWriter, r *http.Request, param RouterParam))
+			return func(w http.ResponseWriter, r *http.Request, param RouterParam) {
 				w.Write([]byte(data))
 				last(w, r, param)
 			}
@@ -427,7 +428,7 @@ func TestRouterMiddleware(t *testing.T) {
 
 func benchmarkRouterBasic(b *testing.B, insertData []string, findData []string) {
 	routerFactory := NewRouterFactory()
-	doNothing := func(w http.ResponseWriter, r *http.Request, param map[string]string) {
+	doNothing := func(w http.ResponseWriter, r *http.Request, param RouterParam) {
 	}
 	routerFactory.NotFound(doNothing)
 	for _, data := range insertData {
@@ -495,5 +496,17 @@ func BenchmarkRouterParam(b *testing.B) {
 func BenchmarkGinParam(b *testing.B) {
 	insertUrl := "/user/:userId"
 	findUrl := "/user/123"
+	benchmarkGinBasic(b, []string{insertUrl}, []string{findUrl})
+}
+
+func BenchmarkRouterParamLong(b *testing.B) {
+	insertUrl := "/user/:userId"
+	findUrl := "/user/123/adsfasdfadsfasdfasdfadsf/zcvczxcxzvzvcx"
+	benchmarkRouterBasic(b, []string{insertUrl}, []string{findUrl})
+}
+
+func BenchmarkGinParamLong(b *testing.B) {
+	insertUrl := "/user/:userId"
+	findUrl := "/user/123/adsfasdfadsfasdfasdfadsf/zcvczxcxzvzvcx"
 	benchmarkGinBasic(b, []string{insertUrl}, []string{findUrl})
 }

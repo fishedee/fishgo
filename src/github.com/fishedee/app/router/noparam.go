@@ -17,7 +17,7 @@ func NewNoParamMiddleware() RouterMiddleware {
 		} else {
 			return last
 		}
-		return func(w http.ResponseWriter, r *http.Request, param map[string]string) {
+		return func(w http.ResponseWriter, r *http.Request, param RouterParam) {
 			netHandler(w, r)
 		}
 	}

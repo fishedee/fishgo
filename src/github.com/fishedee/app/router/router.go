@@ -4,37 +4,58 @@ import (
 	. "github.com/fishedee/container"
 	. "github.com/fishedee/language"
 	"net/http"
+	"strings"
+	"sync"
 )
 
 type Router struct {
-	trie      *TrieArray
-	methodMap map[string]int
+	trie *TrieArray
+	pool sync.Pool
 }
 
-type routerHandlerFunc func(w http.ResponseWriter, r *http.Request, param map[string]string) int
+type RouterSingleParam struct {
+	Key   string
+	Value string
+}
+type RouterParam []RouterSingleParam
 
+type routerContext struct {
+	param RouterParam
+}
+
+type routerHandlerFunc func(w http.ResponseWriter, r *http.Request, param RouterParam) int
+
+type routerUrlPrefixHandlerParam struct {
+	index int
+	name  string
+}
 type routerUrlPrefixHandler struct {
-	param   map[int]string
+	segment int
+	param   []routerUrlPrefixHandlerParam
 	handler routerHandlerFunc
 }
 
 type routerHandler struct {
+	prefix                []string
+	prefixLength          int
 	urlExactHandler       routerHandlerFunc
-	urlPrefixHandler      map[int]routerUrlPrefixHandler
+	urlPrefixHandler      []routerUrlPrefixHandler
 	staticPrefixHandler   routerHandlerFunc
 	notFoundPrefixHandler routerHandlerFunc
 }
 
 type routerPathInfo []routerHandler
 
-func newRouter(trieTree *TrieTree) *Router {
+func newRouter(trieTree *TrieTree, maxSegment int) *Router {
 	router := &Router{}
-	router.methodMap = map[string]int{}
-	entrys := routerMethod.Entrys()
-	for i := routerMethod.HEAD; i <= routerMethod.PATCH; i++ {
-		router.methodMap[entrys[i]] = i
-	}
 	router.trie = router.build(trieTree)
+	router.pool = sync.Pool{
+		New: func() interface{} {
+			return &routerContext{
+				param: make([]RouterSingleParam, maxSegment, maxSegment),
+			}
+		},
+	}
 	return router
 }
 
@@ -104,12 +125,12 @@ func (this *routerResponseWriter) GetStatus() int {
 func (this *Router) catchNotFound(in interface{}, isCatch bool) routerHandlerFunc {
 	origin := in.(routerFactoryHandlerFunc)
 	if isCatch == false {
-		return func(w http.ResponseWriter, r *http.Request, param map[string]string) int {
+		return func(w http.ResponseWriter, r *http.Request, param RouterParam) int {
 			origin(w, r, param)
 			return 200
 		}
 	} else {
-		return func(w http.ResponseWriter, r *http.Request, param map[string]string) int {
+		return func(w http.ResponseWriter, r *http.Request, param RouterParam) int {
 			fakeWriter := newRouterResponseWriter(w)
 			origin(fakeWriter, r, param)
 			return fakeWriter.GetStatus()
@@ -120,7 +141,7 @@ func (this *Router) catchNotFound(in interface{}, isCatch bool) routerHandlerFun
 func (this *Router) changeMethod(origin *routerFactoryHandler) routerHandler {
 	result := routerHandler{
 		urlExactHandler:       nil,
-		urlPrefixHandler:      map[int]routerUrlPrefixHandler{},
+		urlPrefixHandler:      []routerUrlPrefixHandler{},
 		staticPrefixHandler:   nil,
 		notFoundPrefixHandler: nil,
 	}
@@ -128,12 +149,23 @@ func (this *Router) changeMethod(origin *routerFactoryHandler) routerHandler {
 		result.urlExactHandler = this.catchNotFound(origin.urlExactHandler, false)
 	}
 	if origin.urlPrefixHandler != nil {
+		resultUrlPrefixHandler := []routerUrlPrefixHandler{}
 		for seg, singleUrlPrefixHandler := range origin.urlPrefixHandler {
-			result.urlPrefixHandler[seg] = routerUrlPrefixHandler{
-				param:   singleUrlPrefixHandler.param,
-				handler: this.catchNotFound(singleUrlPrefixHandler.handler, false),
+			param := []routerUrlPrefixHandlerParam{}
+			for key, value := range singleUrlPrefixHandler.param {
+				param = append(param, routerUrlPrefixHandlerParam{
+					index: key,
+					name:  value,
+				})
 			}
+			param = QuerySort(param, "index asc").([]routerUrlPrefixHandlerParam)
+			resultUrlPrefixHandler = append(resultUrlPrefixHandler, routerUrlPrefixHandler{
+				segment: seg,
+				param:   param,
+				handler: this.catchNotFound(singleUrlPrefixHandler.handler, false),
+			})
 		}
+		result.urlPrefixHandler = QuerySort(resultUrlPrefixHandler, "segment asc").([]routerUrlPrefixHandler)
 	}
 	if origin.staticPrefixHandler != nil {
 		result.staticPrefixHandler = this.catchNotFound(origin.staticPrefixHandler, true)
@@ -144,13 +176,24 @@ func (this *Router) changeMethod(origin *routerFactoryHandler) routerHandler {
 	return result
 }
 
-func (this *Router) change(pathInfo routerFactoryPathInfo) routerPathInfo {
+func (this *Router) changeUrl(url string) ([]string, int) {
+	length := strings.LastIndexByte(url, '/')
+	if length == -1 {
+		return nil, 0
+	}
+	url = url[:length]
+	return Explode(url, "/"), length
+}
+
+func (this *Router) change(url string, pathInfo routerFactoryPathInfo) routerPathInfo {
 	methodLen := routerMethod.PATCH - routerMethod.HEAD + 2
 	var result routerPathInfo
 	result = make([]routerHandler, methodLen, methodLen)
 	for i := routerMethod.HEAD; i <= routerMethod.PATCH; i++ {
 		methodPathInfo := pathInfo[i]
-		result[i] = this.changeMethod(methodPathInfo)
+		newMethodPathInfo := this.changeMethod(methodPathInfo)
+		newMethodPathInfo.prefix, newMethodPathInfo.prefixLength = this.changeUrl(url)
+		result[i] = newMethodPathInfo
 	}
 	return result
 }
@@ -168,7 +211,7 @@ func (this *Router) build(trieTree *TrieTree) *TrieArray {
 		parentPathInfo := parentValue.(routerFactoryPathInfo)
 		this.combineParent(currentPathInfo, parentPathInfo)
 		trieTree.Set(key, currentPathInfo)
-		newPathInfo := this.change(currentPathInfo)
+		newPathInfo := this.change(key, currentPathInfo)
 		myTrieTree.Set(key, newPathInfo)
 	})
 	return myTrieTree.ToTrieArray()
@@ -187,7 +230,34 @@ func (this *Router) normalUrl(url string, a int) string {
 	return url[begin:end]
 }
 
-func (this *Router) findHandler(url string, method int) (routerHandlerFunc, map[string]string, routerHandlerFunc) {
+func (this *Router) parseParam(prefix []string, suffix string, maxParam int) (RouterParam, *routerContext, bool) {
+	context := this.pool.Get().(*routerContext)
+	param := context.param
+	k := 0
+	for i := 0; i != len(prefix); i++ {
+		param[k].Value = prefix[i]
+		k++
+	}
+	lastIndex := -1
+	for lastIndex < len(suffix) {
+		index := lastIndex + 1
+		for index < len(suffix) && suffix[index] != '/' {
+			index++
+		}
+		if index-lastIndex > 1 {
+			if k >= maxParam {
+				this.pool.Put(context)
+				return nil, nil, false
+			}
+			param[k].Value = suffix[lastIndex+1 : index]
+			k++
+		}
+		lastIndex = index
+	}
+	return param[0:k], context, true
+}
+
+func (this *Router) findHandler(url string, method int) (routerHandlerFunc, RouterParam, routerHandlerFunc, *routerContext) {
 	searchUrl := this.normalUrl(url, 1)
 	var isExact bool
 	var handlerValue interface{}
@@ -200,23 +270,29 @@ func (this *Router) findHandler(url string, method int) (routerHandlerFunc, map[
 	}
 	handler := handlerValue.(routerPathInfo)[method]
 	if handler.urlExactHandler != nil && isExact {
-		return handler.urlExactHandler, nil, handler.notFoundPrefixHandler
+		return handler.urlExactHandler, nil, handler.notFoundPrefixHandler, nil
 	}
 	if len(handler.urlPrefixHandler) != 0 {
-		urlSegment := Explode(url, "/")
-		urlPrefixHandler, isExist := handler.urlPrefixHandler[len(urlSegment)]
-		if isExist {
-			urlParam := map[string]string{}
-			for index, key := range urlPrefixHandler.param {
-				urlParam[key] = urlSegment[index]
+		maxParam := handler.urlPrefixHandler[len(handler.urlPrefixHandler)-1].segment
+		suffixUrl := searchUrl[handler.prefixLength:]
+		param, context, isValid := this.parseParam(handler.prefix, suffixUrl, maxParam)
+		if isValid {
+			for _, urlPrefixHandler := range handler.urlPrefixHandler {
+				if urlPrefixHandler.segment == len(param) {
+					for _, singleParam := range urlPrefixHandler.param {
+						param[singleParam.index].Key = singleParam.name
+					}
+					begin := urlPrefixHandler.param[0].index
+					end := len(param)
+					return urlPrefixHandler.handler, param[begin:end], handler.notFoundPrefixHandler, context
+				}
 			}
-			return urlPrefixHandler.handler, urlParam, handler.notFoundPrefixHandler
 		}
 	}
 	if handler.staticPrefixHandler != nil {
-		return handler.staticPrefixHandler, nil, handler.notFoundPrefixHandler
+		return handler.staticPrefixHandler, nil, handler.notFoundPrefixHandler, nil
 	}
-	return handler.notFoundPrefixHandler, nil, handler.notFoundPrefixHandler
+	return handler.notFoundPrefixHandler, nil, handler.notFoundPrefixHandler, nil
 }
 
 func (this *Router) ServeHttp(w http.ResponseWriter, r *http.Request) {
@@ -246,10 +322,13 @@ func (this *Router) ServeHttp(w http.ResponseWriter, r *http.Request) {
 	default:
 		panic("unsupport method " + r.Method)
 	}
-	handler, param, notFoundHandler := this.findHandler(url, methodInt)
+	handler, param, notFoundHandler, context := this.findHandler(url, methodInt)
 	status := handler(w, r, param)
 	if status == 404 {
 		notFoundHandler(w, r, param)
+	}
+	if context != nil {
+		this.pool.Put(context)
 	}
 }
 
@@ -258,6 +337,7 @@ type RouterFactory struct {
 	middleware []RouterMiddleware
 	tree       map[string]routerFactoryPathInfo
 	group      []*RouterFactory
+	maxSegment int
 }
 
 type RouterMiddleware func([]interface{}) interface{}
@@ -279,7 +359,7 @@ type routerFactoryUrlPrefixHandler struct {
 	handler interface{}
 }
 
-type routerFactoryHandlerFunc func(w http.ResponseWriter, r *http.Request, param map[string]string)
+type routerFactoryHandlerFunc func(w http.ResponseWriter, r *http.Request, param RouterParam)
 
 type routerFactoryHandler struct {
 	urlExactHandler       interface{}
@@ -305,6 +385,7 @@ func newRouterFactory(basePath string) *RouterFactory {
 	routerFactory.middleware = []RouterMiddleware{}
 	routerFactory.tree = map[string]routerFactoryPathInfo{}
 	routerFactory.group = []*RouterFactory{}
+	routerFactory.maxSegment = 0
 	return routerFactory
 }
 
@@ -343,6 +424,10 @@ func (this *RouterFactory) changeUrlPrefix(priority int, path string, handler in
 			panic("invalid path : " + path)
 		}
 		urlPrefixHandler.param[singlePathIndex] = pathInfo[singlePathIndex][1:]
+	}
+
+	if len(pathInfo) > this.maxSegment {
+		this.maxSegment = len(pathInfo)
 	}
 	return 2, path, urlPrefixHandler
 }
@@ -469,7 +554,7 @@ func (this *RouterFactory) createHandler(middlewares []RouterMiddleware, handler
 		allHandler = append(allHandler, curHandler)
 	}
 	resultHandler := allHandler[len(allHandler)-1]
-	httpHandler, isOk := resultHandler.(func(w http.ResponseWriter, r *http.Request, param map[string]string))
+	httpHandler, isOk := resultHandler.(func(w http.ResponseWriter, r *http.Request, param RouterParam))
 	if isOk == false {
 		panic("handler must be routerFactoryHandlerFunc type")
 	}
@@ -502,10 +587,22 @@ func (this *RouterFactory) buildTrie(trieTree *TrieTree, rootMiddleware []Router
 	}
 }
 
+func (this *RouterFactory) getMaxSegment() int {
+	maxSegment := this.maxSegment
+	for _, singleGroup := range this.group {
+		groupSegment := singleGroup.getMaxSegment()
+		if groupSegment > maxSegment {
+			maxSegment = groupSegment
+		}
+	}
+	return maxSegment
+}
+
 func (this *RouterFactory) Create() *Router {
 	trieTree := NewTrieTree()
 	this.buildTrie(trieTree, []RouterMiddleware{})
-	router := newRouter(trieTree)
+	maxSegment := this.getMaxSegment()
+	router := newRouter(trieTree, maxSegment)
 	return router
 }
 
