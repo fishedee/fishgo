@@ -127,6 +127,13 @@ func TestRouterUrl(t *testing.T) {
 
 				[]interface{}{3, "/a/d"},
 				[]interface{}{4, "/a/d"},
+
+				[]interface{}{1, "/mc/:id1/:id2"},
+				[]interface{}{1, "/mc/10001/:id3"},
+
+				[]interface{}{1, "/ck/:id"},
+				[]interface{}{1, "/ck/cvhbu"},
+				[]interface{}{1, "/ck/cvhbg"},
 			},
 			[]interface{}{
 				[]interface{}{"/", "/_3"},
@@ -135,6 +142,8 @@ func TestRouterUrl(t *testing.T) {
 				[]interface{}{"/a/c/d", "/a/:userId/:mcId_1"},
 				[]interface{}{"/a/d", "/a/d_3"},
 				[]interface{}{"/b", "/_3"},
+				[]interface{}{"/mc/100014/5555", "/mc/:id1/:id2_1"},
+				[]interface{}{"/ck/cvhbc", "/ck/:id_1"},
 			},
 		},
 		//不正常url拼接
@@ -333,6 +342,13 @@ func TestRouterUrlPrefixParam(t *testing.T) {
 			"typeId": "bj",
 			"userId": "jk",
 		}},
+		{"/b/mc/jk/", map[string]string{
+			"fishId": "jk",
+		}},
+		{"/b/bj/jk/", map[string]string{
+			"typeId": "bj",
+			"userId": "jk",
+		}},
 	}
 
 	routerFactory := NewRouterFactory()
@@ -411,7 +427,7 @@ func TestRouterMiddleware(t *testing.T) {
 
 func benchmarkRouterBasic(b *testing.B, insertData []string, findData []string) {
 	routerFactory := NewRouterFactory()
-	doNothing := func(w http.ResponseWriter, r *http.Request) {
+	doNothing := func(w http.ResponseWriter, r *http.Request, param map[string]string) {
 	}
 	routerFactory.NotFound(doNothing)
 	for _, data := range insertData {

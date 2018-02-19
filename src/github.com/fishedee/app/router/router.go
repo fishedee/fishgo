@@ -189,16 +189,16 @@ func (this *Router) normalUrl(url string, a int) string {
 
 func (this *Router) findHandler(url string, method int) (routerHandlerFunc, map[string]string, routerHandlerFunc) {
 	searchUrl := this.normalUrl(url, 1)
+	if len(searchUrl) != 0 {
+		searchUrl += "/"
+	}
 	handlerKey, handlerValue := this.trie.LongestPrefixMatch(searchUrl)
 	handler := handlerValue.(routerPathInfo)[method]
 	isExact := len(handlerKey) == len(searchUrl)
-	isPrefix := isExact ||
-		(len(handlerKey) != 0 && handlerKey[len(handlerKey)-1] == '/') ||
-		(len(searchUrl) != 0 && searchUrl[len(handlerKey)] == '/')
 	if handler.urlExactHandler != nil && isExact {
 		return handler.urlExactHandler, nil, handler.notFoundPrefixHandler
 	}
-	if len(handler.urlPrefixHandler) != 0 && isPrefix {
+	if len(handler.urlPrefixHandler) != 0 {
 		urlSegment := Explode(url, "/")
 		urlPrefixHandler, isExist := handler.urlPrefixHandler[len(urlSegment)]
 		if isExist {
@@ -333,7 +333,7 @@ func (this *RouterFactory) changeUrlPrefix(priority int, path string, handler in
 		param:   map[int]string{},
 		handler: handler,
 	}
-	path = Implode(pathInfo[0:singlePathIndex], "/")
+	path = Implode(pathInfo[0:singlePathIndex], "/") + "/"
 	for ; singlePathIndex != len(pathInfo); singlePathIndex++ {
 		if pathInfo[singlePathIndex][0] != ':' {
 			panic("invalid path : " + path)
@@ -347,6 +347,9 @@ func (this *RouterFactory) addSingleRoute(method int, priority int, path string,
 	//处理path
 	pathInfo := Explode(this.basePath+"/"+path, "/")
 	path = Implode(pathInfo, "/")
+	if len(path) != 0 {
+		path += "/"
+	}
 
 	//处理特殊的url前缀逻辑
 	priority, path, handler = this.changeUrlPrefix(priority, path, handler)
