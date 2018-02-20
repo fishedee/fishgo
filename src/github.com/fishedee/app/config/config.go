@@ -67,6 +67,11 @@ func (this *configImplement) GetString(key string) string {
 	return this.configer.String(key)
 }
 
+func (this *configImplement) GetStringList(key string) []string {
+	v := this.GetString(key)
+	return Explode(v, ",")
+}
+
 func (this *configImplement) GetFloat(key string) float64 {
 	v := this.GetString(key)
 	vF, _ := strconv.ParseFloat(v, 64)
@@ -105,6 +110,8 @@ func (this *configImplement) GetStruct(prefix string, data interface{}) {
 			structInfo[key] = this.GetBool(prefixKey)
 		} else if _, isOk := value.(time.Duration); isOk {
 			structInfo[key] = this.GetDuration(prefixKey)
+		} else if _, isOk := value.([]interface{}); isOk {
+			structInfo[key] = this.GetStringList(prefixKey)
 		} else {
 			panic("invalid type of structInfo: " + prefixKey)
 		}
