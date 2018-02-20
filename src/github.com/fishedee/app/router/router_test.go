@@ -315,6 +315,7 @@ func TestRouterStatic(t *testing.T) {
 func TestRouterUrlPrefixParam(t *testing.T) {
 	insertData := []string{
 		"/",
+		"/:mmId",
 		"/a",
 		"/a/:userId",
 		"/a/:userId/:typeId",
@@ -329,6 +330,9 @@ func TestRouterUrlPrefixParam(t *testing.T) {
 		{"/", nil},
 		{"/a", nil},
 		{"/b", nil},
+		{"/c", RouterParam{
+			{"mmId", "c"},
+		}},
 		{"/a/mc", RouterParam{
 			{"userId", "mc"},
 		}},
@@ -364,8 +368,12 @@ func TestRouterUrlPrefixParam(t *testing.T) {
 		r, _ := http.NewRequest("GET", data.url, nil)
 		w := &fakeWriter{}
 		router.ServeHttp(w, r)
-		AssertEqual(t, len(check), 1)
-		AssertEqual(t, <-check, data.param)
+		select {
+		case result := <-check:
+			AssertEqual(t, result, data.param, data)
+		default:
+			AssertEqual(t, false, true, data)
+		}
 	}
 }
 

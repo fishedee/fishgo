@@ -418,7 +418,10 @@ func (this *RouterFactory) changeUrlPrefix(priority int, path string, handler in
 		param:   map[int]string{},
 		handler: handler,
 	}
-	path = Implode(pathInfo[0:singlePathIndex], "/") + "/"
+	path = Implode(pathInfo[0:singlePathIndex], "/")
+	if len(path) != 0 {
+		path += "/"
+	}
 	for ; singlePathIndex != len(pathInfo); singlePathIndex++ {
 		if pathInfo[singlePathIndex][0] != ':' {
 			panic("invalid path : " + path)
