@@ -9,11 +9,15 @@ import (
 )
 
 type fakeWriter struct {
+	header http.Header
 	result string
 }
 
 func (this *fakeWriter) Header() http.Header {
-	return http.Header{}
+	if this.header == nil {
+		this.header = http.Header{}
+	}
+	return this.header
 }
 
 func (this *fakeWriter) WriteHeader(status int) {

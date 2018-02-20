@@ -202,3 +202,6 @@
 [submodule "src/github.com/jacobsa/go-serial"]
 	path = src/github.com/jacobsa/go-serial
 	url = git@github.com:jacobsa/go-serial.git
+[submodule "src/github.com/rs/cors"]
+	path = src/github.com/rs/cors
+	url = git@github.com:rs/cors.git
