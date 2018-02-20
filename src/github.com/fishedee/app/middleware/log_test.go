@@ -1,29 +1,19 @@
-package router
+package middleware
 
 import (
-	"fmt"
+	. "github.com/fishedee/app/log"
+	. "github.com/fishedee/app/router"
 	"net/http"
 	"testing"
 )
 
-type fakeLog struct {
-}
-
-func (this *fakeLog) Critical(format string, v ...interface{}) {
-	fmt.Printf("[Critical] "+format+"\n", v...)
-}
-
-func (this *fakeLog) Error(format string, v ...interface{}) {
-	fmt.Printf("[Error] "+format+"\n", v...)
-}
-
-func (this *fakeLog) Debug(format string, v ...interface{}) {
-	fmt.Printf("[Debug] "+format+"\n", v...)
-}
-
 func TestLog(t *testing.T) {
+	log, _ := NewLog(LogConfig{
+		Driver: "console",
+	})
+
 	factory := NewRouterFactory()
-	factory.Use(NewLogMiddleware(&fakeLog{}))
+	factory.Use(NewLogMiddleware(log))
 	factory.GET("/a", func(w http.ResponseWriter, r *http.Request) {
 
 	})

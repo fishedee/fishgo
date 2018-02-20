@@ -1,7 +1,8 @@
-package router
+package middleware
 
 import (
 	. "github.com/fishedee/app/cors"
+	. "github.com/fishedee/app/router"
 	. "github.com/fishedee/assert"
 	"net/http"
 	"testing"

@@ -187,7 +187,7 @@ func TestRouterUrl(t *testing.T) {
 				handler := func(w http.ResponseWriter, r *http.Request) {
 					w.Write([]byte(path + fmt.Sprintf("_%v", priority)))
 				}
-				routerFactory.addRoute(routerMethod.GET, priority, path, handler)
+				routerFactory.addRoute(RouterMethod.GET, priority, path, handler)
 			}(singleInsertData.([]interface{}))
 		}
 
@@ -250,8 +250,8 @@ func TestRouterMethod(t *testing.T) {
 			w.Write([]byte("bingo"))
 		})
 		router := routerFactory.Create()
-		entrys := routerMethod.Entrys()
-		for i := routerMethod.HEAD; i <= routerMethod.PATCH; i++ {
+		entrys := RouterMethod.Entrys()
+		for i := RouterMethod.HEAD; i <= RouterMethod.PATCH; i++ {
 			method := entrys[i]
 			r, _ := http.NewRequest(method, "/a", nil)
 			w := &fakeWriter{}

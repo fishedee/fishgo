@@ -186,10 +186,10 @@ func (this *Router) changeUrl(url string) ([]string, int) {
 }
 
 func (this *Router) change(url string, pathInfo routerFactoryPathInfo) routerPathInfo {
-	methodLen := routerMethod.PATCH - routerMethod.HEAD + 2
+	methodLen := RouterMethod.PATCH - RouterMethod.HEAD + 2
 	var result routerPathInfo
 	result = make([]routerHandler, methodLen, methodLen)
-	for i := routerMethod.HEAD; i <= routerMethod.PATCH; i++ {
+	for i := RouterMethod.HEAD; i <= RouterMethod.PATCH; i++ {
 		methodPathInfo := pathInfo[i]
 		newMethodPathInfo := this.changeMethod(methodPathInfo)
 		newMethodPathInfo.prefix, newMethodPathInfo.prefixLength = this.changeUrl(url)
@@ -300,25 +300,25 @@ func (this *Router) ServeHttp(w http.ResponseWriter, r *http.Request) {
 	var methodInt int
 	switch r.Method {
 	case "HEAD":
-		methodInt = routerMethod.HEAD
+		methodInt = RouterMethod.HEAD
 		break
 	case "OPTIONS":
-		methodInt = routerMethod.OPTIONS
+		methodInt = RouterMethod.OPTIONS
 		break
 	case "GET":
-		methodInt = routerMethod.GET
+		methodInt = RouterMethod.GET
 		break
 	case "POST":
-		methodInt = routerMethod.POST
+		methodInt = RouterMethod.POST
 		break
 	case "DELETE":
-		methodInt = routerMethod.DELETE
+		methodInt = RouterMethod.DELETE
 		break
 	case "PUT":
-		methodInt = routerMethod.PUT
+		methodInt = RouterMethod.PUT
 		break
 	case "PATCH":
-		methodInt = routerMethod.PATCH
+		methodInt = RouterMethod.PATCH
 	default:
 		panic("unsupport method " + r.Method)
 	}
@@ -342,7 +342,7 @@ type RouterFactory struct {
 
 type RouterMiddleware func([]interface{}) interface{}
 
-var routerMethod struct {
+var RouterMethod struct {
 	EnumStruct
 	HEAD    int `enum:"1,HEAD"`
 	OPTIONS int `enum:"2,OPTIONS"`
@@ -477,42 +477,42 @@ func (this *RouterFactory) addRoute(method int, priority int, path string, handl
 }
 
 func (this *RouterFactory) HEAD(path string, handler interface{}) *RouterFactory {
-	this.addRoute(routerMethod.HEAD, 1, path, handler)
+	this.addRoute(RouterMethod.HEAD, 1, path, handler)
 	return this
 }
 
 func (this *RouterFactory) OPTIONS(path string, handler interface{}) *RouterFactory {
-	this.addRoute(routerMethod.OPTIONS, 1, path, handler)
+	this.addRoute(RouterMethod.OPTIONS, 1, path, handler)
 	return this
 }
 
 func (this *RouterFactory) GET(path string, handler interface{}) *RouterFactory {
-	this.addRoute(routerMethod.GET, 1, path, handler)
+	this.addRoute(RouterMethod.GET, 1, path, handler)
 	return this
 }
 
 func (this *RouterFactory) POST(path string, handler interface{}) *RouterFactory {
-	this.addRoute(routerMethod.POST, 1, path, handler)
+	this.addRoute(RouterMethod.POST, 1, path, handler)
 	return this
 }
 
 func (this *RouterFactory) DELETE(path string, handler interface{}) *RouterFactory {
-	this.addRoute(routerMethod.DELETE, 1, path, handler)
+	this.addRoute(RouterMethod.DELETE, 1, path, handler)
 	return this
 }
 
 func (this *RouterFactory) PUT(path string, handler interface{}) *RouterFactory {
-	this.addRoute(routerMethod.PUT, 1, path, handler)
+	this.addRoute(RouterMethod.PUT, 1, path, handler)
 	return this
 }
 
 func (this *RouterFactory) PATCH(path string, handler interface{}) *RouterFactory {
-	this.addRoute(routerMethod.PATCH, 1, path, handler)
+	this.addRoute(RouterMethod.PATCH, 1, path, handler)
 	return this
 }
 
 func (this *RouterFactory) Any(path string, handler interface{}) *RouterFactory {
-	for i := routerMethod.HEAD; i <= routerMethod.PATCH; i++ {
+	for i := RouterMethod.HEAD; i <= RouterMethod.PATCH; i++ {
 		this.addRoute(i, 1, path, handler)
 	}
 	return this
@@ -527,13 +527,13 @@ func (this *RouterFactory) rejustPath(path string) string {
 func (this *RouterFactory) Static(path string, dir string) *RouterFactory {
 	absolutePath := this.rejustPath(this.basePath + "/" + path)
 	handler := http.StripPrefix("/"+absolutePath, http.FileServer(http.Dir(dir)))
-	this.addRoute(routerMethod.HEAD, 3, path, handler)
-	this.addRoute(routerMethod.GET, 3, path, handler)
+	this.addRoute(RouterMethod.HEAD, 3, path, handler)
+	this.addRoute(RouterMethod.GET, 3, path, handler)
 	return this
 }
 
 func (this *RouterFactory) NotFound(handler interface{}) *RouterFactory {
-	for i := routerMethod.HEAD; i <= routerMethod.PATCH; i++ {
+	for i := RouterMethod.HEAD; i <= RouterMethod.PATCH; i++ {
 		this.addRoute(i, 4, "/", handler)
 	}
 	return this
@@ -610,5 +610,5 @@ func (this *RouterFactory) Create() *Router {
 }
 
 func init() {
-	InitEnumStruct(&routerMethod)
+	InitEnumStruct(&RouterMethod)
 }

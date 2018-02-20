@@ -1,6 +1,7 @@
-package router
+package middleware
 
 import (
+	. "github.com/fishedee/app/router"
 	. "github.com/fishedee/assert"
 	"net/http"
 	"testing"
@@ -60,8 +61,8 @@ func TestRouterObject(t *testing.T) {
 	}
 	router := routerFactory.Create()
 	for index, singleTestCase := range testCase {
-		entrys := routerMethod.Entrys()
-		for i := routerMethod.HEAD; i <= routerMethod.PATCH; i++ {
+		entrys := RouterMethod.Entrys()
+		for i := RouterMethod.HEAD; i <= RouterMethod.PATCH; i++ {
 			r, _ := http.NewRequest(entrys[i], singleTestCase.url, nil)
 			w := &fakeWriter{}
 			router.ServeHttp(w, r)

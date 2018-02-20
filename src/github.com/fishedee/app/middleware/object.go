@@ -1,6 +1,7 @@
-package router
+package middleware
 
 import (
+	. "github.com/fishedee/app/router"
 	. "github.com/fishedee/language"
 	"reflect"
 	"strings"
