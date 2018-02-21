@@ -120,6 +120,24 @@ func (this *validatorImplement) parse() error {
 	this.parseResult = this.parseInner()
 	return this.parseResult
 }
+
+type LimitedReader struct {
+	R io.Reader
+	N int64
+}
+
+func (l *LimitedReader) Read(p []byte) (n int, err error) {
+	if l.N <= 0 {
+		return 0, errors.New("文件太大，拒绝读取")
+	}
+	if int64(len(p)) > l.N {
+		p = p[0:l.N]
+	}
+	n, err = l.R.Read(p)
+	l.N -= int64(n)
+	return
+}
+
 func (this *validatorImplement) parseInner() error {
 	//解析query参数
 	queryInput := this.request.URL.RawQuery
@@ -139,12 +157,11 @@ func (this *validatorImplement) parseInner() error {
 	ct, ctParam, err := mime.ParseMediaType(ct)
 
 	if ct == "application/x-www-form-urlencoded" || ct == "" {
-		bodyReader := io.LimitReader(this.request.Body, int64(this.config.MaxBodySize))
+		bodyReader := &LimitedReader{this.request.Body, int64(this.config.MaxBodySize)}
 		byteArray, err := ioutil.ReadAll(bodyReader)
 		if err != nil {
 			return err
 		}
-
 		err = DecodeUrlQuery(byteArray, &this.form)
 		if err != nil {
 			return err

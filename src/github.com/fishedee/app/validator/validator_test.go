@@ -100,7 +100,6 @@ func TestValidatorQuery(t *testing.T) {
 			validator.MustBindQuery(&result2)
 			AssertEqual(t, result, singleTestCase.value)
 		}
-
 	}
 }
 
@@ -117,30 +116,33 @@ func TestValidatorFormPost(t *testing.T) {
 		{"a=123&b=true&c=c_value", "", testStruct{123, true, "c_value"}},
 	}
 
-	for _, singleTestCase := range testCase {
-		r, _ := http.NewRequest("POST", "http://www.baidu.com/", ioutil.NopCloser(strings.NewReader(singleTestCase.form)))
-		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-		validatorFactory, _ := NewValidatorFactory(ValidatorConfig{})
-		validator := validatorFactory.Create(r, nil)
+	for k := 0; k != 2; k++ {
+		for _, singleTestCase := range testCase {
+			r, _ := http.NewRequest("POST", "http://www.baidu.com/", ioutil.NopCloser(strings.NewReader(singleTestCase.form)))
+			if k == 0 {
+				r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			}
+			validatorFactory, _ := NewValidatorFactory(ValidatorConfig{})
+			validator := validatorFactory.Create(r, nil)
 
-		if singleTestCase.name != "" {
-			result, err := validator.Form(singleTestCase.name)
-			AssertEqual(t, err, nil)
-			AssertEqual(t, result, singleTestCase.value)
+			if singleTestCase.name != "" {
+				result, err := validator.Form(singleTestCase.name)
+				AssertEqual(t, err, nil)
+				AssertEqual(t, result, singleTestCase.value)
 
-			result2 := validator.MustForm(singleTestCase.name)
-			AssertEqual(t, result2, singleTestCase.value)
-		} else {
-			result := testStruct{}
-			err := validator.BindForm(&result)
-			AssertEqual(t, err, nil)
-			AssertEqual(t, result, singleTestCase.value)
+				result2 := validator.MustForm(singleTestCase.name)
+				AssertEqual(t, result2, singleTestCase.value)
+			} else {
+				result := testStruct{}
+				err := validator.BindForm(&result)
+				AssertEqual(t, err, nil)
+				AssertEqual(t, result, singleTestCase.value)
 
-			result2 := testStruct{}
-			validator.MustBindForm(&result2)
-			AssertEqual(t, result, singleTestCase.value)
+				result2 := testStruct{}
+				validator.MustBindForm(&result2)
+				AssertEqual(t, result, singleTestCase.value)
+			}
 		}
-
 	}
 }
 
@@ -261,4 +263,34 @@ func TestValidatorFormFile(t *testing.T) {
 			AssertEqual(t, result2, (*multipart.FileHeader)(nil))
 		}
 	}
+}
+
+func TestValidatorError(t *testing.T) {
+	var err error
+
+	//Content-Type设置错误
+	r, _ := http.NewRequest("POST", "http://www.baidu.com/", strings.NewReader("a=3&b=4"))
+	r.Header.Set("Content-Type", "text/plain")
+	validatorFactory, _ := NewValidatorFactory(ValidatorConfig{})
+	validator := validatorFactory.Create(r, nil)
+	_, err = validator.Form("b")
+	AssertEqual(t, err != nil, true)
+
+	//MaxSize设置错误
+	r2, _ := http.NewRequest("POST", "http://www.baidu.com/", strings.NewReader("a=3&b=4"))
+	validatorFactory2, _ := NewValidatorFactory(ValidatorConfig{
+		MaxBodySize: 1,
+	})
+	validator2 := validatorFactory2.Create(r2, nil)
+	_, err = validator2.Query("b")
+	AssertEqual(t, err != nil, true)
+
+	//类型错误
+	r3, _ := http.NewRequest("GET", "http://www.baidu.com/?a=123c", nil)
+	validatorFactory3, _ := NewValidatorFactory(ValidatorConfig{})
+	validator3 := validatorFactory3.Create(r3, nil)
+	var data testStruct
+	err = validator3.BindQuery(&data)
+	AssertEqual(t, err != nil, true)
+
 }
