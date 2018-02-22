@@ -68,7 +68,9 @@ type ValidatorFactory interface {
 }
 
 type ValidatorConfig struct {
-	MaxBodySize int `config:"maxbodysize"`
+	MaxFormSize       int `config:"maxformsize"`
+	MaxFileSize       int `config:"maxfilesize"`
+	MaxFileMemorySize int `config:"maxfilememorysize"`
 }
 
 type validatorFactoryImplement struct {
@@ -100,9 +102,14 @@ func newValidator(r *http.Request, param map[string]string, config ValidatorConf
 	if param == nil {
 		param = map[string]string{}
 	}
-	maxBodySize := 1024 * 1024 * 10
-	if config.MaxBodySize == 0 {
-		config.MaxBodySize = maxBodySize
+	if config.MaxFormSize <= 0 {
+		config.MaxFormSize = 1024 * 1024 * 10
+	}
+	if config.MaxFileSize <= 0 {
+		config.MaxFileSize = 1024 * 1024 * 20
+	}
+	if config.MaxFileMemorySize <= 0 {
+		config.MaxFileMemorySize = 1024 * 1024 * 10
 	}
 	return &validatorImplement{
 		request:  r,
@@ -157,7 +164,7 @@ func (this *validatorImplement) parseInner() error {
 	ct, ctParam, err := mime.ParseMediaType(ct)
 
 	if ct == "application/x-www-form-urlencoded" || ct == "" {
-		bodyReader := &LimitedReader{this.request.Body, int64(this.config.MaxBodySize)}
+		bodyReader := &LimitedReader{this.request.Body, int64(this.config.MaxFormSize)}
 		byteArray, err := ioutil.ReadAll(bodyReader)
 		if err != nil {
 			return err
@@ -171,8 +178,9 @@ func (this *validatorImplement) parseInner() error {
 		if !ok {
 			return errors.New("multipart has not boundary!")
 		}
-		multipartReader := multipart.NewReader(this.request.Body, boundary)
-		form, err := multipartReader.ReadForm(int64(this.config.MaxBodySize))
+		bodyReader := &LimitedReader{this.request.Body, int64(this.config.MaxFileSize)}
+		multipartReader := multipart.NewReader(bodyReader, boundary)
+		form, err := multipartReader.ReadForm(int64(this.config.MaxFileMemorySize))
 		if err != nil {
 			return err
 		}

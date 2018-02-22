@@ -276,10 +276,10 @@ func TestValidatorError(t *testing.T) {
 	_, err = validator.Form("b")
 	AssertEqual(t, err != nil, true)
 
-	//MaxSize设置错误
+	//Form MaxSize设置错误
 	r2, _ := http.NewRequest("POST", "http://www.baidu.com/", strings.NewReader("a=3&b=4"))
 	validatorFactory2, _ := NewValidatorFactory(ValidatorConfig{
-		MaxBodySize: 1,
+		MaxFormSize: 1,
 	})
 	validator2 := validatorFactory2.Create(r2, nil)
 	_, err = validator2.Query("b")
@@ -291,6 +291,23 @@ func TestValidatorError(t *testing.T) {
 	validator3 := validatorFactory3.Create(r3, nil)
 	var data testStruct
 	err = validator3.BindQuery(&data)
+	AssertEqual(t, err != nil, true)
+
+	//File MaxSize设置错误
+	builder := strings.Builder{}
+	writer := multipart.NewWriter(&builder)
+	fileWriter, _ := writer.CreateFormFile("file1", "a.txt")
+	fileData, _ := ioutil.ReadFile("testdata/a.txt")
+	fileWriter.Write(fileData)
+	writer.Close()
+
+	r4, _ := http.NewRequest("POST", "http://www.baidu.com/", strings.NewReader(builder.String()))
+	r4.Header.Set("Content-Type", writer.FormDataContentType())
+	validatorFactory4, _ := NewValidatorFactory(ValidatorConfig{
+		MaxFileSize: 1,
+	})
+	validator4 := validatorFactory4.Create(r4, nil)
+	_, err = validator4.Query("b")
 	AssertEqual(t, err != nil, true)
 
 }
