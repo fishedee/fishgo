@@ -45,7 +45,7 @@ func NewSessionFactory(config SessionConfig) (SessionFactory, error) {
 		return nil, nil
 	}
 	if config.CookieName == "" {
-		config.CookieName = "beego_session"
+		config.CookieName = "session"
 	}
 	if config.CookieLifeTime == 0 {
 		config.CookieLifeTime = 3600

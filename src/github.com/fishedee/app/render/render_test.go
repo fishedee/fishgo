@@ -22,7 +22,7 @@ func TestRenderBasic(t *testing.T) {
 		{"html", []interface{}{"index2.html", map[string]interface{}{"User": "Fish"}}, "<html><body><div>Fish</div></body></html>", "text/html; charset=utf-8"},
 	}
 
-	renderFactory, err := NewRenderFactory()
+	renderFactory, err := NewRenderFactory(RenderConfig{TemplateDir: "testdata"})
 	if err != nil {
 		panic(err)
 	}
@@ -50,7 +50,7 @@ func TestRenderRedirect(t *testing.T) {
 		{[]interface{}{"http://www.baidu.com/a", 301}, 301, "http://www.baidu.com/a"},
 		{[]interface{}{"http://www.qq.com/b", 302}, 302, "http://www.qq.com/b"},
 	}
-	renderFactory, _ := NewRenderFactory()
+	renderFactory, _ := NewRenderFactory(RenderConfig{})
 	for index, singleTestCase := range testCase {
 		r, _ := http.NewRequest("GET", "http://www.baidu.com/c", nil)
 		w := httptest.NewRecorder()

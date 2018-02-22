@@ -1,9 +1,11 @@
 package router
 
 import (
+	"fmt"
 	. "github.com/fishedee/container"
 	. "github.com/fishedee/language"
 	"net/http"
+	"reflect"
 	"strings"
 	"sync"
 )
@@ -559,7 +561,7 @@ func (this *RouterFactory) createHandler(middlewares []RouterMiddleware, handler
 	resultHandler := allHandler[len(allHandler)-1]
 	httpHandler, isOk := resultHandler.(func(w http.ResponseWriter, r *http.Request, param RouterParam))
 	if isOk == false {
-		panic("handler must be routerFactoryHandlerFunc type")
+		panic("handler must be routerFactoryHandlerFunc type,current type is " + fmt.Sprintf("%v", reflect.TypeOf(resultHandler)))
 	}
 	return routerFactoryHandlerFunc(httpHandler)
 }

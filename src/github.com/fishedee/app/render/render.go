@@ -24,11 +24,15 @@ type RenderFactory interface {
 	Create(w http.ResponseWriter, r *http.Request) Render
 }
 
+type RenderConfig struct {
+	TemplateDir string `config:"templatedir"`
+}
+
 type renderFactoryImplement struct {
 	formatter map[string]RenderFormatter
 }
 
-func NewRenderFactory() (RenderFactory, error) {
+func NewRenderFactory(config RenderConfig) (RenderFactory, error) {
 	impl := &renderFactoryImplement{
 		formatter: map[string]RenderFormatter{},
 	}
@@ -46,9 +50,11 @@ func NewRenderFactory() (RenderFactory, error) {
 		func() (RenderFormatter, error) {
 			return NewJsonFormatter()
 		},
-		func() (RenderFormatter, error) {
-			return NewHtmlFormatter("template")
-		},
+	}
+	if config.TemplateDir != "" {
+		preFormatter = append(preFormatter, func() (RenderFormatter, error) {
+			return NewHtmlFormatter(config.TemplateDir)
+		})
 	}
 
 	for _, singlePreFormatter := range preFormatter {

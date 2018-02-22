@@ -16,6 +16,9 @@ type HtmlFormatter struct {
 func (this *HtmlFormatter) load(dir string) error {
 	fileList := []string{}
 	err := filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
 		if f.IsDir() == true {
 			return nil
 		}
