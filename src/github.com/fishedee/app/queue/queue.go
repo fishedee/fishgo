@@ -24,11 +24,11 @@ type Queue interface {
 }
 
 type QueueConfig struct {
-	SavePath   string
-	SavePrefix string
-	Driver     string
-	PoolSize   int
-	Debug      bool
+	SavePath   string `config:"savepath"`
+	SavePrefix string `config:"saveprefix"`
+	Driver     string `config:"driver"`
+	PoolSize   int    `config:"poolsize"`
+	Debug      bool   `config:"debug"`
 }
 
 type queueImplement struct {

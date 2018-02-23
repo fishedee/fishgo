@@ -72,16 +72,16 @@ type Database interface {
 }
 
 type DatabaseConfig struct {
-	Driver        string
-	Host          string
-	Port          int
-	User          string
-	Passowrd      string
-	Charset       string
-	Collation     string
-	Database      string
-	Debug         bool
-	MaxConnection int
+	Driver        string `config:"driver"`
+	Host          string `config:"host"`
+	Port          int    `config:"port"`
+	User          string `config:"user"`
+	Passowrd      string `config:"password"`
+	Charset       string `config:"charset"`
+	Collation     string `config:"collation"`
+	Database      string `config:"charset"`
+	Debug         bool   `config:"debug"`
+	MaxConnection int    `config:"maxconnection"`
 }
 
 type databaseImplement struct {
