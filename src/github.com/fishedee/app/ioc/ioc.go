@@ -109,18 +109,18 @@ func (this *Ioc) MustInvoke(createFun interface{}) {
 	}
 }
 
-func Register(createFun interface{}) error {
+func RegisterIoc(createFun interface{}) error {
 	return defaultIoc.Register(createFun)
 }
 
-func MustRegister(createFun interface{}) {
+func MustRegisterIoc(createFun interface{}) {
 	defaultIoc.MustRegister(createFun)
 }
 
-func Invoke(createFun interface{}) error {
+func InvokeIoc(createFun interface{}) error {
 	return defaultIoc.Invoke(createFun)
 }
 
-func MustInvoke(createFun interface{}) {
+func MustInvokeIoc(createFun interface{}) {
 	defaultIoc.MustInvoke(createFun)
 }
