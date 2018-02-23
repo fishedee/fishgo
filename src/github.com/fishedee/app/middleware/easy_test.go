@@ -22,6 +22,10 @@ func b_Json(v Validator, s Session) interface{} {
 	return nil
 }
 
+func c(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("Hello Fish"))
+}
+
 func jsonToArray(data string) interface{} {
 	var result interface{}
 	err := DecodeJson([]byte(data), &result)
@@ -43,6 +47,7 @@ func TestEasy(t *testing.T) {
 	factory.Use(middleware)
 	factory.GET("/a", a_json)
 	factory.GET("/b", b_Json)
+	factory.GET("/c", c)
 	router := factory.Create()
 
 	r, _ := http.NewRequest("GET", "http://example.com/a?key=mmc", nil)
@@ -55,4 +60,9 @@ func TestEasy(t *testing.T) {
 	w2 := &fakeWriter{}
 	router.ServeHttp(w2, r2)
 	AssertEqual(t, jsonToArray(w2.Read()), map[string]interface{}{"code": 10001.0, "msg": "my god"})
+
+	r3, _ := http.NewRequest("GET", "http://example.com/c", nil)
+	w3 := &fakeWriter{}
+	router.ServeHttp(w3, r3)
+	AssertEqual(t, w3.Read(), "Hello Fish")
 }
