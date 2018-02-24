@@ -32,11 +32,11 @@ func (this *BasicQueueStore) Publish(topicId string, data []byte) error {
 }
 
 func (this *BasicQueueStore) subscribeInner(topicId string, single *BasicAsyncQueuePubSubStore) error {
-	return this.Consume(topicId, func(argv []byte, err error) {
+	return this.Consume(topicId, func(argv []byte) {
 		listeners := single.listener
 
 		for _, singleListener := range listeners {
-			singleListener(argv, err)
+			singleListener(argv)
 		}
 	})
 }

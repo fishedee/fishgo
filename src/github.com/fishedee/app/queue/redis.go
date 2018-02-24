@@ -1,27 +1,36 @@
 package queue
 
 import (
-	. "github.com/fishedee/util"
+	. "github.com/fishedee/app/log"
 	"github.com/garyburd/redigo/redis"
 	"strconv"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 )
 
 type RedisQueueStore struct {
-	redisPool *redis.Pool
-	prefix    string
+	redisPool        *redis.Pool
+	log              Log
+	poolsize         int
+	prefix           string
+	savePath         string
+	password         string
+	dbNum            int
+	retryInterval    int
+	consumeListeners sync.Map
+	isClose          int32
 }
 
 var MAX_POOL_SIZE = 100
 
-func newRedisPool(configSavePath string) (*redis.Pool, error) {
+func NewRedisQueue(log Log, config QueueStoreConfig) (QueueStoreInterface, error) {
 	var savePath string
-	var poolsize int
 	var password string
 	var dbNum int
-	var poollist *redis.Pool
-	configs := strings.Split(configSavePath, ",")
+	var poolsize int
+	configs := strings.Split(config.SavePath, ",")
 	if len(configs) > 0 {
 		savePath = configs[0]
 	}
@@ -48,55 +57,59 @@ func newRedisPool(configSavePath string) (*redis.Pool, error) {
 	} else {
 		dbNum = 0
 	}
-	poollist = &redis.Pool{
-		MaxIdle:     poolsize,
-		IdleTimeout: 240 * time.Second,
-		Dial: func() (redis.Conn, error) {
-			c, err := redis.DialTimeout(
-				"tcp",
-				savePath,
-				time.Second,
-				time.Second*12,
-				time.Second,
-			)
-			if err != nil {
-				return nil, err
-			}
-			if password != "" {
-				if _, err := c.Do("AUTH", password); err != nil {
-					c.Close()
-					return nil, err
-				}
-			}
-			_, err = c.Do("SELECT", dbNum)
-			if err != nil {
-				c.Close()
-				return nil, err
-			}
-			return c, err
-		},
-		TestOnBorrow: func(c redis.Conn, t time.Time) error {
-			_, err := c.Do("PING")
-			return err
-		},
+	if config.RetryInterval == 0 {
+		config.RetryInterval = 5
 	}
-	return poollist, poollist.Get().Err()
-}
-func NewRedisQueue(closeFunc *CloseFunc, config QueueStoreConfig) (QueueStoreInterface, error) {
-	redisPool, err := newRedisPool(config.SavePath)
+
+	result := &RedisQueueStore{
+		prefix:        config.SavePrefix,
+		savePath:      savePath,
+		password:      password,
+		dbNum:         dbNum,
+		poolsize:      poolsize,
+		retryInterval: config.RetryInterval,
+		log:           log,
+	}
+	var err error
+	result.redisPool, err = result.getConnectPool()
 	if err != nil {
 		return nil, err
 	}
-	result := &RedisQueueStore{
-		redisPool: redisPool,
-		prefix:    config.SavePrefix,
-	}
-	closeFunc.AddCloseHandler(func() {
-		redisPool.Close()
-	})
 	return NewBasicQueue(result), nil
 }
 
+func (this *RedisQueueStore) getConnectPool() (*redis.Pool, error) {
+	poollist := &redis.Pool{
+		MaxIdle:     this.poolsize,
+		IdleTimeout: 240 * time.Second,
+		Dial:        this.getConnect,
+	}
+	return poollist, poollist.Get().Err()
+}
+func (this *RedisQueueStore) getConnect() (redis.Conn, error) {
+	c, err := redis.DialTimeout(
+		"tcp",
+		this.savePath,
+		time.Second,
+		time.Second*12,
+		time.Second,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if this.password != "" {
+		if _, err := c.Do("AUTH", this.password); err != nil {
+			c.Close()
+			return nil, err
+		}
+	}
+	_, err = c.Do("SELECT", this.dbNum)
+	if err != nil {
+		c.Close()
+		return nil, err
+	}
+	return c, err
+}
 func (this *RedisQueueStore) Produce(topicId string, data []byte) error {
 	c := this.redisPool.Get()
 	defer c.Close()
@@ -108,13 +121,11 @@ func (this *RedisQueueStore) Produce(topicId string, data []byte) error {
 	return nil
 }
 
-func (this *RedisQueueStore) consumeData(topicId string, timeout int) (interface{}, error) {
+func (this *RedisQueueStore) consumeData(connect redis.Conn, topicId string, timeout int) ([]byte, error) {
 	var topic interface{}
 	var data interface{}
 
-	c := this.redisPool.Get()
-	defer c.Close()
-	reply, err := redis.Values(c.Do("BRPOP", this.prefix+topicId, timeout))
+	reply, err := redis.Values(connect.Do("BRPOP", this.prefix+topicId, timeout))
 	if err == redis.ErrNil {
 		return nil, nil
 	}
@@ -128,26 +139,54 @@ func (this *RedisQueueStore) consumeData(topicId string, timeout int) (interface
 	if err != nil {
 		return nil, err
 	}
-	return data, nil
+	return data.([]byte), nil
+}
+
+func (this *RedisQueueStore) singleConsume(topicId string, listener QueueListener) error {
+	conn, err := this.getConnect()
+	if err != nil {
+		return err
+	}
+	this.consumeListeners.Store(conn, true)
+	defer func() {
+		conn.Close()
+		this.consumeListeners.Delete(conn)
+	}()
+	for {
+		data, err := this.consumeData(conn, topicId, 5)
+		if err != nil {
+			return err
+		}
+		if data == nil {
+			continue
+		} else {
+			listener(data)
+		}
+	}
 }
 
 func (this *RedisQueueStore) Consume(topicId string, listener QueueListener) error {
 	go func() {
 		for {
-			data, err := this.consumeData(topicId, 2)
-			if err != nil {
-				if strings.Index(err.Error(), "get on closed pool") != -1 {
-					return
-				} else {
-					listener(nil, err)
-				}
-			}
-			if data == nil {
-				continue
+			err := this.singleConsume(topicId, listener)
+			isExit := atomic.LoadInt32(&this.isClose)
+			if isExit == 0 {
+				this.log.Critical("Queue Redis consume error :%v, will be retry in %v seconds", err, this.retryInterval)
+				time.Sleep(time.Duration(int(time.Second) * this.retryInterval))
 			} else {
-				listener(data.([]byte), nil)
+				return
 			}
 		}
 	}()
 	return nil
+}
+
+func (this *RedisQueueStore) Close() {
+	atomic.StoreInt32(&this.isClose, 1)
+	this.redisPool.Close()
+	this.consumeListeners.Range(func(key, value interface{}) bool {
+		conn := key.(redis.Conn)
+		conn.Close()
+		return true
+	})
 }

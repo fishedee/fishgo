@@ -30,17 +30,16 @@ type Queue interface {
 	SubscribeInPool(topicId string, listener interface{}, poolSize int) error
 	MustSubscribeInPool(topicId string, listener interface{}, poolSize int)
 
-	Start()
-	Stop()
-	Run()
+	Close()
 }
 
 type QueueConfig struct {
-	SavePath   string `config:"savepath"`
-	SavePrefix string `config:"saveprefix"`
-	Driver     string `config:"driver"`
-	PoolSize   int    `config:"poolsize"`
-	Debug      bool   `config:"debug"`
+	SavePath      string `config:"savepath"`
+	SavePrefix    string `config:"saveprefix"`
+	Driver        string `config:"driver"`
+	PoolSize      int    `config:"poolsize"`
+	Debug         bool   `config:"debug"`
+	RetryInterval int    `config:"retryinterval"`
 }
 
 type queueImplement struct {
@@ -56,7 +55,7 @@ func NewQueue(log Log, config QueueConfig) (Queue, error) {
 		return nil, nil
 	} else if config.Driver == "memory" {
 		closeFunc := NewCloseFunc()
-		queue, err := NewMemoryQueue(closeFunc, QueueStoreConfig{})
+		queue, err := NewMemoryQueue(QueueStoreConfig{})
 		if err != nil {
 			return nil, err
 		}
@@ -69,9 +68,10 @@ func NewQueue(log Log, config QueueConfig) (Queue, error) {
 		}, nil
 	} else if config.Driver == "redis" {
 		closeFunc := NewCloseFunc()
-		queue, err := NewRedisQueue(closeFunc, QueueStoreConfig{
-			SavePath:   config.SavePath,
-			SavePrefix: config.SavePrefix,
+		queue, err := NewRedisQueue(log, QueueStoreConfig{
+			SavePath:      config.SavePath,
+			SavePrefix:    config.SavePrefix,
+			RetryInterval: config.RetryInterval,
 		})
 		if err != nil {
 			return nil, err
@@ -118,17 +118,7 @@ func (this *queueImplement) DecodeData(dataByte []byte, dataType []reflect.Type)
 	return valueResult, nil
 }
 
-func (this *queueImplement) WrapErrorListener(listener queueInnerListener) QueueListener {
-	return func(data []byte, err error) {
-		if err != nil {
-			this.log.Critical("QueueTask Crash !! error:[%v]", err)
-			return
-		}
-		listener(data)
-	}
-}
-
-func (this *queueImplement) WrapPoolListener(listener queueInnerListener, poolSize int) queueInnerListener {
+func (this *queueImplement) WrapPoolListener(listener QueueListener, poolSize int) QueueListener {
 	if poolSize <= 0 {
 		return func(data []byte) {
 			this.closeFunc.IncrCloseCounter()
@@ -162,7 +152,7 @@ func (this *queueImplement) WrapPoolListener(listener queueInnerListener, poolSi
 	}
 }
 
-func (this *queueImplement) WrapExceptionListener(listener interface{}, topicId string, debugPrefix string) (queueInnerListener, error) {
+func (this *queueImplement) WrapExceptionListener(listener interface{}, topicId string, debugPrefix string) (QueueListener, error) {
 	listenerType := reflect.TypeOf(listener)
 	listenerValue := reflect.ValueOf(listener)
 	if listenerType.Kind() != reflect.Func {
@@ -228,7 +218,7 @@ func (this *queueImplement) ConsumeInPool(topicId string, listener interface{}, 
 	if err != nil {
 		return err
 	}
-	err = this.store.Consume(topicId, this.WrapErrorListener(this.WrapPoolListener(listenerResult, poolSize)))
+	err = this.store.Consume(topicId, this.WrapPoolListener(listenerResult, poolSize))
 	if err != nil {
 		return err
 	}
@@ -280,7 +270,7 @@ func (this *queueImplement) SubscribeInPool(topicId string, listener interface{}
 	if err != nil {
 		return err
 	}
-	err = this.store.Subscribe(topicId, this.WrapErrorListener(this.WrapPoolListener(listenerResult, poolSize)))
+	err = this.store.Subscribe(topicId, this.WrapPoolListener(listenerResult, poolSize))
 	if err != nil {
 		return err
 	}
@@ -294,15 +284,7 @@ func (this *queueImplement) MustSubscribeInPool(topicId string, listener interfa
 	}
 }
 
-func (this *queueImplement) Run() {
-	this.Start()
-	this.Stop()
-}
-
-func (this *queueImplement) Start() {
-	//FIXME donothing
-}
-
-func (this *queueImplement) Stop() {
+func (this *queueImplement) Close() {
+	this.store.Close()
 	this.closeFunc.Close()
 }

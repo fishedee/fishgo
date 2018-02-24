@@ -166,6 +166,22 @@ func TestQueueSync(t *testing.T) {
 	}
 }
 
+/*
+func TestQueueRedisUnexcpectClose(t *testing.T) {
+	queue := newQueueForTest(t, QueueConfig{
+		SavePath:   "127.0.0.1:6379,100,13420693396",
+		SavePrefix: "queue:",
+		Driver:     "redis",
+	})
+	queue.Consume("topic1", func(data string) {
+		fmt.Println("uj", data)
+	})
+	queue.Produce("topic1", "mm1")
+	queue.Produce("topic1", "mm2")
+	time.Sleep(time.Second * 1000)
+}
+*/
+
 func TestQueueRedis(t *testing.T) {
 	queue := newQueueForTest(t, QueueConfig{
 		SavePath:   "127.0.0.1:6379,100,13420693396",
@@ -221,7 +237,7 @@ func TestQueueClose(t *testing.T) {
 		})
 		singleTestCase.Queue.Produce("queue", singleTestCase.Data)
 		<-inputEvent
-		singleTestCase.Queue.Stop()
+		singleTestCase.Queue.Close()
 		AssertEqual(t, result, singleTestCase.Data, singleTestCaseIndex)
 	}
 }

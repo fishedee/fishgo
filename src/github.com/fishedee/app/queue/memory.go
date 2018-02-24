@@ -1,7 +1,6 @@
 package queue
 
 import (
-	. "github.com/fishedee/util"
 	"sync"
 )
 
@@ -14,7 +13,7 @@ type MemoryQueueStore struct {
 	mutex           sync.RWMutex
 }
 
-func NewMemoryQueue(closeFunc *CloseFunc, config QueueStoreConfig) (QueueStoreInterface, error) {
+func NewMemoryQueue(config QueueStoreConfig) (QueueStoreInterface, error) {
 	result := &MemoryQueueStore{}
 	result.mapPushPopStore = map[string]MemoryQueuePushPopStore{}
 	return NewBasicQueue(result), nil
@@ -27,7 +26,7 @@ func (this *MemoryQueueStore) Produce(topicId string, data []byte) error {
 	if !ok {
 		return nil
 	}
-	result.listener(data, nil)
+	result.listener(data)
 	return nil
 }
 
@@ -38,4 +37,8 @@ func (this *MemoryQueueStore) Consume(topicId string, listener QueueListener) er
 	}
 	this.mutex.Unlock()
 	return nil
+}
+
+func (this *MemoryQueueStore) Close() {
+
 }
