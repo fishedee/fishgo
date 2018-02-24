@@ -42,15 +42,33 @@ type DatabaseCommon interface {
 	Join(join_operator string, tablename interface{}, condition string, args ...interface{}) DatabaseSession
 	GroupBy(keys string) DatabaseSession
 	Having(conditions string) DatabaseSession
+
 	Exec(sql string, args ...interface{}) (sql.Result, error)
+	MustExec(sql string, args ...interface{}) sql.Result
+
 	Query(sql string, paramStr ...interface{}) (resultsSlice []map[string][]byte, err error)
+	MustQuery(sql string, paramStr ...interface{}) []map[string][]byte
+
 	Insert(beans ...interface{}) (int64, error)
+	MustInsert(beans ...interface{}) int64
+
 	InsertOne(bean interface{}) (int64, error)
+	MustInsertOne(bean interface{}) int64
+
 	Update(bean interface{}, condiBeans ...interface{}) (int64, error)
+	MustUpdate(bean interface{}, condiBeans ...interface{}) int64
+
 	Delete(bean interface{}) (int64, error)
+	MustDelete(bean interface{}) int64
+
 	Get(bean interface{}) (bool, error)
+	MustGet(bean interface{}) bool
+
 	Find(beans interface{}, condiBeans ...interface{}) error
+	MustFind(beans interface{}, condiBeans ...interface{})
+
 	Count(bean interface{}) (int64, error)
+	MustCount(bean interface{}) int64
 }
 
 type DatabaseSession interface {
@@ -59,8 +77,13 @@ type DatabaseSession interface {
 	And(querystring string, args ...interface{}) DatabaseSession
 	Or(querystring string, args ...interface{}) DatabaseSession
 	ForUpdate() DatabaseSession
+
 	Begin() error
+	MustBegin()
+
 	Commit() error
+	MustCommit()
+
 	LastSQL() (string, []interface{})
 }
 
@@ -69,6 +92,7 @@ type Database interface {
 	Close() error
 	NewSession() DatabaseSession
 	UpdateBatch(rowsSlicePtr interface{}, indexColName string) (int64, error)
+	MustUpdateBatch(rowSlicePtr interface{}, indexColName string) int64
 }
 
 type DatabaseConfig struct {
@@ -362,6 +386,77 @@ func (this *databaseImplement) Having(conditions string) DatabaseSession {
 	return newDatabaseSession(this.Engine.Having(conditions))
 }
 
+func (this *databaseImplement) MustExec(sql string, args ...interface{}) sql.Result {
+	result, err := this.Exec(sql, args...)
+	if err != nil {
+		panic(err)
+	}
+	return result
+}
+
+func (this *databaseImplement) MustQuery(sql string, paramStr ...interface{}) []map[string][]byte {
+	result, err := this.Query(sql, paramStr...)
+	if err != nil {
+		panic(err)
+	}
+	return result
+}
+
+func (this *databaseImplement) MustInsert(beans ...interface{}) int64 {
+	result, err := this.Insert(beans...)
+	if err != nil {
+		panic(err)
+	}
+	return result
+}
+
+func (this *databaseImplement) MustInsertOne(bean interface{}) int64 {
+	result, err := this.InsertOne(bean)
+	if err != nil {
+		panic(err)
+	}
+	return result
+}
+
+func (this *databaseImplement) MustUpdate(bean interface{}, condiBeans ...interface{}) int64 {
+	result, err := this.Update(bean, condiBeans...)
+	if err != nil {
+		panic(err)
+	}
+	return result
+}
+
+func (this *databaseImplement) MustDelete(bean interface{}) int64 {
+	result, err := this.Delete(bean)
+	if err != nil {
+		panic(err)
+	}
+	return result
+}
+
+func (this *databaseImplement) MustGet(bean interface{}) bool {
+	result, err := this.Get(bean)
+	if err != nil {
+		panic(err)
+	}
+	return result
+}
+
+func (this *databaseImplement) MustFind(beans interface{}, condiBeans ...interface{}) {
+	err := this.Find(beans, condiBeans...)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (this *databaseImplement) MustCount(bean interface{}) int64 {
+	result, err := this.Count(bean)
+	if err != nil {
+		panic(err)
+	}
+	return result
+}
+
 func (this *databaseImplement) UpdateBatch(rowsSlicePtr interface{}, indexColName string) (int64, error) {
 	sliceValue := reflect.Indirect(reflect.ValueOf(rowsSlicePtr))
 	if sliceValue.Kind() != reflect.Slice {
@@ -480,6 +575,14 @@ func (this *databaseImplement) UpdateBatch(rowsSlicePtr interface{}, indexColNam
 		return 0, err
 	}
 	return res.RowsAffected()
+}
+
+func (this *databaseImplement) MustUpdateBatch(rowsSlicePtr interface{}, indexColName string) int64 {
+	result, err := this.UpdateBatch(rowsSlicePtr, indexColName)
+	if err != nil {
+		panic(err)
+	}
+	return result
 }
 
 type tableMapper struct {
@@ -637,4 +740,89 @@ func (this *databaseSessionImplement) Or(querystring string, args ...interface{}
 
 func (this *databaseSessionImplement) ForUpdate() DatabaseSession {
 	return newDatabaseSession(this.Session.ForUpdate())
+}
+
+func (this *databaseSessionImplement) MustExec(sql string, args ...interface{}) sql.Result {
+	result, err := this.Exec(sql, args...)
+	if err != nil {
+		panic(err)
+	}
+	return result
+}
+
+func (this *databaseSessionImplement) MustQuery(sql string, paramStr ...interface{}) []map[string][]byte {
+	result, err := this.Query(sql, paramStr...)
+	if err != nil {
+		panic(err)
+	}
+	return result
+}
+
+func (this *databaseSessionImplement) MustInsert(beans ...interface{}) int64 {
+	result, err := this.Insert(beans...)
+	if err != nil {
+		panic(err)
+	}
+	return result
+}
+
+func (this *databaseSessionImplement) MustInsertOne(bean interface{}) int64 {
+	result, err := this.InsertOne(bean)
+	if err != nil {
+		panic(err)
+	}
+	return result
+}
+
+func (this *databaseSessionImplement) MustUpdate(bean interface{}, condiBeans ...interface{}) int64 {
+	result, err := this.Update(bean, condiBeans...)
+	if err != nil {
+		panic(err)
+	}
+	return result
+}
+
+func (this *databaseSessionImplement) MustDelete(bean interface{}) int64 {
+	result, err := this.Delete(bean)
+	if err != nil {
+		panic(err)
+	}
+	return result
+}
+
+func (this *databaseSessionImplement) MustGet(bean interface{}) bool {
+	result, err := this.Get(bean)
+	if err != nil {
+		panic(err)
+	}
+	return result
+}
+
+func (this *databaseSessionImplement) MustFind(beans interface{}, condiBeans ...interface{}) {
+	err := this.Find(beans, condiBeans...)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (this *databaseSessionImplement) MustCount(bean interface{}) int64 {
+	result, err := this.Count(bean)
+	if err != nil {
+		panic(err)
+	}
+	return result
+}
+
+func (this *databaseSessionImplement) MustBegin() {
+	err := this.Begin()
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (this *databaseSessionImplement) MustCommit() {
+	err := this.Commit()
+	if err != nil {
+		panic(err)
+	}
 }
