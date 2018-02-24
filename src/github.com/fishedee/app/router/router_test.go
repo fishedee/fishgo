@@ -196,7 +196,7 @@ func TestRouterUrl(t *testing.T) {
 			func(singleFindData []interface{}) {
 				r, _ := http.NewRequest("GET", singleFindData[0].(string), nil)
 				w := &fakeWriter{}
-				router.ServeHttp(w, r)
+				router.ServeHTTP(w, r)
 				AssertEqual(t, w.Read(), singleFindData[1].(string), fmt.Sprintf("%v-%v", testCaseIndex, findDataIndex))
 			}(singleFindData.([]interface{}))
 		}
@@ -255,7 +255,7 @@ func TestRouterMethod(t *testing.T) {
 			method := entrys[i]
 			r, _ := http.NewRequest(method, "/a", nil)
 			w := &fakeWriter{}
-			router.ServeHttp(w, r)
+			router.ServeHTTP(w, r)
 			if singleTestCase.findData == "Any" ||
 				method == singleTestCase.findData {
 				AssertEqual(t, w.Read(), "bingo")
@@ -311,7 +311,7 @@ func TestRouterStatic(t *testing.T) {
 	for index, singleTestCase := range testCase {
 		r, _ := http.NewRequest("GET", singleTestCase.url, nil)
 		w := &fakeWriter{}
-		router.ServeHttp(w, r)
+		router.ServeHTTP(w, r)
 		AssertEqual(t, w.Read(), singleTestCase.data, index)
 	}
 }
@@ -371,7 +371,7 @@ func TestRouterUrlPrefixParam(t *testing.T) {
 	for _, data := range findData {
 		r, _ := http.NewRequest("GET", data.url, nil)
 		w := &fakeWriter{}
-		router.ServeHttp(w, r)
+		router.ServeHTTP(w, r)
 		select {
 		case result := <-check:
 			AssertEqual(t, result, data.param, data)
@@ -433,7 +433,7 @@ func TestRouterMiddleware(t *testing.T) {
 	for _, singleTestCase := range testCase {
 		r, _ := http.NewRequest("GET", singleTestCase.url, nil)
 		w := &fakeWriter{}
-		router.ServeHttp(w, r)
+		router.ServeHTTP(w, r)
 		AssertEqual(t, w.Read(), singleTestCase.data)
 	}
 }
@@ -455,7 +455,7 @@ func benchmarkRouterBasic(b *testing.B, insertData []string, findData []string) 
 	for i := 0; i != b.N; i++ {
 		single := findData[i%len(findData)]
 		r.URL.Path = single
-		router.ServeHttp(w, r)
+		router.ServeHTTP(w, r)
 	}
 }
 

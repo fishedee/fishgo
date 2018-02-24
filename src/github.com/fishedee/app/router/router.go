@@ -297,7 +297,7 @@ func (this *Router) findHandler(url string, method int) (routerHandlerFunc, Rout
 	return handler.notFoundPrefixHandler, nil, handler.notFoundPrefixHandler, nil
 }
 
-func (this *Router) ServeHttp(w http.ResponseWriter, r *http.Request) {
+func (this *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	url := r.URL.Path
 	var methodInt int
 	switch r.Method {
