@@ -166,22 +166,6 @@ func TestQueueSync(t *testing.T) {
 	}
 }
 
-/*
-func TestQueueRedisUnexcpectClose(t *testing.T) {
-	queue := newQueueForTest(t, QueueConfig{
-		SavePath:   "127.0.0.1:6379,100,13420693396",
-		SavePrefix: "queue:",
-		Driver:     "redis",
-	})
-	queue.Consume("topic1", func(data string) {
-		fmt.Println("uj", data)
-	})
-	queue.Produce("topic1", "mm1")
-	queue.Produce("topic1", "mm2")
-	time.Sleep(time.Second * 1000)
-}
-*/
-
 func TestQueueRedis(t *testing.T) {
 	queue := newQueueForTest(t, QueueConfig{
 		SavePath:   "127.0.0.1:6379,100,13420693396",
@@ -223,7 +207,7 @@ func TestQueueClose(t *testing.T) {
 		}), 123},
 		{newQueueForTest(t, QueueConfig{
 			SavePath:   "127.0.0.1:6379,100,13420693396",
-			SavePrefix: "queue:",
+			SavePrefix: "queue2:",
 			Driver:     "redis",
 		}), 456},
 	}
@@ -239,5 +223,37 @@ func TestQueueClose(t *testing.T) {
 		<-inputEvent
 		singleTestCase.Queue.Close()
 		AssertEqual(t, result, singleTestCase.Data, singleTestCaseIndex)
+	}
+}
+
+func TestQueueRedisRetry(t *testing.T) {
+	queue := newQueueForTest(t, QueueConfig{
+		SavePath:      "127.0.0.1:6379,100,13420693396",
+		SavePrefix:    "queue3:",
+		Driver:        "redis",
+		RetryInterval: 2,
+	})
+	result := make(chan string, 64)
+	queue.Consume("topic1", func(data string) {
+		result <- data
+	})
+	queue.Produce("topic1", "mm1")
+	queue.Produce("topic1", "mm2")
+	time.Sleep(time.Second * 1)
+	queue.(*queueImplement).store.(*BasicQueueStore).QueueStoreBasicInterface.(*RedisQueueStore).closeListener()
+	queue.Produce("topic1", "mm3")
+	queue.Produce("topic1", "mm4")
+	time.Sleep(time.Second * 2)
+	queue.Produce("topic1", "mm5")
+	queue.Produce("topic1", "mm6")
+	time.Sleep(time.Second * 2)
+	testCase := []string{"mm1", "mm2", "mm3", "mm4", "mm5", "mm6"}
+	for i := 0; i != 6; i++ {
+		select {
+		case single := <-result:
+			AssertEqual(t, single, testCase[i])
+		default:
+			AssertEqual(t, true, false)
+		}
 	}
 }

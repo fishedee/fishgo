@@ -184,6 +184,10 @@ func (this *RedisQueueStore) Consume(topicId string, listener QueueListener) err
 func (this *RedisQueueStore) Close() {
 	atomic.StoreInt32(&this.isClose, 1)
 	this.redisPool.Close()
+	this.closeListener()
+}
+
+func (this *RedisQueueStore) closeListener() {
 	this.consumeListeners.Range(func(key, value interface{}) bool {
 		conn := key.(redis.Conn)
 		conn.Close()
