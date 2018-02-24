@@ -26,7 +26,7 @@ func TestLog(t *testing.T) {
 	for _, url := range testCase {
 		r, _ := http.NewRequest("GET", url, nil)
 		w := &fakeWriter{}
-		router.ServeHttp(w, r)
+		router.ServeHTTP(w, r)
 	}
 
 }

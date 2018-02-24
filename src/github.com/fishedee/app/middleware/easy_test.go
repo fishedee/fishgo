@@ -52,17 +52,17 @@ func TestEasy(t *testing.T) {
 
 	r, _ := http.NewRequest("GET", "http://example.com/a?key=mmc", nil)
 	w := &fakeWriter{}
-	router.ServeHttp(w, r)
+	router.ServeHTTP(w, r)
 
 	AssertEqual(t, jsonToArray(w.Read()), map[string]interface{}{"code": 0.0, "msg": "", "data": "mmc"})
 
 	r2, _ := http.NewRequest("GET", "http://example.com/b?key2=mmc", nil)
 	w2 := &fakeWriter{}
-	router.ServeHttp(w2, r2)
+	router.ServeHTTP(w2, r2)
 	AssertEqual(t, jsonToArray(w2.Read()), map[string]interface{}{"code": 10001.0, "msg": "my god"})
 
 	r3, _ := http.NewRequest("GET", "http://example.com/c", nil)
 	w3 := &fakeWriter{}
-	router.ServeHttp(w3, r3)
+	router.ServeHTTP(w3, r3)
 	AssertEqual(t, w3.Read(), "Hello Fish")
 }

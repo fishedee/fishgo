@@ -47,7 +47,7 @@ func TestCors(t *testing.T) {
 			r.Header.Add(name, value)
 		}
 		w := &fakeWriter{}
-		router.ServeHttp(w, r)
+		router.ServeHTTP(w, r)
 		AssertEqual(t, w.Header(), singleTestCase.resHeader)
 	}
 }
