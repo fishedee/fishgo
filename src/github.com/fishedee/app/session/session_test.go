@@ -27,9 +27,9 @@ func firstRequest(t *testing.T, sessionFactory SessionFactory) string {
 	w := httptest.NewRecorder()
 
 	session := sessionFactory.Create(w, r)
-	session.Begin()
-	session.Set("mc", "123")
-	session.End()
+	session.MustBegin()
+	session.MustSet("mc", "123")
+	session.MustCommit()
 
 	headerInfo := getHeaderInfo(w.Header(), "Set-Cookie")
 	AssertEqual(t, len(headerInfo["fishmm"]) != 0, true)
@@ -42,9 +42,9 @@ func secondRequest(t *testing.T, sessionFactory SessionFactory, sessionId string
 
 	r.Header.Set("Cookie", "fishmm="+sessionId)
 	session := sessionFactory.Create(w, r)
-	session.Begin()
-	data := session.Get("mc")
-	session.End()
+	session.MustBegin()
+	data := session.MustGet("mc")
+	session.MustCommit()
 
 	headerInfo := getHeaderInfo(w.Header(), "Set-Cookie")
 	AssertEqual(t, headerInfo["fishmm"], sessionId)

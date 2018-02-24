@@ -20,8 +20,8 @@ type Cache interface {
 	Set(key string, value string, timeout time.Duration) error
 	MustSet(key string, value string, timeout time.Duration)
 
-	Del(key string) error
-	MustDel(key string)
+	Delete(key string) error
+	MustDelete(key string)
 
 	Memoize(key string, value interface{}, timeout time.Duration) (interface{}, error)
 	MustMemoize(key string, valuer interface{}, timeout time.Duration) interface{}
@@ -141,7 +141,7 @@ func (this *cacheImplement) MustSet(key string, value string, timeout time.Durat
 	}
 }
 
-func (this *cacheImplement) Del(key string) error {
+func (this *cacheImplement) Delete(key string) error {
 	err := this.store.Delete(this.saveprefix + key)
 	if err != nil && strings.Index(err.Error(), "not exist") == -1 {
 		return err
@@ -149,8 +149,8 @@ func (this *cacheImplement) Del(key string) error {
 	return nil
 }
 
-func (this *cacheImplement) MustDel(key string) {
-	err := this.Del(key)
+func (this *cacheImplement) MustDelete(key string) {
+	err := this.Delete(key)
 	if err != nil {
 		panic(err)
 	}

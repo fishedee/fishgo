@@ -26,7 +26,7 @@ func getNoExistData(t *testing.T, cache Cache, key string, index int) string {
 }
 
 func delData(t *testing.T, cache Cache, key string, index int) {
-	err := cache.Del(key)
+	err := cache.Delete(key)
 	AssertEqual(t, err, nil, index)
 }
 

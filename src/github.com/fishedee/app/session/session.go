@@ -2,6 +2,7 @@ package session
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/astaxie/beego/session"
 	. "github.com/fishedee/language"
 	"net/http"
@@ -12,11 +13,21 @@ import (
 
 type Session interface {
 	Set(key, value interface{}) error
-	Get(key interface{}) interface{}
+	MustSet(key, value interface{})
+
+	Get(key interface{}) (interface{}, error)
+	MustGet(key interface{}) interface{}
+
 	Delete(key interface{}) error
+	MustDelete(key interface{})
+
 	SessionId() string
+
 	Begin() error
-	End()
+	MustBegin()
+
+	Commit() error
+	MustCommit()
 }
 
 type SessionFactory interface {
@@ -96,35 +107,61 @@ func newSession(manager *session.Manager, config SessionConfig, w http.ResponseW
 
 func (this *sessionImplement) Set(key, value interface{}) error {
 	if this.store == nil {
-		panic("you should begin session first")
+		return errors.New("you should begin session first")
 	}
-	return this.store.Set(key, value)
+	this.store.Set(key, value)
+	return nil
 }
 
-func (this *sessionImplement) Get(key interface{}) interface{} {
-	if this.store == nil {
-		panic("you should begin session first")
+func (this *sessionImplement) MustSet(key, value interface{}) {
+	err := this.Set(key, value)
+	if err != nil {
+		panic(err)
 	}
-	return this.store.Get(key)
+}
+
+func (this *sessionImplement) Get(key interface{}) (interface{}, error) {
+	if this.store == nil {
+		return nil, errors.New("you should begin session first")
+	}
+	result := this.store.Get(key)
+	return result, nil
+}
+
+func (this *sessionImplement) MustGet(key interface{}) interface{} {
+	result, err := this.Get(key)
+	if err != nil {
+		panic(err)
+	}
+	return result
 }
 
 func (this *sessionImplement) Delete(key interface{}) error {
 	if this.store == nil {
-		panic("you should begin session first")
+		return errors.New("you should begin session first")
 	}
-	return this.store.Delete(key)
+	this.store.Delete(key)
+	return nil
+}
+
+func (this *sessionImplement) MustDelete(key interface{}) {
+	err := this.Delete(key)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (this *sessionImplement) SessionId() string {
 	if this.store == nil {
-		panic("you should begin session first")
+		return ""
+	} else {
+		return this.store.SessionID()
 	}
-	return this.store.SessionID()
 }
 
 func (this *sessionImplement) Begin() error {
 	if this.store != nil {
-		panic("you should begin session already")
+		return errors.New("you should begin session already")
 	}
 	result, errOrgin := this.manager.SessionStart(this.w, this.r)
 	if errOrgin != nil {
@@ -167,10 +204,25 @@ func (this *sessionImplement) Begin() error {
 	return nil
 }
 
-func (this *sessionImplement) End() {
+func (this *sessionImplement) MustBegin() {
+	err := this.Begin()
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (this *sessionImplement) Commit() error {
 	if this.store == nil {
-		panic("you should begin session first")
+		return errors.New("you should begin session first")
 	}
 	this.store.SessionRelease(this.w)
 	this.store = nil
+	return nil
+}
+
+func (this *sessionImplement) MustCommit() {
+	err := this.Commit()
+	if err != nil {
+		panic(err)
+	}
 }
