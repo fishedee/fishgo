@@ -6,17 +6,19 @@ const (
 	QUEUE_PRODUCE_CONSUME
 )
 
-type QueueListener func(argv interface{}) error
+type QueueListener func(argv []byte, err error)
+
+type queueInnerListener func(argv []byte)
 
 type QueueStoreInterface interface {
-	Produce(topicId string, data interface{}) error
+	Produce(topicId string, data []byte) error
 	Consume(topicId string, listener QueueListener) error
-	Publish(topicId string, data interface{}) error
+	Publish(topicId string, data []byte) error
 	Subscribe(topicId string, listener QueueListener) error
 }
 
 type QueueStoreBasicInterface interface {
-	Produce(topicId string, data interface{}) error
+	Produce(topicId string, data []byte) error
 	Consume(topicId string, listener QueueListener) error
 }
 

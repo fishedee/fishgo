@@ -97,7 +97,7 @@ func NewRedisQueue(closeFunc *CloseFunc, config QueueStoreConfig) (QueueStoreInt
 	return NewBasicQueue(result), nil
 }
 
-func (this *RedisQueueStore) Produce(topicId string, data interface{}) error {
+func (this *RedisQueueStore) Produce(topicId string, data []byte) error {
 	c := this.redisPool.Get()
 	defer c.Close()
 
@@ -139,13 +139,13 @@ func (this *RedisQueueStore) Consume(topicId string, listener QueueListener) err
 				if strings.Index(err.Error(), "get on closed pool") != -1 {
 					return
 				} else {
-					listener(err)
+					listener(nil, err)
 				}
 			}
 			if data == nil {
 				continue
 			} else {
-				listener(data)
+				listener(data.([]byte), nil)
 			}
 		}
 	}()

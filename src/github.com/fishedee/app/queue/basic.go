@@ -1,13 +1,11 @@
 package queue
 
 import (
-	"errors"
 	"sync"
 )
 
 type BasicAsyncQueuePubSubStore struct {
 	listener []QueueListener
-	mutex    sync.RWMutex
 }
 
 type BasicQueueStore struct {
@@ -23,7 +21,7 @@ func NewBasicQueue(target QueueStoreBasicInterface) *BasicQueueStore {
 	}
 }
 
-func (this *BasicQueueStore) Publish(topicId string, data interface{}) error {
+func (this *BasicQueueStore) Publish(topicId string, data []byte) error {
 	this.mutex.RLock()
 	_, ok := this.mapPubSubStore[topicId]
 	this.mutex.RUnlock()
@@ -34,23 +32,12 @@ func (this *BasicQueueStore) Publish(topicId string, data interface{}) error {
 }
 
 func (this *BasicQueueStore) subscribeInner(topicId string, single *BasicAsyncQueuePubSubStore) error {
-	return this.Consume(topicId, func(argv interface{}) error {
-		var lastError error
-		single.mutex.RLock()
+	return this.Consume(topicId, func(argv []byte, err error) {
 		listeners := single.listener
-		single.mutex.RUnlock()
 
 		for _, singleListener := range listeners {
-			err := singleListener(argv)
-			if err != nil {
-				if lastError == nil {
-					lastError = errors.New(err.Error())
-				} else {
-					lastError = errors.New(lastError.Error() + "\n" + err.Error())
-				}
-			}
+			singleListener(argv, err)
 		}
-		return lastError
 	})
 }
 
@@ -59,17 +46,16 @@ func (this *BasicQueueStore) Subscribe(topicId string, listener QueueListener) e
 	result, ok := this.mapPubSubStore[topicId]
 	if !ok {
 		result = &BasicAsyncQueuePubSubStore{}
-		result.listener = []QueueListener{listener}
+		this.mapPubSubStore[topicId] = result
 	}
-	this.mapPubSubStore[topicId] = result
+	result.listener = append(result.listener, listener)
 	this.mutex.Unlock()
 
 	if !ok {
+		//第一次订阅
 		return this.subscribeInner(topicId, result)
 	} else {
-		result.mutex.Lock()
-		result.listener = append(result.listener, listener)
-		result.mutex.Unlock()
+		//非第一次的订阅
 		return nil
 	}
 }

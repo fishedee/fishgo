@@ -11,7 +11,7 @@ type MemoryQueuePushPopStore struct {
 
 type MemoryQueueStore struct {
 	mapPushPopStore map[string]MemoryQueuePushPopStore
-	mutex           sync.Mutex
+	mutex           sync.RWMutex
 }
 
 func NewMemoryQueue(closeFunc *CloseFunc, config QueueStoreConfig) (QueueStoreInterface, error) {
@@ -20,14 +20,14 @@ func NewMemoryQueue(closeFunc *CloseFunc, config QueueStoreConfig) (QueueStoreIn
 	return NewBasicQueue(result), nil
 }
 
-func (this *MemoryQueueStore) Produce(topicId string, data interface{}) error {
-	this.mutex.Lock()
+func (this *MemoryQueueStore) Produce(topicId string, data []byte) error {
+	this.mutex.RLock()
 	result, ok := this.mapPushPopStore[topicId]
-	this.mutex.Unlock()
+	this.mutex.RUnlock()
 	if !ok {
 		return nil
 	}
-	result.listener(data)
+	result.listener(data, nil)
 	return nil
 }
 
