@@ -1,6 +1,7 @@
 package web
 
 import (
+	"github.com/fishedee/app/router"
 	"github.com/fishedee/language"
 	"net/http"
 	"reflect"
@@ -137,14 +138,14 @@ func InitRoute(namespace string, target ControllerInterface) {
 	handler.addRoute(namespace, target)
 }
 
-func Run() error {
+func runServer(httpHandler http.Handler) error {
 	//启动服务器
 	httpPort := globalBasic.Config.GetInt("httpport")
 	if httpPort == 0 {
 		httpPort = 8080
 	}
 	globalBasic.Log.Debug("Server is Running :%v", httpPort)
-	err := globalBasic.Grace.ListenAndServe(httpPort, &handler)
+	err := globalBasic.Grace.ListenAndServe(httpPort, httpHandler)
 	if err != nil {
 		globalBasic.Log.Error("Listen fail! " + err.Error())
 		return err
@@ -153,4 +154,16 @@ func Run() error {
 	//删除收尾的资源
 	destroyBasic()
 	return nil
+}
+
+func Run() error {
+	return runServer(&handler)
+}
+
+func RunAppRouter(factory *router.RouterFactory) error {
+	factory.NotFound(func(w http.ResponseWriter, r *http.Request) {
+		handler.ServeHTTP(w, r)
+	})
+	httpHandler := factory.Create()
+	return runServer(httpHandler)
 }
