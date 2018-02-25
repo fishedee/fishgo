@@ -30,6 +30,7 @@ type Queue interface {
 	SubscribeInPool(topicId string, listener interface{}, poolSize int) error
 	MustSubscribeInPool(topicId string, listener interface{}, poolSize int)
 
+	Run()
 	Close()
 }
 
@@ -48,6 +49,7 @@ type queueImplement struct {
 	poolSize  int
 	debug     bool
 	closeFunc *CloseFunc
+	exitChan  chan bool
 }
 
 func NewQueue(log Log, config QueueConfig) (Queue, error) {
@@ -65,6 +67,7 @@ func NewQueue(log Log, config QueueConfig) (Queue, error) {
 			poolSize:  config.PoolSize,
 			debug:     config.Debug,
 			closeFunc: closeFunc,
+			exitChan:  make(chan bool, 8),
 		}, nil
 	} else if config.Driver == "redis" {
 		closeFunc := NewCloseFunc()
@@ -82,6 +85,7 @@ func NewQueue(log Log, config QueueConfig) (Queue, error) {
 			poolSize:  config.PoolSize,
 			debug:     config.Debug,
 			closeFunc: closeFunc,
+			exitChan:  make(chan bool, 8),
 		}, nil
 	} else {
 		return nil, errors.New("invalid memory config " + config.Driver)
@@ -284,7 +288,12 @@ func (this *queueImplement) MustSubscribeInPool(topicId string, listener interfa
 	}
 }
 
+func (this *queueImplement) Run() {
+	<-this.exitChan
+}
+
 func (this *queueImplement) Close() {
+	this.exitChan <- true
 	this.store.Close()
 	this.closeFunc.Close()
 }
