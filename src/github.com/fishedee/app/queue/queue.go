@@ -30,7 +30,7 @@ type Queue interface {
 	SubscribeInPool(topicId string, listener interface{}, poolSize int) error
 	MustSubscribeInPool(topicId string, listener interface{}, poolSize int)
 
-	Run()
+	Run() error
 	Close()
 }
 
@@ -288,12 +288,13 @@ func (this *queueImplement) MustSubscribeInPool(topicId string, listener interfa
 	}
 }
 
-func (this *queueImplement) Run() {
+func (this *queueImplement) Run() error {
 	<-this.exitChan
+	this.store.Close()
+	this.closeFunc.Close()
+	return nil
 }
 
 func (this *queueImplement) Close() {
 	this.exitChan <- true
-	this.store.Close()
-	this.closeFunc.Close()
 }

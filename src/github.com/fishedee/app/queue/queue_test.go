@@ -196,32 +196,6 @@ func TestQueueRedis(t *testing.T) {
 	}
 }
 
-func TestQueueRun(t *testing.T) {
-	//ConsumeInPool配置Sync
-	testCase := []struct {
-		Queue Queue
-		Data  int
-	}{
-		{newQueueForTest(t, QueueConfig{
-			Driver: "memory",
-		}), 123},
-		{newQueueForTest(t, QueueConfig{
-			SavePath:   "127.0.0.1:6379,100,13420693396",
-			SavePrefix: "queue2:",
-			Driver:     "redis",
-		}), 456},
-	}
-	for singleTestCaseIndex, singleTestCase := range testCase {
-		inputEvent := make(chan bool)
-		go func() {
-			singleTestCase.Queue.Run()
-			inputEvent <- true
-		}()
-		singleTestCase.Queue.Close()
-		AssertEqual(t, true, <-inputEvent, singleTestCaseIndex)
-	}
-}
-
 func TestQueueClose(t *testing.T) {
 	//ConsumeInPool配置Sync
 	testCase := []struct {
@@ -247,7 +221,8 @@ func TestQueueClose(t *testing.T) {
 		})
 		singleTestCase.Queue.Produce("queue", singleTestCase.Data)
 		<-inputEvent
-		singleTestCase.Queue.Close()
+		go singleTestCase.Queue.Close()
+		singleTestCase.Queue.Run()
 		AssertEqual(t, result, singleTestCase.Data, singleTestCaseIndex)
 	}
 }

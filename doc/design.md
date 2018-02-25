@@ -24,17 +24,50 @@ fishgo设计原则与历史
 
 ## 4.2 Daemon生命周期
 
-Daemon的生命周期为run和close
+Daemon在使用时需要考虑到四个场景
 
-run就是同步阻塞，开始运行，直到daemmon异常或正常退出。至于在调用run之前或之后，是否接受运行任务则未定义，各业务可以按照自己需要来做。
+* 单个daemon运行，一个daemon的关闭触发整个进程的关闭
+* 多个daemon运行，所有daemon的关闭才能触发整个进程的关闭
+* 异常退出的情况下，一个daemon的退出会触发其他daemon的关闭
+* 主动退出的情况下，逐个让每个daemon优雅关闭
 
-close就是中断关闭daemon，它会在完成所有的收尾工作后才返回。
+```
+func WhenExit(){
+	daemon1.Close()
+}
+func main(){
+	err := daemon1.Run()
+	if err != nil{
+		panic(err)
+	}
+}
+```
 
-这样做的原因是：
+单个daemon的运行，异常退出时panic触发整个进程的退出，正常退出时Close触发Run退出
 
-* 如果不提供run的同步阻塞接口，遇到单daemon运行的程序时，主程序就会因为没事而做而提前结束。例如，web的queue没有run接口，所以web无法执行单独运行queue的任务
-* 不需要提供start与wait接口，因为run接口以go方式运行时就有start的功效，wait的功效可以通过等待run接口返回来实现。
-* close需要完成所有的收尾工作后才返回，是为了保证close返回后就能执行重试了，避免边close边重试的冲突问题
+```
+func WhenExit(){
+	workgroup.Close()
+}
+
+func main(){
+	workgroup := NewWorkGroup()
+	workgroup.Add(queue)
+	workgroup.Add(timer)
+	workgroup.Add(server)
+	err := workgroup.Run()
+	if err != nil{
+		panic(err)
+	}
+}
+```
+
+多个daemon的运行，异常退出时panic触发整个进程的退出，正常退出时Close触发Run退出
+
+所以，所有的daemon都需要有以下的两个接口
+
+* Run()error，正常运行时阻塞进程，正常退出时返回nil，异常发生时马上退出，返回非nil。要注意，Run的返回意味着所有的收尾工作都已经做完了。
+* Close()，立即关闭进程，这个操作应该是马上返回的，不需要等待收尾工作的完成。
 
 ## 4.3 error与exception
 
