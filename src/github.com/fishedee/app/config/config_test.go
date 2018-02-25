@@ -19,7 +19,7 @@ type testNormal struct {
 func TestConfigNormal(t *testing.T) {
 	config, _ := NewConfig("ini", "testdata/normal.ini")
 	result := testNormal{}
-	config.GetStruct("", &result)
+	config.MustBind("", &result)
 	AssertEqual(t, result, testNormal{
 		A: 2,
 		B: "asdf",
@@ -33,5 +33,31 @@ func TestConfigNormal(t *testing.T) {
 func TestConfigProd(t *testing.T) {
 	os.Setenv("RUNMODE", "prod")
 	config, _ := NewConfig("ini", "testdata/prod.ini")
-	AssertEqual(t, config.GetInt("a"), 8)
+	AssertEqual(t, config.MustInt("a"), 8)
+}
+
+func TestConfigError(t *testing.T) {
+	config, _ := NewConfig("ini", "testdata/error.ini")
+
+	var err error
+	//格式错误
+	_, err = config.Int("a")
+	AssertEqual(t, err != nil, true)
+	_, err = config.Bool("c")
+	AssertEqual(t, err != nil, true)
+
+	//空值略过
+	_, err = config.String("b")
+	AssertEqual(t, err == nil, true)
+	_, err = config.Duration("d")
+	AssertEqual(t, err == nil, true)
+	_, err = config.StringList("e")
+	AssertEqual(t, err == nil, true)
+	_, err = config.Float("f")
+	AssertEqual(t, err == nil, true)
+
+	data := testNormal{}
+	err = config.Bind("", &data)
+	t.Logf("%v", err)
+	AssertEqual(t, err != nil, true)
 }
