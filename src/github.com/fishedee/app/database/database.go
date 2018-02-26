@@ -103,7 +103,7 @@ type DatabaseConfig struct {
 	Passowrd      string `config:"password"`
 	Charset       string `config:"charset"`
 	Collation     string `config:"collation"`
-	Database      string `config:"charset"`
+	Database      string `config:"database"`
 	Debug         bool   `config:"debug"`
 	MaxConnection int    `config:"maxconnection"`
 }
