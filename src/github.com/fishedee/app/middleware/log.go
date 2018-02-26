@@ -9,8 +9,8 @@ import (
 )
 
 func NewLogMiddleware(log Log) RouterMiddleware {
-	return func(handler []interface{}) interface{} {
-		last := handler[len(handler)-1].(func(w http.ResponseWriter, r *http.Request, param RouterParam))
+	return func(prev RouterMiddlewareContext) RouterMiddlewareContext {
+		last := prev.Handler.(func(w http.ResponseWriter, r *http.Request, param RouterParam))
 		run := func(w http.ResponseWriter, r *http.Request, param RouterParam) {
 			defer CatchCrash(func(exception Exception) {
 				log.Critical("Buiness Crash Code:[%d] Message:[%s]\nStackTrace:[%s]", exception.GetCode(), exception.GetMessage(), exception.GetStackTrace())
@@ -19,11 +19,14 @@ func NewLogMiddleware(log Log) RouterMiddleware {
 			})
 			last(w, r, param)
 		}
-		return func(w http.ResponseWriter, r *http.Request, param RouterParam) {
-			beginTime := time.Now().UnixNano()
-			run(w, r, param)
-			endTime := time.Now().UnixNano()
-			log.Debug("%s %s : %s", r.Method, r.URL.String(), time.Duration(endTime-beginTime).String())
+		return RouterMiddlewareContext{
+			Data: prev.Data,
+			Handler: func(w http.ResponseWriter, r *http.Request, param RouterParam) {
+				beginTime := time.Now().UnixNano()
+				run(w, r, param)
+				endTime := time.Now().UnixNano()
+				log.Debug("%s %s : %s", r.Method, r.URL.String(), time.Duration(endTime-beginTime).String())
+			},
 		}
 
 	}

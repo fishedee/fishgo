@@ -1,7 +1,11 @@
 package middleware
 
 import (
+	. "github.com/fishedee/app/log"
+	. "github.com/fishedee/app/render"
 	. "github.com/fishedee/app/router"
+	. "github.com/fishedee/app/session"
+	. "github.com/fishedee/app/validator"
 	. "github.com/fishedee/assert"
 	"net/http"
 	"testing"
@@ -14,6 +18,7 @@ type testInterface interface {
 	Any(w http.ResponseWriter, r *http.Request)
 	GET_do5(w http.ResponseWriter, r *http.Request)
 	POST_Do6_Json(w http.ResponseWriter, r *http.Request)
+	Do7_Text(v Validator, s Session) interface{}
 }
 type testObject struct {
 }
@@ -42,14 +47,26 @@ func (this *testObject) POST_Do6_Json(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("do6"))
 }
 
+func (this *testObject) Do7_Text(v Validator, s Session) interface{} {
+	return "do7"
+}
+
 func TestRouterObject(t *testing.T) {
 	var testObjectInterface testInterface
 	testObjectInterface = &testObject{}
+
+	log, _ := NewLog(LogConfig{Driver: "console"})
+	renderFactory, _ := NewRenderFactory(RenderConfig{})
+	validatorFactory, _ := NewValidatorFactory(ValidatorConfig{})
+	sessionFactory, _ := NewSessionFactory(SessionConfig{Driver: "memory", CookieName: "fishmm"})
+	middleware := NewEasyMiddleware(log, validatorFactory, sessionFactory, renderFactory)
 
 	routerFactory := NewRouterFactory()
 	routerFactory.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("404"))
 	})
+	routerFactory.Use(middleware)
+
 	ObjectRouter(routerFactory, "/", &testObject{})
 	ObjectRouter(routerFactory, "/mc", &testObject{})
 	ObjectRouter(routerFactory, "/mj", testObjectInterface)
@@ -64,18 +81,21 @@ func TestRouterObject(t *testing.T) {
 		{"ANY", "/", "do4"},
 		{"GET", "/do5", "do5"},
 		{"POST", "/do6", "do6"},
+		{"ANY", "/do7", "do7"},
 		{"ANY", "/mc/do1", "do1"},
 		{"ANY", "/mc/do2", "do2"},
 		{"ANY", "/mc/do3", "do3"},
 		{"ANY", "/mc", "do4"},
 		{"GET", "/mc/do5", "do5"},
 		{"POST", "/mc/do6", "do6"},
+		{"ANY", "/mc/do7", "do7"},
 		{"ANY", "/mj/do1", "do1"},
 		{"ANY", "/mj/do2", "do2"},
 		{"ANY", "/mj/do3", "do3"},
 		{"ANY", "/mj", "do4"},
 		{"GET", "/mj/do5", "do5"},
 		{"POST", "/mj/do6", "do6"},
+		{"ANY", "/mj/do7", "do7"},
 	}
 	router := routerFactory.Create()
 	for index, singleTestCase := range testCase {

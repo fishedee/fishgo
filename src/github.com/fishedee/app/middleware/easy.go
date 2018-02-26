@@ -8,25 +8,22 @@ import (
 	. "github.com/fishedee/app/validator"
 	. "github.com/fishedee/language"
 	"net/http"
-	"reflect"
-	"runtime"
 	"strings"
 )
 
 func NewEasyMiddleware(log Log, validatorFactory ValidatorFactory, sessionFactory SessionFactory, renderFactory RenderFactory) RouterMiddleware {
-	return func(handler []interface{}) interface{} {
-		last := handler[len(handler)-1]
-		lastHandler, isOk := last.(func(v Validator, s Session) interface{})
+	return func(prev RouterMiddlewareContext) RouterMiddlewareContext {
+		lastHandler, isOk := prev.Handler.(func(v Validator, s Session) interface{})
 		if isOk == false {
-			return last
+			return prev
 		}
-		first := handler[0]
-		name := runtime.FuncForPC(reflect.ValueOf(first).Pointer()).Name()
+		name := prev.Data["name"].(string)
 		nameInfo := Explode(name, "_")
 		if len(nameInfo) == 0 {
-			return last
+			return prev
 		}
 		renderName := strings.ToLower(nameInfo[len(nameInfo)-1])
+
 		renderChange := func(err Exception, result interface{}) interface{} {
 			if renderName == "raw" {
 				if err.GetCode() != 0 {
@@ -74,30 +71,33 @@ func NewEasyMiddleware(log Log, validatorFactory ValidatorFactory, sessionFactor
 				return result
 			}
 		}
-		return func(w http.ResponseWriter, r *http.Request, p RouterParam) {
-			param := map[string]string{}
-			if p != nil {
-				for _, singleP := range p {
-					param[singleP.Key] = singleP.Value
+		return RouterMiddlewareContext{
+			Data: prev.Data,
+			Handler: func(w http.ResponseWriter, r *http.Request, p RouterParam) {
+				param := map[string]string{}
+				if p != nil {
+					for _, singleP := range p {
+						param[singleP.Key] = singleP.Value
+					}
 				}
-			}
-			validator := validatorFactory.Create(r, param)
-			session := sessionFactory.Create(w, r)
-			render := renderFactory.Create(w, r)
-			var result interface{}
-			var exception Exception
-			func() {
-				defer Catch(func(e Exception) {
-					exception = e
-					log.Error("Buiness Error Code:[%d] Message:[%s]\nStackTrace:[%s]", e.GetCode(), e.GetMessage(), e.GetStackTrace())
-				})
-				result = lastHandler(validator, session)
-			}()
-			data := renderChange(exception, result)
-			err := render.Format(renderName, data)
-			if err != nil {
-				panic(err)
-			}
+				validator := validatorFactory.Create(r, param)
+				session := sessionFactory.Create(w, r)
+				render := renderFactory.Create(w, r)
+				var result interface{}
+				var exception Exception
+				func() {
+					defer Catch(func(e Exception) {
+						exception = e
+						log.Error("Buiness Error Code:[%d] Message:[%s]\nStackTrace:[%s]", e.GetCode(), e.GetMessage(), e.GetStackTrace())
+					})
+					result = lastHandler(validator, session)
+				}()
+				data := renderChange(exception, result)
+				err := render.Format(renderName, data)
+				if err != nil {
+					panic(err)
+				}
+			},
 		}
 
 	}

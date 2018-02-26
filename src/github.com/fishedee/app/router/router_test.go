@@ -383,11 +383,14 @@ func TestRouterUrlPrefixParam(t *testing.T) {
 
 func TestRouterMiddleware(t *testing.T) {
 	newMiddleware := func(data string) RouterMiddleware {
-		return func(handler []interface{}) interface{} {
-			last := handler[len(handler)-1].(func(w http.ResponseWriter, r *http.Request, param RouterParam))
-			return func(w http.ResponseWriter, r *http.Request, param RouterParam) {
-				w.Write([]byte(data))
-				last(w, r, param)
+		return func(prev RouterMiddlewareContext) RouterMiddlewareContext {
+			handler := prev.Handler.(func(w http.ResponseWriter, r *http.Request, param RouterParam))
+			return RouterMiddlewareContext{
+				Data: prev.Data,
+				Handler: func(w http.ResponseWriter, r *http.Request, param RouterParam) {
+					w.Write([]byte(data))
+					handler(w, r, param)
+				},
 			}
 		}
 	}

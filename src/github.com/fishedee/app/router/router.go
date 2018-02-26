@@ -19,6 +19,7 @@ type RouterSingleParam struct {
 	Key   string
 	Value string
 }
+
 type RouterParam []RouterSingleParam
 
 type routerContext struct {
@@ -342,7 +343,12 @@ type RouterFactory struct {
 	maxSegment int
 }
 
-type RouterMiddleware func([]interface{}) interface{}
+type RouterMiddlewareContext struct {
+	Data    map[string]interface{}
+	Handler interface{}
+}
+
+type RouterMiddleware func(RouterMiddlewareContext) RouterMiddlewareContext
 
 var RouterMethod struct {
 	EnumStruct
@@ -552,13 +558,19 @@ func (this *RouterFactory) Group(basePath string, handler func(r *RouterFactory)
 }
 
 func (this *RouterFactory) createHandler(middlewares []RouterMiddleware, handler interface{}) routerFactoryHandlerFunc {
-	middlewares = append(middlewares, NewNoParamMiddleware())
-	allHandler := []interface{}{handler}
-	for i := len(middlewares) - 1; i >= 0; i-- {
-		curHandler := middlewares[i](allHandler)
-		allHandler = append(allHandler, curHandler)
+	middlewareContext, isOk := handler.(RouterMiddlewareContext)
+	if isOk == false {
+		middlewareContext = RouterMiddlewareContext{
+			Data:    map[string]interface{}{},
+			Handler: handler,
+		}
 	}
-	resultHandler := allHandler[len(allHandler)-1]
+	middlewares = append(middlewares, NewNoParamMiddleware())
+	curContext := middlewareContext
+	for i := len(middlewares) - 1; i >= 0; i-- {
+		curContext = middlewares[i](curContext)
+	}
+	resultHandler := curContext.Handler
 	httpHandler, isOk := resultHandler.(func(w http.ResponseWriter, r *http.Request, param RouterParam))
 	if isOk == false {
 		panic("handler must be routerFactoryHandlerFunc type,current type is " + fmt.Sprintf("%v", reflect.TypeOf(resultHandler)))

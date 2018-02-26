@@ -55,6 +55,11 @@ func ObjectRouter(factory *RouterFactory, basePath string, handler interface{}) 
 			continue
 		}
 		addRouter, path := analyseObjectRouter(factory, methodName)
-		addRouter(basePath+"/"+path, handlerValue.Method(i).Interface())
+		addRouter(basePath+"/"+path, RouterMiddlewareContext{
+			Data: map[string]interface{}{
+				"name": methodName,
+			},
+			Handler: handlerValue.Method(i).Interface(),
+		})
 	}
 }

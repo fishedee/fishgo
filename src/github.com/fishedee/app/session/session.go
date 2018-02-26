@@ -3,6 +3,7 @@ package session
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/astaxie/beego/session"
 	. "github.com/fishedee/language"
 	"net/http"
@@ -35,7 +36,7 @@ type SessionFactory interface {
 }
 
 type SessionConfig struct {
-	Driver           string `json:"driver" config:"dirver"`
+	Driver           string `json:"driver" config:"driver"`
 	CookieName       string `json:"cookieName" config:"name"`
 	DisableSetCookie bool   `json:"-" config:"disablesetcookie"`
 	GcLifeTime       int    `json:"gclifetime" config:"gclifttime"`
@@ -53,7 +54,7 @@ type sessionFactoryImplement struct {
 
 func NewSessionFactory(config SessionConfig) (SessionFactory, error) {
 	if config.Driver == "" {
-		return nil, nil
+		return nil, fmt.Errorf("invalid session driver:[%v]", config.Driver)
 	}
 	if config.CookieName == "" {
 		config.CookieName = "session"
