@@ -54,7 +54,7 @@ type queueImplement struct {
 
 func NewQueue(log Log, config QueueConfig) (Queue, error) {
 	if config.Driver == "" {
-		return nil, nil
+		return nil, errors.New("invalid queue driver empty!")
 	} else if config.Driver == "memory" {
 		closeFunc := NewCloseFunc()
 		queue, err := NewMemoryQueue(QueueStoreConfig{})

@@ -39,7 +39,7 @@ func (this *Ioc) dfs(t reflect.Type, visit map[reflect.Type]bool) (reflect.Value
 
 	info, isExist := this.builder[t]
 	if isExist == false {
-		return reflect.Value{}, errors.New("unknown type")
+		return reflect.Value{}, errors.New("unknown type [" + t.String() + "]")
 	}
 	args := []reflect.Value{}
 	for _, singleDepType := range info.depType {
