@@ -23,48 +23,50 @@ func TestGzipMinSize(t *testing.T) {
 		data       string
 		isCompress bool
 		handler    func(w http.ResponseWriter)
+		statusCode int
 	}{
 		{"1", false, func(w http.ResponseWriter) {
 			w.Write([]byte("1"))
-		}},
+		}, 200},
 		{"1234", false, func(w http.ResponseWriter) {
 			w.Write([]byte("1234"))
-		}},
+		}, 200},
 		{"12345", false, func(w http.ResponseWriter) {
 			w.Write([]byte("12345"))
-		}},
+		}, 200},
 		{"123456", true, func(w http.ResponseWriter) {
 			w.Write([]byte("123456"))
-		}},
+		}, 200},
 		{"1234", false, func(w http.ResponseWriter) {
+			w.WriteHeader(404)
 			w.Write([]byte("123"))
 			w.Write([]byte("4"))
-		}},
+		}, 404},
 		{"12345", false, func(w http.ResponseWriter) {
 			w.Write([]byte("1234"))
 			w.Write([]byte("5"))
-		}},
+		}, 200},
 		{"123456", true, func(w http.ResponseWriter) {
 			w.Write([]byte("123456"))
-		}},
+		}, 200},
 		{"123456", true, func(w http.ResponseWriter) {
 			w.Write([]byte("12345"))
 			w.Write([]byte("6"))
-		}},
+		}, 200},
 		{"123456", true, func(w http.ResponseWriter) {
 			w.Write([]byte("1234"))
 			w.Write([]byte("56"))
-		}},
+		}, 200},
 		{"123456789", true, func(w http.ResponseWriter) {
 			w.Write([]byte("1234"))
 			w.Write([]byte("56"))
 			w.Write([]byte("7"))
 			w.Write([]byte("8"))
 			w.Write([]byte("9"))
-		}},
+		}, 200},
 		{"123456789", true, func(w http.ResponseWriter) {
 			w.Write([]byte("123456789"))
-		}},
+		}, 200},
 		{"123456789", true, func(w http.ResponseWriter) {
 			w.Write([]byte("1234"))
 			w.Write([]byte("5"))
@@ -72,7 +74,15 @@ func TestGzipMinSize(t *testing.T) {
 			w.Write([]byte("7"))
 			w.Write([]byte("8"))
 			w.Write([]byte("9"))
-		}},
+		}, 200},
+		{"123456789", true, func(w http.ResponseWriter) {
+			w.Header().Set("Content-Length", "9")
+			w.WriteHeader(404)
+			w.Write([]byte("123456789"))
+		}, 404},
+		{"", false, func(w http.ResponseWriter) {
+			w.WriteHeader(301)
+		}, 301},
 	}
 
 	for _, singleTestCase := range testCase {
@@ -94,6 +104,7 @@ func TestGzipMinSize(t *testing.T) {
 				panic(err)
 			}
 		}
+		AssertEqual(t, w.Result().StatusCode, singleTestCase.statusCode)
 		AssertEqual(t, data, []byte(singleTestCase.data))
 	}
 }
@@ -122,7 +133,7 @@ func TestGzipContentType(t *testing.T) {
 			panic(err)
 		}
 		r, _ := http.NewRequest("GET", "/", nil)
-		r.Header.Set("Accept-Encoding", "gzip;q=1.0, identity; q=0.5, *;q=0")
+		r.Header.Set("Accept-Encoding", "gzip,deflate,br")
 		w := httptest.NewRecorder()
 		gzip.ServeHTTP(w, r, func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", singleTestCase.buildContentType)

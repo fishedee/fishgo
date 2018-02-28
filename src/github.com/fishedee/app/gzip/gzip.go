@@ -80,6 +80,7 @@ func (this *gzipImplement) ServeHTTP(w http.ResponseWriter, r *http.Request, nex
 		enableGzip:     false,
 		writer:         nil,
 		totalSize:      0,
+		statusCode:     0,
 	}
 	defer gw.Close()
 
@@ -107,6 +108,7 @@ type gzipResponseWriter struct {
 	enableGzip bool
 	writer     *gzipWriter
 	totalSize  int
+	statusCode int
 }
 
 type gzipResponseWriterWithCloseNotify struct {
@@ -225,6 +227,15 @@ func (w *gzipResponseWriter) Write(b []byte) (int, error) {
 	}
 }
 
+func (w *gzipResponseWriter) WriteHeader(statusCode int) {
+	shouldGzip := w.shouldGzip()
+	if shouldGzip == false {
+		w.ResponseWriter.WriteHeader(statusCode)
+	} else {
+		w.statusCode = statusCode
+	}
+}
+
 func (w *gzipResponseWriter) handleGzip(b []byte) error {
 
 	if len(b) == 0 {
@@ -243,6 +254,10 @@ func (w *gzipResponseWriter) handleGzip(b []byte) error {
 		if w.totalSize <= w.gzipImpl.minSize {
 			w.Header().Set(contentEncoding, "gzip")
 			w.Header().Del(contentLength)
+			if w.statusCode != 0 {
+				w.ResponseWriter.WriteHeader(w.statusCode)
+				w.statusCode = 0
+			}
 			w.writer.writer.Reset(w.ResponseWriter)
 			if w.totalSize != 0 {
 				_, err := w.writer.writer.Write(w.writer.buffer[0:w.totalSize])
@@ -262,15 +277,21 @@ func (w *gzipResponseWriter) handleGzip(b []byte) error {
 }
 
 func (w *gzipResponseWriter) Close() error {
+	if w.statusCode != 0 {
+		w.ResponseWriter.WriteHeader(w.statusCode)
+	}
+
 	if w.writer == nil {
 		return nil
 	}
 
 	if w.totalSize <= w.gzipImpl.minSize {
 		//还未超过minSize
-		_, err := w.ResponseWriter.Write(w.writer.buffer[0:w.totalSize])
-		if err != nil {
-			return err
+		if w.totalSize != 0 {
+			_, err := w.ResponseWriter.Write(w.writer.buffer[0:w.totalSize])
+			if err != nil {
+				return err
+			}
 		}
 	} else {
 		//超过minSize
