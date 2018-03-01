@@ -124,6 +124,7 @@ func (this *queueImplement) DecodeData(dataByte []byte, dataType []reflect.Type)
 
 func (this *queueImplement) WrapPoolListener(listener QueueListener, poolSize int) QueueListener {
 	if poolSize <= 0 {
+		//不限量的读取
 		return func(data []byte) {
 			this.closeFunc.IncrCloseCounter()
 			go func() {
@@ -132,12 +133,14 @@ func (this *queueImplement) WrapPoolListener(listener QueueListener, poolSize in
 			}()
 		}
 	} else if poolSize == 1 {
+		//限量只有1个的读取
 		return func(data []byte) {
 			this.closeFunc.IncrCloseCounter()
 			defer this.closeFunc.DecrCloseCounter()
 			listener(data)
 		}
 	} else {
+		//限量只有poolSize个的读取，注意不能提前将所有数据都读出来放在内存
 		chanConsume := make(chan bool, poolSize)
 		for i := 0; i != poolSize; i++ {
 			chanConsume <- true
@@ -148,8 +151,8 @@ func (this *queueImplement) WrapPoolListener(listener QueueListener, poolSize in
 			go func() {
 				defer func() {
 					chanConsume <- true
+					this.closeFunc.DecrCloseCounter()
 				}()
-				defer this.closeFunc.DecrCloseCounter()
 				listener(data)
 			}()
 		}

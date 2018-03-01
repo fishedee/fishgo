@@ -3,6 +3,7 @@ package queue
 import (
 	. "github.com/fishedee/app/log"
 	. "github.com/fishedee/assert"
+	"sort"
 	"strconv"
 	"testing"
 	"time"
@@ -120,79 +121,90 @@ func TestQueueBasic(t *testing.T) {
 	}
 }
 
-func TestQueueSync(t *testing.T) {
-	//ConsumeInPool配置Sync
-	manager := newQueueForTest(t, QueueConfig{
-		Driver: "memory",
-	})
-	for i := 0; i != 100; i++ {
-		var result int
-		manager.ConsumeInPool("queue", func(data int) {
-			result = data
-		}, 1)
-		manager.Produce("queue", i)
-		AssertEqual(t, i, result, i)
+func TestQueuePoolSize(t *testing.T) {
+	testCaseDriver := []Queue{
+		newQueueForTest(t, QueueConfig{
+			SavePrefix: "queue:",
+			Driver:     "memory",
+		}),
 	}
 
-	//ConsumeInPool配置Async
-	manager2 := newQueueForTest(t, QueueConfig{
-		Driver: "memory",
-	})
-	var hasFalse bool
-	for i := 0; i != 100; i++ {
-		var result int
-		manager2.Consume("queue", func(data int) {
-			result = data
-		})
-		manager2.Produce("queue", i)
-		if result == 0 {
-			hasFalse = true
+	testCase := []struct {
+		poolSize    int
+		minDuration time.Duration
+		maxDuration time.Duration
+	}{
+		{0, time.Millisecond * 100, time.Millisecond * 200},
+		{1, time.Millisecond * 1000, time.Millisecond * 1100},
+		{2, time.Millisecond * 500, time.Millisecond * 600},
+	}
+
+	for queueIndex, queue := range testCaseDriver {
+		for index, test := range testCase {
+			testCaseIndex := strconv.Itoa(queueIndex) + "_" + strconv.Itoa(index)
+			result := make(chan int, 10)
+			name := "queue4_" + strconv.Itoa(index)
+			queue.ConsumeInPool(name, func(data int) {
+				result <- data
+				time.Sleep(time.Millisecond * 100)
+			}, test.poolSize)
+			for i := 0; i != 10; i++ {
+				queue.Produce(name, i)
+			}
+			go queue.Close()
+			begin := time.Now()
+			queue.Run()
+			end := time.Now()
+			AssertEqual(t, end.Sub(begin) >= test.minDuration, true, testCaseIndex+","+end.Sub(begin).String())
+			AssertEqual(t, end.Sub(begin) <= test.maxDuration, true, testCaseIndex)
+
+			close(result)
+			temp := []int{}
+			for single := range result {
+				temp = append(temp, single)
+			}
+			sort.Ints(temp)
+			AssertEqual(t, temp, []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}, testCaseIndex)
 		}
-	}
-	AssertEqual(t, hasFalse, true, 0)
 
-	//config配置Sync
-	manager3 := newQueueForTest(t, QueueConfig{
-		Driver:   "memory",
-		PoolSize: 1,
-	})
-	for i := 0; i != 100; i++ {
-		var result int
-		manager3.Consume("queue", func(data int) {
-			result = data
-		})
-		manager3.Produce("queue", i)
-		AssertEqual(t, i, result, i)
 	}
 }
 
-func TestQueueRedis(t *testing.T) {
-	queue := newQueueForTest(t, QueueConfig{
-		SavePath:   "127.0.0.1:6379,100,13420693396",
-		SavePrefix: "queue:",
-		Driver:     "redis",
-	})
+func TestQueueProduceFirst(t *testing.T) {
+	testCaseDriver := []Queue{
+		newQueueForTest(t, QueueConfig{
+			SavePrefix: "queue:",
+			Driver:     "memory",
+		}),
+		newQueueForTest(t, QueueConfig{
+			SavePath:   "127.0.0.1:6379,100,13420693396",
+			SavePrefix: "queue:",
+			Driver:     "redis",
+		}),
+	}
 
-	//生产者消费者模式有累积效应
-	queue.Produce("topic1", 1)
-	var result = make(chan int)
-	queue.Consume("topic1", func(data int) {
-		result <- data
-	})
-	target := <-result
-	AssertEqual(t, target, 1, 0)
+	for _, queue := range testCaseDriver {
+		//生产者消费者模式有累积效应
+		queue.Produce("topic1", 1)
+		var result = make(chan int)
+		queue.Consume("topic1", func(data int) {
+			result <- data
+		})
+		target := <-result
+		AssertEqual(t, target, 1, 0)
 
-	//发布订阅模式没有累积效应
-	queue.Publish("topic2", 2)
-	var result2 = make(chan int)
-	queue.Subscribe("topic2", func(data int) {
-		result2 <- data
-	})
-	select {
-	case <-result2:
-		AssertEqual(t, false, "invalid!", 0)
-	case <-time.NewTimer(time.Second).C:
-		break
+		//发布订阅模式没有累积效应
+		queue.Publish("topic2", 2)
+		var result2 = make(chan int)
+		queue.Subscribe("topic2", func(data int) {
+			result2 <- data
+		})
+		select {
+		case <-result2:
+			AssertEqual(t, false, "invalid!", 0)
+		case <-time.NewTimer(time.Second).C:
+			break
+		}
 	}
 }
 
