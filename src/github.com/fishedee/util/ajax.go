@@ -2,6 +2,8 @@ package util
 
 import (
 	"bytes"
+	"compress/flate"
+	"compress/gzip"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
@@ -408,11 +410,41 @@ func (this *Ajax) saveResponseJsonData(respString []byte) error {
 	return nil
 }
 
+func (this *Ajax) decodeResponseBody(response *http.Response) ([]byte, error) {
+	contentEncoding := response.Header.Get("Content-Encoding")
+	var reader io.ReadCloser
+	var decodeReader io.ReadCloser
+	if strings.Contains(contentEncoding, "gzip") {
+		gzipReader, err := gzip.NewReader(response.Body)
+		if err != nil {
+			return nil, err
+		}
+		decodeReader = gzipReader
+		reader = gzipReader
+	} else if strings.Contains(contentEncoding, "deflate") {
+		decodeReader := flate.NewReader(response.Body)
+		reader = decodeReader
+	} else {
+		reader = response.Body
+	}
+	respString, err := ioutil.ReadAll(reader)
+	if err != nil {
+		return nil, err
+	}
+	if decodeReader != nil {
+		err := decodeReader.Close()
+		if err != nil {
+			return nil, err
+		}
+	}
+	return respString, nil
+}
+
 func (this *Ajax) saveResponseData(response *http.Response) ([]byte, error) {
 	if this.ResponseData == nil {
 		return []byte{}, nil
 	}
-	respString, err := ioutil.ReadAll(response.Body)
+	respString, err := this.decodeResponseBody(response)
 	if err != nil {
 		return []byte{}, err
 	}
