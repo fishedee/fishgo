@@ -20,6 +20,7 @@ type RedisQueueStore struct {
 	dbNum            int
 	retryInterval    int
 	consumeListeners sync.Map
+	waitgroup        *sync.WaitGroup
 	isClose          int32
 }
 
@@ -69,6 +70,7 @@ func NewRedisQueue(log Log, config QueueStoreConfig) (QueueStoreInterface, error
 		poolsize:      poolsize,
 		retryInterval: config.RetryInterval,
 		log:           log,
+		waitgroup:     &sync.WaitGroup{},
 	}
 	var err error
 	result.redisPool, err = result.getConnectPool()
@@ -154,27 +156,36 @@ func (this *RedisQueueStore) singleConsume(topicId string, listener QueueListene
 	}()
 	for {
 		data, err := this.consumeData(conn, topicId, 5)
+		isExit := atomic.LoadInt32(&this.isClose)
 		if err != nil {
-			return err
+			if isExit == 1 {
+				return nil
+			} else {
+				return err
+			}
 		}
 		if data == nil {
-			continue
-		} else {
-			listener(data)
+			if isExit == 1 {
+				return nil
+			} else {
+				continue
+			}
 		}
+		listener(data)
 	}
 }
 
 func (this *RedisQueueStore) Consume(topicId string, listener QueueListener) error {
+	this.waitgroup.Add(1)
 	go func() {
 		for {
 			err := this.singleConsume(topicId, listener)
-			isExit := atomic.LoadInt32(&this.isClose)
-			if isExit == 0 {
+			if err != nil {
 				this.log.Critical("Queue Redis consume error :%v, will be retry in %v seconds", err, this.retryInterval)
 				time.Sleep(time.Duration(int(time.Second) * this.retryInterval))
 			} else {
-				return
+				this.waitgroup.Done()
+				break
 			}
 		}
 	}()
@@ -185,6 +196,7 @@ func (this *RedisQueueStore) Close() {
 	atomic.StoreInt32(&this.isClose, 1)
 	this.redisPool.Close()
 	this.closeListener()
+	this.waitgroup.Wait()
 }
 
 func (this *RedisQueueStore) closeListener() {
