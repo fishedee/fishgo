@@ -208,3 +208,6 @@
 [submodule "src/github.com/mattn/go-sqlite3"]
 	path = src/github.com/mattn/go-sqlite3
 	url = git@github.com:mattn/go-sqlite3.git
+[submodule "src/golang.org/x/sys"]
+	path = src/golang.org/x/sys
+	url = git@github.com:golang/sys.git
