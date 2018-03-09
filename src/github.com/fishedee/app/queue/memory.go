@@ -1,65 +1,119 @@
 package queue
 
 import (
+	"errors"
+	. "github.com/fishedee/app/log"
 	. "github.com/fishedee/util"
 	"sync"
+	"sync/atomic"
+	"unsafe"
 )
 
-type MemoryQueuePushPopStore struct {
+type memoryQueueChannel struct {
 	channel *InfiniteChannel
 }
 
-type MemoryQueueStore struct {
-	mapPushPopStore map[string]MemoryQueuePushPopStore
-	mutex           sync.RWMutex
-	waitgroup       *sync.WaitGroup
+type memoryQueueStore struct {
+	router        map[string]map[string]*memoryQueueChannel
+	routerPointer *map[string][]*memoryQueueChannel
+	mutex         sync.Mutex
+	waitgroup     *sync.WaitGroup
+	exitChan      chan bool
 }
 
-func NewMemoryQueue(config QueueStoreConfig) (QueueStoreInterface, error) {
-	result := &MemoryQueueStore{}
-	result.mapPushPopStore = map[string]MemoryQueuePushPopStore{}
+func newMemoryQueue(log Log, config QueueConfig) (queueStoreInterface, error) {
+	result := &memoryQueueStore{}
+	result.router = map[string]map[string]*memoryQueueChannel{}
+	result.routerPointer = &map[string][]*memoryQueueChannel{}
 	result.waitgroup = &sync.WaitGroup{}
-	return NewBasicQueue(result), nil
+	result.exitChan = make(chan bool, 16)
+	return result, nil
 }
 
-func (this *MemoryQueueStore) getTopicInfo(topicId string) MemoryQueuePushPopStore {
-	this.mutex.RLock()
-	result, ok := this.mapPushPopStore[topicId]
-	this.mutex.RUnlock()
-	if !ok {
-		result = MemoryQueuePushPopStore{
-			channel: NewInfiniteChannel(),
-		}
-		this.mutex.Lock()
-		this.mapPushPopStore[topicId] = result
-		this.mutex.Unlock()
-	}
-	return result
+func (this *memoryQueueStore) getRouter() map[string][]*memoryQueueChannel {
+	router := *(*map[string][]*memoryQueueChannel)(atomic.LoadPointer(
+		(*unsafe.Pointer)(unsafe.Pointer(&this.routerPointer)),
+	))
+	return router
 }
-func (this *MemoryQueueStore) Produce(topicId string, data []byte) error {
-	result := this.getTopicInfo(topicId)
-	result.channel.Write(data)
+
+func (this *memoryQueueStore) setRouter(topicId string, queueName string) (*memoryQueueChannel, error) {
+	this.mutex.Lock()
+	defer this.mutex.Unlock()
+
+	queues, isExist := this.router[topicId]
+	if isExist == false {
+		queues = map[string]*memoryQueueChannel{}
+		this.router[topicId] = queues
+	}
+	_, isExist = queues[queueName]
+	if isExist == true {
+		return nil, errors.New("has exist queue " + queueName)
+	}
+	result := &memoryQueueChannel{
+		channel: NewInfiniteChannel(),
+	}
+	queues[queueName] = result
+
+	newRouter := map[string][]*memoryQueueChannel{}
+	for topicId, single := range this.router {
+		singleChannel := []*memoryQueueChannel{}
+		for _, single2 := range single {
+			singleChannel = append(singleChannel, single2)
+		}
+		newRouter[topicId] = singleChannel
+	}
+	atomic.StorePointer(
+		(*unsafe.Pointer)(unsafe.Pointer(&this.routerPointer)),
+		unsafe.Pointer(&newRouter),
+	)
+	return result, nil
+}
+
+func (this *memoryQueueStore) Produce(topicId string, data []byte) error {
+	router := this.getRouter()
+	queues, isExist := router[topicId]
+	if isExist == false {
+		return nil
+	}
+	for _, queue := range queues {
+		queue.channel.Write(data)
+	}
 	return nil
 }
 
-func (this *MemoryQueueStore) Consume(topicId string, listener QueueListener) error {
-	result := this.getTopicInfo(topicId)
-	this.waitgroup.Add(1)
-	go func() {
-		defer this.waitgroup.Done()
-		for single := range result.channel.Read() {
-			listener(single.([]byte))
-		}
-	}()
+func (this *memoryQueueStore) Consume(topicId string, queueName string, poolSize int, listener queueStoreListener) error {
+	queue, err := this.setRouter(topicId, queueName)
+	if err != nil {
+		return err
+	}
+	channel := queue.channel
+	for i := 0; i < poolSize; i++ {
+		this.waitgroup.Add(1)
+		go func() {
+			defer this.waitgroup.Done()
+			for single := range channel.Read() {
+				listener(single.([]byte))
+			}
+		}()
+	}
 	return nil
 }
 
-func (this *MemoryQueueStore) Close() {
-	this.mutex.RLock()
-	for _, single := range this.mapPushPopStore {
-		single.channel.Close()
-	}
-	this.mutex.RUnlock()
-
+func (this *memoryQueueStore) Run() error {
 	this.waitgroup.Wait()
+	this.exitChan <- true
+	return nil
+}
+
+func (this *memoryQueueStore) Close() {
+	router := this.getRouter()
+
+	for _, singleRouter := range router {
+		for _, queue := range singleRouter {
+			queue.channel.Close()
+		}
+	}
+
+	<-this.exitChan
 }

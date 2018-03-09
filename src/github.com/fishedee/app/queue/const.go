@@ -1,29 +1,10 @@
 package queue
 
-const (
-	QUEUE_UNKNOWN = iota
-	QUEUE_PUBLISH_SUBSCRIBE
-	QUEUE_PRODUCE_CONSUME
-)
+type queueStoreListener func(argv []byte)
 
-type QueueListener func(argv []byte)
-
-type QueueStoreInterface interface {
+type queueStoreInterface interface {
 	Produce(topicId string, data []byte) error
-	Consume(topicId string, listener QueueListener) error
-	Publish(topicId string, data []byte) error
-	Subscribe(topicId string, listener QueueListener) error
+	Consume(topicId string, queue string, poolSize int, listener queueStoreListener) error
+	Run() error
 	Close()
-}
-
-type QueueStoreBasicInterface interface {
-	Produce(topicId string, data []byte) error
-	Consume(topicId string, listener QueueListener) error
-	Close()
-}
-
-type QueueStoreConfig struct {
-	SavePath      string
-	SavePrefix    string
-	RetryInterval int
 }

@@ -13,9 +13,19 @@ func newQueueForTest(t *testing.T, config QueueConfig) Queue {
 	log, err := NewLog(LogConfig{
 		Driver: "console",
 	})
-	AssertEqual(t, err, nil, 0)
+	if err != nil {
+		panic(err)
+	}
 	manager, err := NewQueue(log, config)
-	AssertEqual(t, err, nil, 0)
+	if err != nil {
+		panic(err)
+	}
+	if config.Driver == "redis" {
+		redisPool := manager.(*queueImplement).store.(*redisQueueStore).redisPool
+		c := redisPool.Get()
+		defer c.Close()
+		c.Do("flushall")
+	}
 	return manager
 }
 
@@ -80,44 +90,41 @@ func TestQueueBasic(t *testing.T) {
 		}),
 	}
 
-	for _, manager := range testCaseDriver {
+	for managerIndex, manager := range testCaseDriver {
+		go manager.Run()
 		for poolSize := -1; poolSize <= 2; poolSize++ {
 			for singleTestCaseIndex, singleTestCase := range testCase {
 				queueNameId := strconv.Itoa(singleTestCaseIndex) + "_" + strconv.Itoa(poolSize)
+				//空消费者
+				topicId := "TestQueueConsume1" + queueNameId
+				manager.MustProduce(topicId, singleTestCase.origin...)
 
-				//生产者消费者模式，空消费者
-				queueName := "TestQueueConsume1" + queueNameId
-				manager.Produce(queueName, singleTestCase.origin...)
-
-				//生产者消费者模式，单消费者
-				queueName = "TestQueueConsume2" + queueNameId
-				manager.ConsumeInPool(queueName, singleTestCase.target, poolSize)
-				manager.Produce(queueName, singleTestCase.origin...)
+				//单一消费组
+				topicId = "TestQueueConsume2" + queueNameId
+				manager.MustConsume(topicId, topicId+"queue", poolSize, singleTestCase.target)
+				if managerIndex == 1 {
+					manager.(*queueImplement).store.(*redisQueueStore).updateRouter()
+				}
+				manager.MustProduce(topicId, singleTestCase.origin...)
 				testCaseResult := <-testCaseResultChannel
 				AssertEqual(t, testCaseResult, singleTestCase.origin, singleTestCaseIndex)
 
-				//发布订阅模式，空订阅者
-				queueName = "TestQueueSubscribe1" + queueNameId
-				manager.Publish(queueName, singleTestCase.origin...)
+				//双消费组
+				topicId = "TestQueueConsume3" + queueNameId
+				manager.MustConsume(topicId, topicId+"queue", poolSize, singleTestCase.target)
+				manager.MustConsume(topicId, topicId+"queue2", poolSize, singleTestCase.target)
+				if managerIndex == 1 {
+					manager.(*queueImplement).store.(*redisQueueStore).updateRouter()
+				}
+				manager.MustProduce(topicId, singleTestCase.origin...)
+				testCaseResult = <-testCaseResultChannel
+				AssertEqual(t, testCaseResult, singleTestCase.origin, singleTestCaseIndex)
+				testCaseResult = <-testCaseResultChannel
+				AssertEqual(t, testCaseResult, singleTestCase.origin, singleTestCaseIndex)
 
-				//发布订阅模式，单订阅者
-				queueName = "TestQueueSubscribe2" + queueNameId
-				manager.SubscribeInPool(queueName, singleTestCase.target, poolSize)
-				manager.Publish(queueName, singleTestCase.origin...)
-				testCaseResult = <-testCaseResultChannel
-				AssertEqual(t, testCaseResult, singleTestCase.origin, singleTestCaseIndex)
-
-				//发布订阅模式，两订阅者
-				queueName = "TestQueueSubscribe3" + queueNameId
-				manager.SubscribeInPool(queueName, singleTestCase.target, poolSize)
-				manager.SubscribeInPool(queueName, singleTestCase.target, poolSize)
-				manager.Publish(queueName, singleTestCase.origin...)
-				testCaseResult = <-testCaseResultChannel
-				AssertEqual(t, testCaseResult, singleTestCase.origin, singleTestCaseIndex)
-				testCaseResult = <-testCaseResultChannel
-				AssertEqual(t, testCaseResult, singleTestCase.origin, singleTestCaseIndex)
 			}
 		}
+		manager.Close()
 	}
 }
 
@@ -134,7 +141,6 @@ func TestQueuePoolSize(t *testing.T) {
 		minDuration time.Duration
 		maxDuration time.Duration
 	}{
-		{0, time.Millisecond * 100, time.Millisecond * 200},
 		{1, time.Millisecond * 1000, time.Millisecond * 1100},
 		{2, time.Millisecond * 500, time.Millisecond * 600},
 	}
@@ -143,13 +149,13 @@ func TestQueuePoolSize(t *testing.T) {
 		for index, test := range testCase {
 			testCaseIndex := strconv.Itoa(queueIndex) + "_" + strconv.Itoa(index)
 			result := make(chan int, 10)
-			name := "queue4_" + strconv.Itoa(index)
-			queue.ConsumeInPool(name, func(data int) {
+			topicId := "queue4_" + strconv.Itoa(index)
+			queue.Consume(topicId, "queue", test.poolSize, func(data int) {
 				result <- data
 				time.Sleep(time.Millisecond * 100)
-			}, test.poolSize)
+			})
 			for i := 0; i != 10; i++ {
-				queue.Produce(name, i)
+				queue.Produce(topicId, i)
 			}
 			go queue.Close()
 			begin := time.Now()
@@ -170,46 +176,7 @@ func TestQueuePoolSize(t *testing.T) {
 	}
 }
 
-func TestQueueProduceFirst(t *testing.T) {
-	testCaseDriver := []Queue{
-		newQueueForTest(t, QueueConfig{
-			SavePrefix: "queue:",
-			Driver:     "memory",
-		}),
-		newQueueForTest(t, QueueConfig{
-			SavePath:   "127.0.0.1:6379,100,13420693396",
-			SavePrefix: "queue:",
-			Driver:     "redis",
-		}),
-	}
-
-	for _, queue := range testCaseDriver {
-		//生产者消费者模式有累积效应
-		queue.Produce("topic1", 1)
-		var result = make(chan int)
-		queue.Consume("topic1", func(data int) {
-			result <- data
-		})
-		target := <-result
-		AssertEqual(t, target, 1, 0)
-
-		//发布订阅模式没有累积效应
-		queue.Publish("topic2", 2)
-		var result2 = make(chan int)
-		queue.Subscribe("topic2", func(data int) {
-			result2 <- data
-		})
-		select {
-		case <-result2:
-			AssertEqual(t, false, "invalid!", 0)
-		case <-time.NewTimer(time.Second).C:
-			break
-		}
-	}
-}
-
 func TestQueueClose(t *testing.T) {
-	//ConsumeInPool配置Sync
 	testCase := []struct {
 		Queue Queue
 		Data  int
@@ -226,12 +193,15 @@ func TestQueueClose(t *testing.T) {
 	for singleTestCaseIndex, singleTestCase := range testCase {
 		var result int
 		inputEvent := make(chan bool)
-		singleTestCase.Queue.Consume("queue", func(data int) {
+		singleTestCase.Queue.Consume("topic", "queue", 1, func(data int) {
 			inputEvent <- true
 			time.Sleep(time.Second)
 			result = singleTestCase.Data
 		})
-		singleTestCase.Queue.Produce("queue", singleTestCase.Data)
+		if singleTestCaseIndex == 1 {
+			singleTestCase.Queue.(*queueImplement).store.(*redisQueueStore).updateRouter()
+		}
+		singleTestCase.Queue.Produce("topic", singleTestCase.Data)
 		<-inputEvent
 		go singleTestCase.Queue.Close()
 		singleTestCase.Queue.Run()
@@ -247,13 +217,14 @@ func TestQueueRedisRetry(t *testing.T) {
 		RetryInterval: 2,
 	})
 	result := make(chan string, 64)
-	queue.Consume("topic1", func(data string) {
+	queue.Consume("topic1", "queue", 1, func(data string) {
 		result <- data
 	})
+	queue.(*queueImplement).store.(*redisQueueStore).updateRouter()
 	queue.Produce("topic1", "mm1")
 	queue.Produce("topic1", "mm2")
 	time.Sleep(time.Second * 1)
-	queue.(*queueImplement).store.(*BasicQueueStore).QueueStoreBasicInterface.(*RedisQueueStore).closeListener()
+	queue.(*queueImplement).store.(*redisQueueStore).closeListener()
 	queue.Produce("topic1", "mm3")
 	queue.Produce("topic1", "mm4")
 	time.Sleep(time.Second * 2)
