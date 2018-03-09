@@ -211,3 +211,6 @@
 [submodule "src/golang.org/x/sys"]
 	path = src/golang.org/x/sys
 	url = git@github.com:golang/sys.git
+[submodule "src/gopkg.in/redsync.v1"]
+	path = src/gopkg.in/redsync.v1
+	url = git@github.com:go-redsync/redsync.git
