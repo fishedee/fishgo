@@ -214,3 +214,6 @@
 [submodule "src/gopkg.in/redsync.v1"]
 	path = src/gopkg.in/redsync.v1
 	url = git@github.com:go-redsync/redsync.git
+[submodule "src/github.com/streadway/amqp"]
+	path = src/github.com/streadway/amqp
+	url = git@github.com:streadway/amqp.git
