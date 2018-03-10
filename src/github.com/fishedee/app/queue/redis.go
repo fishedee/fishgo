@@ -26,17 +26,15 @@ type redisQueueChannel struct {
 }
 
 type redisQueueStore struct {
-	redisPool        *redis.Pool
-	log              Log
-	redisConfig      redisConfig
-	config           QueueConfig
-	waitgroup        *sync.WaitGroup
-	mutex            sync.RWMutex
-	isClose          bool
-	consumeListeners map[redis.Conn]bool
-	router           *map[string][]string
-	exitChan         chan bool
-	closeChan        chan bool
+	redisPool   *redis.Pool
+	log         Log
+	redisConfig redisConfig
+	config      QueueConfig
+	waitgroup   *sync.WaitGroup
+	router      *map[string][]string
+	listener    sync.Map
+	exitChan    chan bool
+	closeChan   chan bool
 }
 
 var MAX_POOL_SIZE = 100
@@ -87,15 +85,13 @@ func newRedisQueue(log Log, config QueueConfig) (queueStoreInterface, error) {
 	}
 
 	result := &redisQueueStore{
-		config:           config,
-		redisConfig:      redisConfig,
-		log:              log,
-		waitgroup:        &sync.WaitGroup{},
-		router:           &map[string][]string{},
-		closeChan:        make(chan bool, 16),
-		exitChan:         make(chan bool, 16),
-		isClose:          false,
-		consumeListeners: map[redis.Conn]bool{},
+		config:      config,
+		redisConfig: redisConfig,
+		log:         log,
+		waitgroup:   &sync.WaitGroup{},
+		router:      &map[string][]string{},
+		closeChan:   make(chan bool, 16),
+		exitChan:    make(chan bool, 16),
 	}
 	var err error
 	result.redisPool, err = result.getConnectPool()
@@ -186,44 +182,50 @@ func (this *redisQueueStore) singleConsume(queueName string, listener queueStore
 	if err != nil {
 		return err
 	}
-	this.mutex.Lock()
-	if this.isClose {
-		this.mutex.Unlock()
-		return nil
-	}
-	this.consumeListeners[conn] = true
-	this.mutex.Unlock()
+	defer this.listener.Delete(conn)
+	this.listener.Store(conn, true)
 
-	defer func() {
-		this.mutex.Lock()
-		_, isExist := this.consumeListeners[conn]
-		if isExist {
-			conn.Close()
-			delete(this.consumeListeners, conn)
+	recvMsgChan := make(chan interface{})
+	finishMsgChan := make(chan bool)
+	go func() {
+		for {
+			data, err := this.consumeData(conn, queueName, 30)
+			if err != nil {
+				select {
+				case _, _ = <-this.closeChan:
+					return
+				default:
+					recvMsgChan <- err
+					return
+				}
+			}
+			if data == nil {
+				select {
+				case _, _ = <-this.closeChan:
+					return
+				default:
+					continue
+				}
+			}
+			recvMsgChan <- data
+			<-finishMsgChan
 		}
-		this.mutex.Unlock()
 	}()
 
 	for {
-		data, err := this.consumeData(conn, queueName, 30)
-		this.mutex.RLock()
-		isClose := this.isClose
-		this.mutex.RUnlock()
-		if err != nil {
-			if isClose == true {
-				return nil
-			} else {
+		select {
+		case msg := <-recvMsgChan:
+			err, isErr := msg.(error)
+			if isErr {
+				conn.Close()
 				return err
 			}
+			listener(msg.([]byte))
+			finishMsgChan <- true
+		case _, _ = <-this.closeChan:
+			conn.Close()
+			return nil
 		}
-		if data == nil {
-			if isClose == true {
-				return nil
-			} else {
-				continue
-			}
-		}
-		listener(data)
 	}
 }
 
@@ -235,21 +237,27 @@ func (this *redisQueueStore) Consume(topicId string, queueName string, poolSize 
 	for i := 0; i < poolSize; i++ {
 		this.waitgroup.Add(1)
 		go func() {
+			defer this.waitgroup.Done()
 			for {
 				err := this.singleConsume(queueName, listener)
 				if err != nil {
-					this.mutex.RLock()
-					isClose := this.isClose
-					if isClose {
-						this.mutex.RUnlock()
+					select {
+					case _, _ = <-this.closeChan:
 						return
+					default:
 					}
-					this.mutex.RUnlock()
 
 					this.log.Critical("Queue Redis consume error :%v, will be retry in %v seconds", err, this.config.RetryInterval)
-					time.Sleep(time.Duration(int(time.Second) * this.config.RetryInterval))
+
+					sleepTime := int(time.Second) * this.config.RetryInterval
+					timer := time.NewTimer(time.Duration(sleepTime))
+					select {
+					case _, _ = <-this.closeChan:
+						return
+					case _ = <-timer.C:
+						break
+					}
 				} else {
-					this.waitgroup.Done()
 					return
 				}
 			}
@@ -352,7 +360,7 @@ func (this *redisQueueStore) Run() error {
 	tick := time.NewTicker(time.Second)
 	for isRun {
 		select {
-		case <-this.closeChan:
+		case _, _ = <-this.closeChan:
 			isRun = false
 			break
 		case <-tick.C:
@@ -367,19 +375,7 @@ func (this *redisQueueStore) Run() error {
 }
 
 func (this *redisQueueStore) Close() {
-	this.closeChan <- true
+	close(this.closeChan)
 	this.redisPool.Close()
-	this.mutex.Lock()
-	this.isClose = true
-	this.closeListener()
-	this.consumeListeners = map[redis.Conn]bool{}
-	this.mutex.Unlock()
-
 	<-this.exitChan
-}
-
-func (this *redisQueueStore) closeListener() {
-	for key, _ := range this.consumeListeners {
-		key.Close()
-	}
 }

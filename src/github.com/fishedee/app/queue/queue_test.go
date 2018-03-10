@@ -3,6 +3,7 @@ package queue
 import (
 	. "github.com/fishedee/app/log"
 	. "github.com/fishedee/assert"
+	"github.com/garyburd/redigo/redis"
 	"github.com/streadway/amqp"
 	"os/exec"
 	"sort"
@@ -252,7 +253,11 @@ func TestQueueRetry(t *testing.T) {
 		queue.MustProduce("topic1", "mm2")
 		time.Sleep(time.Second * 1)
 		if testCaseIndex == 0 {
-			queue.(*queueImplement).store.(*redisQueueStore).closeListener()
+			listener := queue.(*queueImplement).store.(*redisQueueStore).listener
+			listener.Range(func(key, value interface{}) bool {
+				key.(redis.Conn).Close()
+				return true
+			})
 		} else {
 			listener := queue.(*queueImplement).store.(*rabbitmqQueueStore).listener
 			listener.Range(func(key, value interface{}) bool {

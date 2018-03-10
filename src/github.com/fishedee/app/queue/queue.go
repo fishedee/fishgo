@@ -1,13 +1,12 @@
 package queue
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
-	"reflect"
-
 	. "github.com/fishedee/app/log"
-	. "github.com/fishedee/encoding"
 	. "github.com/fishedee/language"
+	"reflect"
 )
 
 type Queue interface {
@@ -74,7 +73,7 @@ func NewQueue(log Log, config QueueConfig) (Queue, error) {
 }
 
 func (this *queueImplement) encodeData(data []interface{}) ([]byte, error) {
-	dataByte, err := EncodeJson(data)
+	dataByte, err := json.Marshal(data)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +86,7 @@ func (this *queueImplement) decodeData(dataByte []byte, dataType []reflect.Type)
 	for _, singleDataType := range dataType {
 		result = append(result, reflect.New(singleDataType).Interface())
 	}
-	err := DecodeJson(dataByte, &result)
+	err := json.Unmarshal(dataByte, &result)
 	if err != nil {
 		return nil, errors.New(err.Error() + "," + string(dataByte))
 	}

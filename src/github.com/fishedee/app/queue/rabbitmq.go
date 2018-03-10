@@ -176,19 +176,25 @@ func (this *rabbitmqQueueStore) Consume(topicId string, queue string, poolSize i
 	for i := 0; i < poolSize; i++ {
 		this.waitgroup.Add(1)
 		go func() {
+			defer this.waitgroup.Done()
 			for {
 				err := this.singleConsume(queue, listener)
 				if err != nil {
 					select {
 					case _, _ = <-this.closeChan:
-						this.waitgroup.Done()
 						return
 					default:
 					}
 					this.log.Critical("Queue Rabbitmq consume error :%v, will be retry in %v seconds", err, this.config.RetryInterval)
-					time.Sleep(time.Duration(int(time.Second) * this.config.RetryInterval))
+					sleepTime := int(time.Second) * this.config.RetryInterval
+					timer := time.NewTimer(time.Duration(sleepTime))
+					select {
+					case _, _ = <-this.closeChan:
+						return
+					case _ = <-timer.C:
+						break
+					}
 				} else {
-					this.waitgroup.Done()
 					return
 				}
 			}
