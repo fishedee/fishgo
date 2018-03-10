@@ -2,6 +2,7 @@ package queue
 
 import (
 	"encoding/json"
+	"errors"
 	. "github.com/fishedee/app/log"
 	"github.com/garyburd/redigo/redis"
 	"gopkg.in/redsync.v1"
@@ -30,8 +31,9 @@ type redisQueueStore struct {
 	redisConfig      redisConfig
 	config           QueueConfig
 	waitgroup        *sync.WaitGroup
-	isClose          int32
-	consumeListeners sync.Map
+	mutex            sync.RWMutex
+	isClose          bool
+	consumeListeners map[redis.Conn]bool
 	router           *map[string][]string
 	exitChan         chan bool
 	closeChan        chan bool
@@ -85,13 +87,15 @@ func newRedisQueue(log Log, config QueueConfig) (queueStoreInterface, error) {
 	}
 
 	result := &redisQueueStore{
-		config:      config,
-		redisConfig: redisConfig,
-		log:         log,
-		waitgroup:   &sync.WaitGroup{},
-		router:      &map[string][]string{},
-		closeChan:   make(chan bool, 16),
-		exitChan:    make(chan bool, 16),
+		config:           config,
+		redisConfig:      redisConfig,
+		log:              log,
+		waitgroup:        &sync.WaitGroup{},
+		router:           &map[string][]string{},
+		closeChan:        make(chan bool, 16),
+		exitChan:         make(chan bool, 16),
+		isClose:          false,
+		consumeListeners: map[redis.Conn]bool{},
 	}
 	var err error
 	result.redisPool, err = result.getConnectPool()
@@ -142,7 +146,7 @@ func (this *redisQueueStore) Produce(topicId string, data []byte) error {
 	router := this.getRouter()
 	topicRouter, isExist := router[topicId]
 	if isExist == false {
-		return nil
+		return errors.New("dos not exist topicId " + topicId)
 	}
 
 	var lastErr error
@@ -182,23 +186,38 @@ func (this *redisQueueStore) singleConsume(queueName string, listener queueStore
 	if err != nil {
 		return err
 	}
-	this.consumeListeners.Store(conn, true)
+	this.mutex.Lock()
+	if this.isClose {
+		this.mutex.Unlock()
+		return nil
+	}
+	this.consumeListeners[conn] = true
+	this.mutex.Unlock()
+
 	defer func() {
-		conn.Close()
-		this.consumeListeners.Delete(conn)
+		this.mutex.Lock()
+		_, isExist := this.consumeListeners[conn]
+		if isExist {
+			conn.Close()
+			delete(this.consumeListeners, conn)
+		}
+		this.mutex.Unlock()
 	}()
+
 	for {
-		data, err := this.consumeData(conn, queueName, 5)
-		isExit := atomic.LoadInt32(&this.isClose)
+		data, err := this.consumeData(conn, queueName, 30)
+		this.mutex.RLock()
+		isClose := this.isClose
+		this.mutex.RUnlock()
 		if err != nil {
-			if isExit == 1 {
+			if isClose == true {
 				return nil
 			} else {
 				return err
 			}
 		}
 		if data == nil {
-			if isExit == 1 {
+			if isClose == true {
 				return nil
 			} else {
 				continue
@@ -219,11 +238,19 @@ func (this *redisQueueStore) Consume(topicId string, queueName string, poolSize 
 			for {
 				err := this.singleConsume(queueName, listener)
 				if err != nil {
+					this.mutex.RLock()
+					isClose := this.isClose
+					if isClose {
+						this.mutex.RUnlock()
+						return
+					}
+					this.mutex.RUnlock()
+
 					this.log.Critical("Queue Redis consume error :%v, will be retry in %v seconds", err, this.config.RetryInterval)
 					time.Sleep(time.Duration(int(time.Second) * this.config.RetryInterval))
 				} else {
 					this.waitgroup.Done()
-					break
+					return
 				}
 			}
 		}()
@@ -341,18 +368,18 @@ func (this *redisQueueStore) Run() error {
 
 func (this *redisQueueStore) Close() {
 	this.closeChan <- true
-
-	atomic.StoreInt32(&this.isClose, 1)
 	this.redisPool.Close()
+	this.mutex.Lock()
+	this.isClose = true
 	this.closeListener()
+	this.consumeListeners = map[redis.Conn]bool{}
+	this.mutex.Unlock()
 
 	<-this.exitChan
 }
 
 func (this *redisQueueStore) closeListener() {
-	this.consumeListeners.Range(func(key, value interface{}) bool {
-		conn := key.(redis.Conn)
-		conn.Close()
-		return true
-	})
+	for key, _ := range this.consumeListeners {
+		key.Close()
+	}
 }

@@ -74,7 +74,7 @@ func (this *memoryQueueStore) Produce(topicId string, data []byte) error {
 	router := this.getRouter()
 	queues, isExist := router[topicId]
 	if isExist == false {
-		return nil
+		return errors.New("dos not exist topicId " + topicId)
 	}
 	for _, queue := range queues {
 		queue.channel.Write(data)

@@ -3,6 +3,8 @@ package queue
 import (
 	. "github.com/fishedee/app/log"
 	. "github.com/fishedee/assert"
+	"github.com/streadway/amqp"
+	"os/exec"
 	"sort"
 	"strconv"
 	"testing"
@@ -10,6 +12,14 @@ import (
 )
 
 func newQueueForTest(t *testing.T, config QueueConfig) Queue {
+	if config.Driver == "rabbitmq" {
+		cmd := exec.Command("/usr/local/sbin/rabbitmqctl", "delete_vhost", "test")
+		cmd.Run()
+		cmd2 := exec.Command("/usr/local/sbin/rabbitmqctl", "add_vhost", "test")
+		cmd2.Run()
+		cmd3 := exec.Command("/usr/local/sbin/rabbitmqctl", "set_permissions", "-p", "test", "guest", ".*", ".*", ".*")
+		cmd3.Run()
+	}
 	log, err := NewLog(LogConfig{
 		Driver: "console",
 	})
@@ -83,10 +93,15 @@ func TestQueueBasic(t *testing.T) {
 			SavePrefix: "queue:",
 			Driver:     "memory",
 		}),
+
 		newQueueForTest(t, QueueConfig{
 			SavePath:   "127.0.0.1:6379,100,13420693396",
 			SavePrefix: "queue:",
 			Driver:     "redis",
+		}),
+		newQueueForTest(t, QueueConfig{
+			SavePath: "amqp://guest:guest@localhost:5672/test",
+			Driver:   "rabbitmq",
 		}),
 	}
 
@@ -95,12 +110,9 @@ func TestQueueBasic(t *testing.T) {
 		for poolSize := -1; poolSize <= 2; poolSize++ {
 			for singleTestCaseIndex, singleTestCase := range testCase {
 				queueNameId := strconv.Itoa(singleTestCaseIndex) + "_" + strconv.Itoa(poolSize)
-				//空消费者
-				topicId := "TestQueueConsume1" + queueNameId
-				manager.MustProduce(topicId, singleTestCase.origin...)
 
 				//单一消费组
-				topicId = "TestQueueConsume2" + queueNameId
+				topicId := "TestQueueConsume1_" + queueNameId
 				manager.MustConsume(topicId, topicId+"queue", poolSize, singleTestCase.target)
 				if managerIndex == 1 {
 					manager.(*queueImplement).store.(*redisQueueStore).updateRouter()
@@ -110,7 +122,7 @@ func TestQueueBasic(t *testing.T) {
 				AssertEqual(t, testCaseResult, singleTestCase.origin, singleTestCaseIndex)
 
 				//双消费组
-				topicId = "TestQueueConsume3" + queueNameId
+				topicId = "TestQueueConsume2_" + queueNameId
 				manager.MustConsume(topicId, topicId+"queue", poolSize, singleTestCase.target)
 				manager.MustConsume(topicId, topicId+"queue2", poolSize, singleTestCase.target)
 				if managerIndex == 1 {
@@ -150,12 +162,12 @@ func TestQueuePoolSize(t *testing.T) {
 			testCaseIndex := strconv.Itoa(queueIndex) + "_" + strconv.Itoa(index)
 			result := make(chan int, 10)
 			topicId := "queue4_" + strconv.Itoa(index)
-			queue.Consume(topicId, "queue", test.poolSize, func(data int) {
+			queue.MustConsume(topicId, "queue", test.poolSize, func(data int) {
 				result <- data
 				time.Sleep(time.Millisecond * 100)
 			})
 			for i := 0; i != 10; i++ {
-				queue.Produce(topicId, i)
+				queue.MustProduce(topicId, i)
 			}
 			go queue.Close()
 			begin := time.Now()
@@ -189,11 +201,15 @@ func TestQueueClose(t *testing.T) {
 			SavePrefix: "queue2:",
 			Driver:     "redis",
 		}), 456},
+		{newQueueForTest(t, QueueConfig{
+			SavePath: "amqp://guest:guest@localhost:5672/test",
+			Driver:   "rabbitmq",
+		}), 789},
 	}
 	for singleTestCaseIndex, singleTestCase := range testCase {
 		var result int
 		inputEvent := make(chan bool)
-		singleTestCase.Queue.Consume("topic", "queue", 1, func(data int) {
+		singleTestCase.Queue.MustConsume("topic", "queue", 1, func(data int) {
 			inputEvent <- true
 			time.Sleep(time.Second)
 			result = singleTestCase.Data
@@ -201,7 +217,7 @@ func TestQueueClose(t *testing.T) {
 		if singleTestCaseIndex == 1 {
 			singleTestCase.Queue.(*queueImplement).store.(*redisQueueStore).updateRouter()
 		}
-		singleTestCase.Queue.Produce("topic", singleTestCase.Data)
+		singleTestCase.Queue.MustProduce("topic", singleTestCase.Data)
 		<-inputEvent
 		go singleTestCase.Queue.Close()
 		singleTestCase.Queue.Run()
@@ -209,35 +225,55 @@ func TestQueueClose(t *testing.T) {
 	}
 }
 
-func TestQueueRedisRetry(t *testing.T) {
-	queue := newQueueForTest(t, QueueConfig{
-		SavePath:      "127.0.0.1:6379,100,13420693396",
-		SavePrefix:    "queue3:",
-		Driver:        "redis",
-		RetryInterval: 2,
-	})
-	result := make(chan string, 64)
-	queue.Consume("topic1", "queue", 1, func(data string) {
-		result <- data
-	})
-	queue.(*queueImplement).store.(*redisQueueStore).updateRouter()
-	queue.Produce("topic1", "mm1")
-	queue.Produce("topic1", "mm2")
-	time.Sleep(time.Second * 1)
-	queue.(*queueImplement).store.(*redisQueueStore).closeListener()
-	queue.Produce("topic1", "mm3")
-	queue.Produce("topic1", "mm4")
-	time.Sleep(time.Second * 2)
-	queue.Produce("topic1", "mm5")
-	queue.Produce("topic1", "mm6")
-	time.Sleep(time.Second * 2)
-	testCase := []string{"mm1", "mm2", "mm3", "mm4", "mm5", "mm6"}
-	for i := 0; i != 6; i++ {
-		select {
-		case single := <-result:
-			AssertEqual(t, single, testCase[i])
-		default:
-			AssertEqual(t, true, false)
+func TestQueueRetry(t *testing.T) {
+	testCase := []Queue{
+		newQueueForTest(t, QueueConfig{
+			SavePath:      "127.0.0.1:6379,100,13420693396",
+			SavePrefix:    "queue3:",
+			Driver:        "redis",
+			RetryInterval: 2,
+		}),
+		newQueueForTest(t, QueueConfig{
+			SavePath:      "amqp://guest:guest@localhost:5672/test",
+			Driver:        "rabbitmq",
+			RetryInterval: 2,
+		}),
+	}
+
+	for testCaseIndex, queue := range testCase {
+		result := make(chan string, 64)
+		queue.MustConsume("topic1", "queue", 1, func(data string) {
+			result <- data
+		})
+		if testCaseIndex == 0 {
+			queue.(*queueImplement).store.(*redisQueueStore).updateRouter()
+		}
+		queue.MustProduce("topic1", "mm1")
+		queue.MustProduce("topic1", "mm2")
+		time.Sleep(time.Second * 1)
+		if testCaseIndex == 0 {
+			queue.(*queueImplement).store.(*redisQueueStore).closeListener()
+		} else {
+			listener := queue.(*queueImplement).store.(*rabbitmqQueueStore).listener
+			listener.Range(func(key, value interface{}) bool {
+				key.(*amqp.Connection).Close()
+				return true
+			})
+		}
+		queue.MustProduce("topic1", "mm3")
+		queue.MustProduce("topic1", "mm4")
+		time.Sleep(time.Second * 2)
+		queue.MustProduce("topic1", "mm5")
+		queue.MustProduce("topic1", "mm6")
+		time.Sleep(time.Second * 2)
+		testCase := []string{"mm1", "mm2", "mm3", "mm4", "mm5", "mm6"}
+		for i := 0; i != 6; i++ {
+			select {
+			case single := <-result:
+				AssertEqual(t, single, testCase[i])
+			default:
+				AssertEqual(t, true, false)
+			}
 		}
 	}
 }

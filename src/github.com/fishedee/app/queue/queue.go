@@ -58,6 +58,16 @@ func NewQueue(log Log, config QueueConfig) (Queue, error) {
 			config: config,
 			store:  store,
 		}, nil
+	} else if config.Driver == "rabbitmq" {
+		store, err := newRabbitmqQueueStore(log, config)
+		if err != nil {
+			return nil, err
+		}
+		return &queueImplement{
+			log:    log,
+			config: config,
+			store:  store,
+		}, nil
 	} else {
 		return nil, errors.New("invalid queue config " + config.Driver)
 	}
