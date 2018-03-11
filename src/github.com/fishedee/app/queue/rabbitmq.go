@@ -102,8 +102,8 @@ func (this *rabbitmqQueueStore) singleConsume(queue string, listener queueStoreL
 
 	for {
 		select {
-		case d := <-msgs:
-			if d.Body == nil {
+		case d, isOk := <-msgs:
+			if isOk == false {
 				return errors.New("close consume")
 			}
 			listener(d.Body)
