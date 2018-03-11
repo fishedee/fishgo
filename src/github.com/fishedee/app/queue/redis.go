@@ -250,11 +250,11 @@ func (this *redisQueueStore) Consume(topicId string, queueName string, poolSize 
 					this.log.Critical("Queue Redis consume error :%v, will be retry in %v seconds", err, this.config.RetryInterval)
 
 					sleepTime := int(time.Second) * this.config.RetryInterval
-					timer := time.NewTimer(time.Duration(sleepTime))
+					timer := time.After(time.Duration(sleepTime))
 					select {
 					case _, _ = <-this.closeChan:
 						return
-					case _ = <-timer.C:
+					case _ = <-timer:
 						break
 					}
 				} else {

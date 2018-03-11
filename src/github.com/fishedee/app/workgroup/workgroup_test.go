@@ -48,7 +48,8 @@ func TestWorkGroupError(t *testing.T) {
 	begin := time.Now().Unix()
 	err := workgroup.Run()
 	end := time.Now().Unix()
-	AssertEqual(t, end-begin >= 2, true)
+	AssertEqual(t, end-begin >= 1, true)
+	AssertEqual(t, end-begin < 2, true)
 	AssertEqual(t, err != nil, true)
 	AssertEqual(t, err.Error(), "error1")
 }
@@ -128,34 +129,51 @@ func TestWorkGroupTimeout(t *testing.T) {
 	AssertEqual(t, err == nil, true)
 }
 
-func TestWorkGroupCloseTwo(t *testing.T) {
+func TestWorkGroupCloseOrder(t *testing.T) {
 	log, _ := NewLog(LogConfig{
 		Driver: "console",
 	})
 	workgroup, _ := NewWorkGroup(log, WorkGroupConfig{
-		CloseTimeout: time.Second,
+		CloseTimeout: time.Second * 5,
 	})
-
-	taskChan := make(chan bool)
+	closeChan := make(chan bool)
+	closeChan2 := make(chan bool)
+	taskChan := make(chan int, 2)
 	workgroup.Add(&taskStub{
 		runHandler: func() error {
-			<-taskChan
+			<-closeChan
 			return nil
 		},
 		closeHandler: func() {
+			time.Sleep(time.Second)
+			close(closeChan)
+			taskChan <- 1
 		},
 	})
-	exitChan := make(chan bool)
+	workgroup.Add(&taskStub{
+		runHandler: func() error {
+			<-closeChan2
+			return nil
+		},
+		closeHandler: func() {
+			time.Sleep(time.Second)
+			close(closeChan2)
+			taskChan <- 2
+		},
+	})
 	go func() {
 		time.Sleep(time.Second)
 		workgroup.Close()
-		workgroup.Close()
-		exitChan <- true
 	}()
 	begin := time.Now().Unix()
 	err := workgroup.Run()
 	end := time.Now().Unix()
-	AssertEqual(t, end-begin >= 1, true)
-	AssertEqual(t, <-exitChan, true)
+	AssertEqual(t, end-begin >= 2, true)
+	close(taskChan)
+	data := []int{}
+	for single := range taskChan {
+		data = append(data, single)
+	}
+	AssertEqual(t, data, []int{2, 1})
 	AssertEqual(t, err == nil, true)
 }

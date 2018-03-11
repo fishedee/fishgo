@@ -187,11 +187,11 @@ func (this *rabbitmqQueueStore) Consume(topicId string, queue string, poolSize i
 					}
 					this.log.Critical("Queue Rabbitmq consume error :%v, will be retry in %v seconds", err, this.config.RetryInterval)
 					sleepTime := int(time.Second) * this.config.RetryInterval
-					timer := time.NewTimer(time.Duration(sleepTime))
+					timer := time.After(time.Duration(sleepTime))
 					select {
 					case _, _ = <-this.closeChan:
 						return
-					case _ = <-timer.C:
+					case _ = <-timer:
 						break
 					}
 				} else {

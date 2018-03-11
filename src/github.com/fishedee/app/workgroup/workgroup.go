@@ -2,7 +2,10 @@ package workgroup
 
 import (
 	. "github.com/fishedee/app/log"
+	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -19,6 +22,7 @@ type WorkGroup interface {
 
 type WorkGroupConfig struct {
 	CloseTimeout time.Duration `config:"closetimeout"`
+	GraceClose   bool          `config:"graceclose"`
 }
 
 func NewWorkGroup(log Log, config WorkGroupConfig) (WorkGroup, error) {
@@ -28,7 +32,6 @@ func NewWorkGroup(log Log, config WorkGroupConfig) (WorkGroup, error) {
 	return &workGroupImplement{
 		log:       log,
 		config:    config,
-		hasClose:  false,
 		closeChan: make(chan bool, 1),
 	}, nil
 }
@@ -37,9 +40,6 @@ type workGroupImplement struct {
 	log       Log
 	config    WorkGroupConfig
 	task      []WorkGroupTask
-	loadTask  sync.Map
-	mutex     sync.Mutex
-	hasClose  bool
 	closeChan chan bool
 }
 
@@ -47,30 +47,19 @@ func (this *workGroupImplement) Add(task WorkGroupTask) {
 	this.task = append(this.task, task)
 }
 
-func (this *workGroupImplement) waitDoneOrTimeout(doneChan chan bool) {
-	select {
-	case <-time.After(this.config.CloseTimeout):
-		this.log.Critical("workgroup wait %v because close but not exit, so force exit all", this.config.CloseTimeout)
-		return
-	case <-doneChan:
-		return
-	}
-}
 func (this *workGroupImplement) Run() error {
 	errChan := make(chan error, len(this.task))
 	doneChan := make(chan bool, 1)
 	waitgroup := &sync.WaitGroup{}
 	for i := 0; i != len(this.task); i++ {
 		singleTask := this.task[i]
-		this.loadTask.Store(singleTask, true)
 		waitgroup.Add(1)
 		go func(singleTask WorkGroupTask) {
+			defer waitgroup.Done()
 			err := singleTask.Run()
 			if err != nil {
 				errChan <- err
 			}
-			this.loadTask.Delete(singleTask)
-			waitgroup.Done()
 		}(singleTask)
 	}
 
@@ -78,34 +67,57 @@ func (this *workGroupImplement) Run() error {
 		waitgroup.Wait()
 		doneChan <- true
 	}()
+
+	if this.config.GraceClose {
+		this.setGraceClose()
+	}
 	select {
 	case err := <-errChan:
-		this.Close()
-		this.waitDoneOrTimeout(doneChan)
 		return err
 	case <-doneChan:
+		this.log.Debug("workgroup is exited by self")
 		return nil
 	case <-this.closeChan:
-		this.waitDoneOrTimeout(doneChan)
+		this.close(doneChan)
+		this.log.Debug("workgroup is exited by close")
 		return nil
 	}
 }
 
-func (this *workGroupImplement) Close() {
-	this.mutex.Lock()
-	if this.hasClose == true {
-		this.mutex.Unlock()
+func (this *workGroupImplement) setGraceClose() {
+	ch := make(chan os.Signal, 10)
+	signals := []os.Signal{
+		syscall.SIGTERM,
+		syscall.SIGINT,
+		syscall.SIGHUP,
+		syscall.SIGKILL,
+	}
+	signal.Notify(ch, signals...)
+	go func() {
+		<-ch
+		this.Close()
+	}()
+}
+
+func (this *workGroupImplement) close(doneChan chan bool) {
+	closeFinishChan := make(chan bool)
+	go func() {
+		for i := len(this.task) - 1; i >= 0; i-- {
+			this.task[i].Close()
+		}
+		<-doneChan
+		closeFinishChan <- true
+	}()
+
+	select {
+	case <-time.After(this.config.CloseTimeout):
+		this.log.Critical("workgroup wait %v because close but not exit, so force exit all", this.config.CloseTimeout)
+		return
+	case <-closeFinishChan:
 		return
 	}
-	this.closeChan <- true
-	this.hasClose = true
-	this.mutex.Unlock()
+}
 
-	this.loadTask.Range(func(key interface{}, value interface{}) bool {
-		singleTask := key.(WorkGroupTask)
-		go func() {
-			singleTask.Close()
-		}()
-		return true
-	})
+func (this *workGroupImplement) Close() {
+	close(this.closeChan)
 }
