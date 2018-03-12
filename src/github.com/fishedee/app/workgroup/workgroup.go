@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/signal"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 )
@@ -101,8 +102,10 @@ func (this *workGroupImplement) setGraceClose() {
 
 func (this *workGroupImplement) close(doneChan chan bool) {
 	closeFinishChan := make(chan bool)
+	var lastClose int32
 	go func() {
 		for i := len(this.task) - 1; i >= 0; i-- {
+			atomic.StoreInt32(&lastClose, int32(i))
 			this.task[i].Close()
 		}
 		<-doneChan
@@ -111,7 +114,7 @@ func (this *workGroupImplement) close(doneChan chan bool) {
 
 	select {
 	case <-time.After(this.config.CloseTimeout):
-		this.log.Critical("workgroup wait %v because close but not exit, so force exit all", this.config.CloseTimeout)
+		this.log.Critical("workgroup wait %v because close but not exit, so force exit all,last not close work : %v", this.config.CloseTimeout, lastClose)
 		return
 	case <-closeFinishChan:
 		return
