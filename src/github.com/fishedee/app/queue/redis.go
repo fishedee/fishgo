@@ -376,6 +376,5 @@ func (this *redisQueueStore) Run() error {
 
 func (this *redisQueueStore) Close() {
 	close(this.closeChan)
-	this.redisPool.Close()
 	<-this.exitChan
 }

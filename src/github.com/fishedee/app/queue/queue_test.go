@@ -280,5 +280,56 @@ func TestQueueRetry(t *testing.T) {
 				AssertEqual(t, true, false)
 			}
 		}
+		go queue.Run()
+		queue.Close()
+	}
+}
+
+func TestQueueProduceAfterClose(t *testing.T) {
+	testCase := []struct {
+		oldQueue Queue
+	}{
+		{newQueueForTest(t, QueueConfig{
+			SavePath:   "127.0.0.1:6379,100,13420693396",
+			SavePrefix: "queue3:",
+			Driver:     "redis",
+		})},
+		{newQueueForTest(t, QueueConfig{
+			SavePath: "amqp://guest:guest@localhost:5672/test",
+			Driver:   "rabbitmq",
+		})},
+	}
+	for testCaseIndex, test := range testCase {
+		queue := test.oldQueue
+		result := make(chan string, 64)
+		listener := func(data string) {
+			result <- data
+		}
+		queue.MustConsume("topic1", "queue", 1, listener)
+		if testCaseIndex == 0 {
+			queue.(*queueImplement).store.(*redisQueueStore).updateRouter()
+		}
+		queue.MustProduce("topic1", "mm1")
+		time.Sleep(time.Second)
+		go queue.Run()
+		queue.Close()
+
+		if testCaseIndex == 0 {
+			queue.(*queueImplement).store.(*redisQueueStore).closeChan = make(chan bool, 16)
+		} else {
+			queue.(*queueImplement).store.(*rabbitmqQueueStore).closeChan = make(chan bool, 16)
+		}
+
+		queue.MustProduce("topic1", "mm2")
+		queue.MustProduce("topic1", "mm3")
+		queue.MustConsume("topic1", "queue", 1, listener)
+
+		time.Sleep(time.Second)
+		close(result)
+		data := []string{}
+		for single := range result {
+			data = append(data, single)
+		}
+		AssertEqual(t, data, []string{"mm1", "mm2", "mm3"})
 	}
 }
