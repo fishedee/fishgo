@@ -290,6 +290,9 @@ func TestQueueProduceAfterClose(t *testing.T) {
 		oldQueue Queue
 	}{
 		{newQueueForTest(t, QueueConfig{
+			Driver: "memory",
+		})},
+		{newQueueForTest(t, QueueConfig{
 			SavePath:   "127.0.0.1:6379,100,13420693396",
 			SavePrefix: "queue3:",
 			Driver:     "redis",
@@ -301,30 +304,41 @@ func TestQueueProduceAfterClose(t *testing.T) {
 	}
 	for testCaseIndex, test := range testCase {
 		queue := test.oldQueue
+		first := true
 		result := make(chan string, 64)
-		listener := func(data string) {
+		queue.MustConsume("topic1", "queue", 1, func(data string) {
 			result <- data
-		}
-		queue.MustConsume("topic1", "queue", 1, listener)
-		if testCaseIndex == 0 {
+			if testCaseIndex == 0 && first {
+				//close以后,memory支持在consume里面继续produce，并且直到没有produce为止
+				time.Sleep(time.Second)
+				queue.MustProduce("topic1", "mm2")
+				queue.MustProduce("topic1", "mm3")
+				first = false
+			}
+		})
+		if testCaseIndex == 1 {
 			queue.(*queueImplement).store.(*redisQueueStore).updateRouter()
 		}
 		queue.MustProduce("topic1", "mm1")
-		time.Sleep(time.Second)
 		go queue.Run()
 		queue.Close()
 
-		if testCaseIndex == 0 {
-			queue.(*queueImplement).store.(*redisQueueStore).closeChan = make(chan bool, 16)
-		} else {
-			queue.(*queueImplement).store.(*rabbitmqQueueStore).closeChan = make(chan bool, 16)
+		if testCaseIndex == 1 || testCaseIndex == 2 {
+			//redis与rabbitmq支持在close后在外部produce，memory不可以
+			if testCaseIndex == 1 {
+				queue.(*queueImplement).store.(*redisQueueStore).closeChan = make(chan bool, 16)
+			} else {
+				queue.(*queueImplement).store.(*rabbitmqQueueStore).closeChan = make(chan bool, 16)
+			}
+
+			queue.MustProduce("topic1", "mm2")
+			queue.MustProduce("topic1", "mm3")
+			queue.MustConsume("topic1", "queue", 1, func(data string) {
+				result <- data
+			})
+
+			time.Sleep(time.Second)
 		}
-
-		queue.MustProduce("topic1", "mm2")
-		queue.MustProduce("topic1", "mm3")
-		queue.MustConsume("topic1", "queue", 1, listener)
-
-		time.Sleep(time.Second)
 		close(result)
 		data := []string{}
 		for single := range result {

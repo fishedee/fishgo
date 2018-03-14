@@ -77,6 +77,7 @@ func (this *memoryQueueStore) Produce(topicId string, data []byte) error {
 		return errors.New("dos not exist topicId " + topicId)
 	}
 	for _, queue := range queues {
+		this.waitgroup.Add(1)
 		queue.channel.Write(data)
 	}
 	return nil
@@ -89,11 +90,10 @@ func (this *memoryQueueStore) Consume(topicId string, queueName string, poolSize
 	}
 	channel := queue.channel
 	for i := 0; i < poolSize; i++ {
-		this.waitgroup.Add(1)
 		go func() {
-			defer this.waitgroup.Done()
 			for single := range channel.Read() {
 				listener(single.([]byte))
+				this.waitgroup.Done()
 			}
 		}()
 	}
@@ -107,13 +107,5 @@ func (this *memoryQueueStore) Run() error {
 }
 
 func (this *memoryQueueStore) Close() {
-	router := this.getRouter()
-
-	for _, singleRouter := range router {
-		for _, queue := range singleRouter {
-			queue.channel.Close()
-		}
-	}
-
 	<-this.exitChan
 }
