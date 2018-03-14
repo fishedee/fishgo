@@ -68,6 +68,7 @@ func main(){
 
 * Run()error，正常运行时阻塞进程，正常退出时返回nil，异常发生时马上退出，返回非nil。要注意，Run的返回意味着必要的收尾工作都已经做完了，返回后就能保证重新start了。
 * Close()，关闭进程。要注意的是，这个函数的返回更加严格，需要所有的收尾的工作都已经做完，由run启动的所有go进程都必须全部收尾完成。这样做的原因是为了保证多个daemon的close时的依赖顺序能按照需要的执行。
+* Close时不关闭非Daemon接口，因为在Daemon关闭了以后，外部的timer或者http请求可能还会调用非Daemon接口，例如queue中的Produce。
 
 ## 4.3 error与exception
 

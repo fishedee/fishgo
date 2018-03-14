@@ -3,6 +3,7 @@ package queue
 import (
 	"errors"
 	. "github.com/fishedee/app/log"
+	. "github.com/fishedee/util"
 	"github.com/streadway/amqp"
 	"sync"
 	"time"
@@ -11,39 +12,67 @@ import (
 type rabbitmqQueueStore struct {
 	log       Log
 	config    QueueConfig
+	pool      *Pool
 	waitgroup *sync.WaitGroup
 	closeChan chan bool
 	exitChan  chan bool
 	listener  sync.Map
 }
 
+type rabbitmqQueueChannel struct {
+	connection *amqp.Connection
+	channel    *amqp.Channel
+}
+
 func newRabbitmqQueueStore(log Log, config QueueConfig) (*rabbitmqQueueStore, error) {
 	if config.RetryInterval == 0 {
 		config.RetryInterval = 5
 	}
-	return &rabbitmqQueueStore{
+	var err error
+	queue := &rabbitmqQueueStore{
 		log:       log,
 		config:    config,
 		waitgroup: &sync.WaitGroup{},
 		closeChan: make(chan bool, 16),
 		exitChan:  make(chan bool, 16),
+	}
+	queue.pool, err = NewPool(&PoolConfig{
+		InitCap: 1,
+		MaxCap:  100,
+		Wait:    false,
+		Get:     queue.getChannel,
+		Close:   queue.closeChannel,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return queue, nil
+}
+
+func (this *rabbitmqQueueStore) getChannel() (interface{}, error) {
+	conn, err := amqp.Dial(this.config.SavePath)
+	if err != nil {
+		return nil, err
+	}
+	ch, err := conn.Channel()
+	if err != nil {
+		conn.Close()
+		return nil, err
+	}
+	return &rabbitmqQueueChannel{
+		connection: conn,
+		channel:    ch,
 	}, nil
 }
 
-func (this *rabbitmqQueueStore) Produce(topicId string, data []byte) error {
-	conn, err := amqp.Dial(this.config.SavePath)
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
+func (this *rabbitmqQueueStore) closeChannel(conn interface{}) {
+	channel := conn.(*rabbitmqQueueChannel)
+	channel.channel.Close()
+	channel.connection.Close()
+}
 
-	ch, err := conn.Channel()
-	if err != nil {
-		return err
-	}
-	defer ch.Close()
-
-	err = ch.Publish(
+func (this *rabbitmqQueueStore) produceInner(ch *amqp.Channel, topicId string, data []byte) error {
+	return ch.Publish(
 		topicId, // exchange
 		"",      // routing key
 		false,   // mandatory
@@ -54,10 +83,16 @@ func (this *rabbitmqQueueStore) Produce(topicId string, data []byte) error {
 			DeliveryMode: 2,
 		},
 	)
+}
+
+func (this *rabbitmqQueueStore) Produce(topicId string, data []byte) error {
+	conn, err := this.pool.Get()
 	if err != nil {
 		return err
 	}
-	return nil
+	err = this.produceInner(conn.(*rabbitmqQueueChannel).channel, topicId, data)
+	this.pool.Put(conn, err != nil)
+	return err
 }
 
 func (this *rabbitmqQueueStore) singleConsume(queue string, listener queueStoreListener) error {
