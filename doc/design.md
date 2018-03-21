@@ -74,9 +74,90 @@ func main(){
 
 除了language包，其他模块的接口都不允许在实现里面直接panic，也就是接口必须能支持返回error来检查出错的。另外，对于那些经常需要检查error返回值的业务而言，可以提供额外的Must接口，以提高使用的体验。这样做可以同时兼顾返回error的灵活性，和使用exception的便利性。
 
-# 5 历史
+# 5 使用
 
-## 5.1 20180225
+## 5.1 xorm
+
+```
+func (this *ContactDb) getWhere(where Contact) (string, []interface{}) {
+	whereSql := []string{}
+	argSql := []interface{}{}
+	if where.Name != "" {
+		whereSql = append(whereSql, "name like ?")
+		argSql = append(argSql, "%"+where.Name+"%")
+	}
+	if where.Remark != "" {
+		whereSql = append(whereSql, "remark like ?")
+		argSql = append(argSql, "%"+where.Remark+"%")
+	}
+	if where.GroupId != 0 {
+		whereSql = append(whereSql, "groupId = ?")
+		argSql = append(argSql, strconv.Itoa(where.GroupId))
+	}
+	if where.Phone != "" {
+		whereSql = append(whereSql, "(phone like ? or phone2 like ? or phone3 like ?)")
+		argSql = append(argSql, "%"+where.Phone+"%", "%"+where.Phone+"%", "%"+where.Phone+"%")
+	}
+	return Implode(whereSql, " and "), argSql
+}
+
+func (this *ContactDb) Search(where Contact, limit CommonPage) Contacts {
+	db := this.db.NewSession()
+
+	whereSql, whereArg := this.getWhere(where)
+
+	if whereSql != "" {
+		db.Where(whereSql, whereArg...)
+	}
+	result := Contacts{}
+	db.OrderBy("createTime desc").Limit(limit.PageSize, limit.PageIndex).MustFind(&result.Data)
+
+	if whereSql != "" {
+		db.Where(whereSql, whereArg...)
+	}
+	result.Count = int(db.MustCount(&Contact{}))
+
+	return result
+}
+
+func (this *ContactDb) Get(contactId int) Contact {
+	var contacts []Contact
+	this.db.Where("contactId = ?", contactId).MustFind(&contacts)
+	if len(contacts) == 0 {
+		Throw(1, "该"+strconv.Itoa(contactId)+"联系人不存在")
+	}
+	return contacts[0]
+}
+
+func (this *ContactDb) Del(contactId int) {
+	this.db.Where("contactId = ?", contactId).MustDelete(&Contact{})
+}
+
+func (this *ContactDb) Add(contact Contact) {
+	this.db.MustInsert(contact)
+}
+
+func (this *ContactDb) Mod(contactId int, contact Contact) {
+	this.db.Where("contactId = ?", contactId).AllCols().MustUpdate(&contact)
+}
+
+func (this *ContactDb) ResetGroupId(groupId int) {
+	this.db.Where("groupId = ?", groupId).Cols("groupId").MustUpdate(&Contact{
+		GroupId: 0,
+	})
+}
+```
+
+db的标准写法，如上，注意search需要两次的where,mod需要allcols。
+
+## 5.2 queue
+
+* 没有queue的topic在发送时会报错
+* 有queue但没有consumer的topic发送时不会报错，但会导致queue大量堆积
+
+# 6 历史
+
+## 6.1 20180225
 
 重新设计web的模块，将其重构到app的模块，目的是更加模块化的实现，当然，代价是写代码远远没有原来方便了，普通的web的项目依然建议用成熟的web模块。app模块暂时只作为实验性质，不要使用。
 
