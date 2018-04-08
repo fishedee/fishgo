@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"errors"
 	. "github.com/fishedee/app/log"
 	. "github.com/fishedee/app/render"
 	. "github.com/fishedee/app/router"
@@ -26,6 +27,14 @@ func c(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Hello Fish"))
 }
 
+func d_Json(v Validator, s Session) interface{} {
+	return errors.New("my god2")
+}
+
+func e_Json(v Validator, s Session) interface{} {
+	return NewException(10002, "my god%v", 3)
+}
+
 func jsonToArray(data string) interface{} {
 	var result interface{}
 	err := DecodeJson([]byte(data), &result)
@@ -48,6 +57,8 @@ func TestEasy(t *testing.T) {
 	factory.GET("/a", a_json)
 	factory.GET("/b", b_Json)
 	factory.GET("/c", c)
+	factory.GET("/d", d_Json)
+	factory.GET("/e", e_Json)
 	router := factory.Create()
 
 	r, _ := http.NewRequest("GET", "http://example.com/a?key=mmc", nil)
@@ -65,4 +76,14 @@ func TestEasy(t *testing.T) {
 	w3 := &fakeWriter{}
 	router.ServeHTTP(w3, r3)
 	AssertEqual(t, w3.Read(), "Hello Fish")
+
+	r4, _ := http.NewRequest("GET", "http://example.com/d", nil)
+	w4 := &fakeWriter{}
+	router.ServeHTTP(w4, r4)
+	AssertEqual(t, jsonToArray(w4.Read()), map[string]interface{}{"code": 1.0, "msg": "my god2"})
+
+	r5, _ := http.NewRequest("GET", "http://example.com/e", nil)
+	w5 := &fakeWriter{}
+	router.ServeHTTP(w5, r5)
+	AssertEqual(t, jsonToArray(w5.Read()), map[string]interface{}{"code": 10002.0, "msg": "my god3"})
 }

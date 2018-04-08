@@ -86,11 +86,19 @@ func NewEasyMiddleware(log Log, validatorFactory ValidatorFactory, sessionFactor
 				var result interface{}
 				var exception Exception
 				func() {
-					defer Catch(func(e Exception) {
+					doException := func(e Exception) {
 						exception = e
 						log.Error("Buiness Error Code:[%d] Message:[%s]\nStackTrace:[%s]", e.GetCode(), e.GetMessage(), e.GetStackTrace())
-					})
+					}
+					defer Catch(doException)
 					result = lastHandler(validator, session)
+					if resultException, isOk := result.(*Exception); isOk {
+						result = nil
+						doException(*resultException)
+					} else if resultError, isOk := result.(error); isOk {
+						result = nil
+						doException(*NewException(1, resultError.Error()))
+					}
 				}()
 				data := renderChange(exception, result)
 				err := render.Format(renderName, data)

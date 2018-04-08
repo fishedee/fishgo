@@ -148,7 +148,7 @@ func (this *ContactDb) ResetGroupId(groupId int) {
 }
 ```
 
-db的标准写法，如上，注意search需要两次的where,mod需要allcols。
+db的标准写法，如上，注意search需要两次的where,mod需要allcols。要注意在，性能要求较高的场合不能使用pageIndex+pageSize，而是nextPage+pageSize。
 
 ## 5.2 queue
 

@@ -11,7 +11,10 @@ type Exception struct {
 	stack   string
 }
 
-func NewException(code int, message string) *Exception {
+func NewException(code int, message string, args ...interface{}) *Exception {
+	if len(args) != 0 {
+		message = fmt.Sprintf(message, args...)
+	}
 	stack := ""
 	for i := 1; ; i++ {
 		_, file, line, ok := runtime.Caller(i)
