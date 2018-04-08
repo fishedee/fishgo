@@ -35,6 +35,13 @@ func e_Json(v Validator, s Session) interface{} {
 	return NewException(10002, "my god%v", 3)
 }
 
+type dStruct struct {
+}
+
+func (this *dStruct) f_Json(v Validator, s Session) interface{} {
+	return "my god4"
+}
+
 func jsonToArray(data string) interface{} {
 	var result interface{}
 	err := DecodeJson([]byte(data), &result)
@@ -52,6 +59,7 @@ func TestEasy(t *testing.T) {
 	middleware := NewEasyMiddleware(log, validatorFactory, sessionFactory, renderFactory)
 
 	factory := NewRouterFactory()
+	d := &dStruct{}
 	factory.Use(NewLogMiddleware(log))
 	factory.Use(middleware)
 	factory.GET("/a", a_json)
@@ -59,6 +67,7 @@ func TestEasy(t *testing.T) {
 	factory.GET("/c", c)
 	factory.GET("/d", d_Json)
 	factory.GET("/e", e_Json)
+	factory.GET("/f", d.f_Json)
 	router := factory.Create()
 
 	r, _ := http.NewRequest("GET", "http://example.com/a?key=mmc", nil)
@@ -86,4 +95,9 @@ func TestEasy(t *testing.T) {
 	w5 := &fakeWriter{}
 	router.ServeHTTP(w5, r5)
 	AssertEqual(t, jsonToArray(w5.Read()), map[string]interface{}{"code": 10002.0, "msg": "my god3"})
+
+	r6, _ := http.NewRequest("GET", "http://example.com/f", nil)
+	w6 := &fakeWriter{}
+	router.ServeHTTP(w6, r6)
+	AssertEqual(t, jsonToArray(w6.Read()), map[string]interface{}{"code": 0.0, "data": "my god4", "msg": ""})
 }

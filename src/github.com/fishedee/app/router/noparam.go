@@ -1,15 +1,22 @@
 package router
 
 import (
+	. "github.com/fishedee/language"
 	"net/http"
 	"reflect"
 	"runtime"
+	"strings"
 )
 
 func NewNoParamMiddleware() RouterMiddleware {
 	return func(prev RouterMiddlewareContext) RouterMiddlewareContext {
 		if _, isExist := prev.Data["name"]; isExist == false {
-			prev.Data["name"] = runtime.FuncForPC(reflect.ValueOf(prev.Handler).Pointer()).Name()
+			name := runtime.FuncForPC(reflect.ValueOf(prev.Handler).Pointer()).Name()
+			if rbc := strings.LastIndexByte(name, ')'); rbc != -1 {
+				name = name[0:rbc]
+			}
+			nameInfo := Explode(name, ".")
+			prev.Data["name"] = nameInfo[len(nameInfo)-1]
 		}
 		last := prev.Handler
 		var netHandler http.HandlerFunc
