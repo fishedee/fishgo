@@ -82,11 +82,18 @@ type UmengIOSPayload struct {
 }
 
 type UmengIOSPayloadAps struct {
-	Alert            string `json:"alert"`
-	Badge            int    `json:"badge"`
-	Sound            string `json:"sound"`
-	ContentAvailable string `json:"content-available"`
-	Category         string `json:"category"`
+	Alert            string                  `json:"alert,omitempty"`
+	NewAlert         UmengIOSPayloadApsAlert `json:"alert,omitempty"`
+	Badge            int                     `json:"badge"`
+	Sound            string                  `json:"sound"`
+	ContentAvailable string                  `json:"content-available"`
+	Category         string                  `json:"category"`
+}
+
+type UmengIOSPayloadApsAlert struct {
+	Title    string `json:"title"`
+	Subtitle string `json:"subtitle"`
+	Body     string `json:"body"`
 }
 
 type UmengIOSPolicy struct {
