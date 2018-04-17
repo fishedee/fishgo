@@ -82,8 +82,7 @@ type UmengIOSPayload struct {
 }
 
 type UmengIOSPayloadAps struct {
-	Alert            string                  `json:"alert,omitempty"`
-	NewAlert         UmengIOSPayloadApsAlert `json:"alert,omitempty"`
+	Alert			 UmengIOSPayloadApsAlert `json:"alert"`
 	Badge            int                     `json:"badge"`
 	Sound            string                  `json:"sound"`
 	ContentAvailable string                  `json:"content-available"`

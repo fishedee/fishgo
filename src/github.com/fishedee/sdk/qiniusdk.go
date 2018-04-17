@@ -218,7 +218,7 @@ func (this *QiniuSdk) GetDownloadUrl(inUrl string) (string, error) {
 	client := this.getClient()
 
 	getPolicy := &kodo.GetPolicy{
-		Expires: 3600,
+		Expires: 86400,
 	}
 	baseUrl := kodo.MakeBaseUrl(domain, key)
 	privateUrl := client.MakePrivateUrl(baseUrl, getPolicy)
