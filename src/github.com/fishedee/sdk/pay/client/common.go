@@ -7,10 +7,47 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
+	. "github.com/fishedee/language"
 	"github.com/fishedee/sdk/pay/common"
+	"github.com/fishedee/sdk/pay/util"
 	"sort"
 	"strings"
 )
+
+// 微信企业付款到零钱
+func WachatCompanyChange(mchAppid, mchid, key string, conn *HTTPSClient, charge *common.Charge) (map[string]string, error) {
+	var m = make(map[string]string)
+	m["mch_appid"] = mchAppid
+	m["mchid"] = mchid
+	m["nonce_str"] = util.RandomStr()
+	m["partner_trade_no"] = charge.TradeNum
+	m["openid"] = charge.OpenID
+	m["amount"] = fmt.Sprintf("%d", int(MulDecimal(charge.MoneyFee, float64(100))))
+	m["spbill_create_ip"] = util.LocalIP()
+	m["desc"] = TruncatedText(charge.Describe, 32)
+
+	// 是否验证用户名称
+	if charge.CheckName {
+		m["check_name"] = "FORCE_CHECK"
+		m["re_user_name"] = charge.ReUserName
+	} else {
+		m["check_name"] = "NO_CHECK"
+	}
+
+	sign, err := WechatGenSign(key, m)
+	if err != nil {
+		return map[string]string{}, err
+	}
+	m["sign"] = sign
+
+	// 转出xml结构
+	result, err := PostWechat("https://api.mch.weixin.qq.com/mmpaymkttransfers/promotion/transfers", m, conn)
+	if err != nil {
+		return map[string]string{}, err
+	}
+
+	return struct2Map(result)
+}
 
 func WechatGenSign(key string, m map[string]string) (string, error) {
 	var signData []string
@@ -66,7 +103,7 @@ func FilterTheSpecialSymbol(data string) string {
 }
 
 //对微信下订单或者查订单
-func PostWechat(url string, data map[string]string) (common.WeChatQueryResult, error) {
+func PostWechat(url string, data map[string]string, h *HTTPSClient) (common.WeChatQueryResult, error) {
 	var xmlRe common.WeChatQueryResult
 	buf := bytes.NewBufferString("")
 
@@ -75,7 +112,14 @@ func PostWechat(url string, data map[string]string) (common.WeChatQueryResult, e
 	}
 	xmlStr := fmt.Sprintf("<xml>%s</xml>", buf.String())
 
-	re, err := HTTPSC.PostData(url, "text/xml:charset=UTF-8", xmlStr)
+	hc := new(HTTPSClient)
+	if h != nil {
+		hc = h
+	} else {
+		hc = HTTPSC
+	}
+
+	re, err := hc.PostData(url, "text/xml:charset=UTF-8", xmlStr)
 	if err != nil {
 		return xmlRe, errors.New("HTTPSC.PostData: " + err.Error())
 	}
@@ -136,4 +180,17 @@ func ToURL(payUrl string, m map[string]string) string {
 		buf = append(buf, fmt.Sprintf("%s=%s", k, v))
 	}
 	return fmt.Sprintf("%s?%s", payUrl, strings.Join(buf, "&"))
+}
+
+func struct2Map(obj interface{}) (map[string]string,error) {
+
+	j2 := make(map[string]string)
+
+	j1, err := json.Marshal(obj)
+	if err != nil {
+		return  j2, err
+	}
+
+	err2 := json.Unmarshal(j1, &j2)
+	return j2,err2
 }
