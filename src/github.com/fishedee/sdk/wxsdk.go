@@ -820,26 +820,26 @@ func (this *WxSdk) DecryptByMiniProgram(sessionKey, encryptedData, iv string) (*
 	}
 	cipherText, err := base64.StdEncoding.DecodeString(encryptedData)
 	if err != nil {
-		return nil, errors.New("encryptedData:" + sessionKey + ",err:" + err.Error())
+		return nil, errors.New("encryptedData:" + encryptedData + ",err:" + err.Error())
 	}
 	ivBytes, err := base64.StdEncoding.DecodeString(iv)
 	if err != nil {
-		return nil, errors.New("iv:" + sessionKey + ",err:" + err.Error())
+		return nil, errors.New("iv:" + iv + ",err:" + err.Error())
 	}
 	block, err := aes.NewCipher(aesKey)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("aes.NewCipher,err:" + err.Error())
 	}
 	mode := cipher.NewCBCDecrypter(block, ivBytes)
-	mode.CryptBlocks(cipherText, cipherText)
-	cipherText, err = pkcs7Unpad(cipherText, block.BlockSize())
-	if err != nil {
-		return nil, err
-	}
+	origData := make([]byte, len(cipherText))
+	mode.CryptBlocks(origData, cipherText)
+	length := len(origData)
+	unpadding := int(origData[length-1])
+	userData := origData[:(length - unpadding)]
 	var userInfo WxMiniProgramUserInfo
-	err = json.Unmarshal(cipherText, &userInfo)
+	err = json.Unmarshal(userData, &userInfo)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("json.Unmarshal,err:" + err.Error())
 	}
 	if userInfo.Watermark.AppID != this.AppId {
 		return nil, errors.New("app id not match")
