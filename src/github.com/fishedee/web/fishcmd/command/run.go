@@ -1,16 +1,23 @@
 package command
 
 import (
+	"errors"
 	"github.com/fishedee/web/fishcmd/modules"
 )
 
 func Run(argv []string) (string, error) {
 	//读取参数
 	isWatch := false
+	appName := ""
 	for _, singleArgv := range argv {
 		if singleArgv == "--watch" {
 			isWatch = true
+		} else {
+			appName = singleArgv
 		}
+	}
+	if appName == "" {
+		return "", errors.New("lack of appName")
 	}
 
 	//读取配置
@@ -18,7 +25,6 @@ func Run(argv []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	appName := modules.GetAppName()
 
 	//运行
 	handler := func(singlePackage string) {

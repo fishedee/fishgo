@@ -11,19 +11,9 @@ func build(appName string) error {
 	timer := modules.NewTimer()
 	modules.Log.Debug("start building (" + appName + ")...")
 	timer.Start()
-	err = modules.InstallPackage(appName)
+	err = modules.BuildPackage(appName)
 	if err != nil {
 		modules.Log.Error("build fail! error: %v", err.Error())
-		return err
-	}
-
-	//复制文件
-	if strings.Index(appName, ".") != -1 {
-		return nil
-	}
-	err = modules.CopyFile(modules.GetAppInstallPath(), modules.GetAppCurrentPath())
-	if err != nil {
-		modules.Log.Error("copy fail! error: %v", err.Error())
 		return err
 	}
 	timer.Stop()

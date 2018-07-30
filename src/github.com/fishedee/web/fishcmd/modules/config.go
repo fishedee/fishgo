@@ -36,22 +36,13 @@ func InitConfig() error {
 	}
 
 	goPathPkg = goPath + "/pkg/" + runtime.GOOS + "_" + runtime.GOARCH
-	if IsExistDir(goPathPkg) == false {
-		return fmt.Errorf("$GOPATH/pkg [%v] is not exist", goPathPkg)
-	}
 
 	workingDir, err = os.Getwd()
 	if err != nil {
 		return err
 	}
 	workingDir = strings.TrimRight(workingDir, "/")
-	if strings.HasPrefix(workingDir, goPathSrc) == false {
-		return fmt.Errorf("You are not in $GOPATH/src [%v]", workingDir)
-	}
-	appName = workingDir[len(goPathSrc)+1:]
-	if appName == "" {
-		return fmt.Errorf("You are not in good directory [%v]", workingDir)
-	}
+	appName = ""
 
 	workingDirArray := strings.Split(workingDir, "/")
 	appBinName = workingDirArray[len(workingDirArray)-1]
