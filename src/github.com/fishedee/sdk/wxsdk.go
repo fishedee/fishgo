@@ -101,6 +101,17 @@ type WxSdkTemplateMessage struct {
 	Data        map[string]WxSdkTemplateMessageDataContent `json:"data"`
 }
 
+// 微信小程序消息模板
+type WxSdkMiniProgramTemplateMessage struct {
+	Touser          string                                         `json:"touser"`
+	TemplateId      string                                         `json:"template_id"`
+	Page            string                                         `json:"page"`
+	FormId          string                                         `json:"form_id"`
+	Color           string                                         `json:"color"`
+	EmphasisKeyword string                                         `json:"emphasis_keyword"`
+	Data            map[string]WxSdkMiniProgramTemplateMessageData `json:"data"`
+}
+
 type WxSdkTemplateMessageMiniprogram struct {
 	Appid    string `json:"appid"`
 	Pagepath string `json:"pagepath"`
@@ -109,6 +120,10 @@ type WxSdkTemplateMessageMiniprogram struct {
 type WxSdkTemplateMessageDataContent struct {
 	Value string `json:"value"`
 	Color string `json:"color"`
+}
+
+type WxSdkMiniProgramTemplateMessageData struct {
+	Value string `json:"value"`
 }
 
 // 微信素材列表
@@ -257,6 +272,15 @@ type WxSdkSendQrcode struct {
 			SceneStr string `json:"scene_str,omitempty"`
 		} `json:"scene"`
 	} `json:"action_info"`
+}
+
+type WxSdkMiniProgarSendQrcode struct {
+	Scene     string            `json:"scene,omitempty"`
+	Page      string            `json:"page,omitempty"`
+	Width     int               `json:"width,omitempty"`
+	AutoColor bool              `json:"auto_color,omitempty"`
+	LineColor map[string]string `json:"line_color,omitempty"`
+	IsHyaline bool              `json:"is_hyaline,omitempty"`
 }
 
 type WxSdkReceiveQrcode struct {
@@ -649,7 +673,7 @@ func (this *WxSdk) DelMenu(accessToken string) error {
 	return nil
 }
 
-// 发送消息模板
+// 发送公众号消息模板
 func (this *WxSdk) SendTemplateMessage(accessToken string, msgData WxSdkTemplateMessage) (WxSdkCommonResult, error) {
 
 	result := WxSdkCommonResult{}
@@ -667,10 +691,28 @@ func (this *WxSdk) SendTemplateMessage(accessToken string, msgData WxSdkTemplate
 	}
 
 	err = DecodeJson(data, &result)
+	return result, err
+}
+
+// 发送小程序消息模板
+func (this *WxSdk) SendMiniProgramTemplateMessage(accessToken string, msgData WxSdkMiniProgramTemplateMessage) (WxSdkCommonResult, error) {
+
+	result := WxSdkCommonResult{}
+
+	msgJson, err := EncodeJson(msgData)
 	if err != nil {
 		return result, err
 	}
-	return result, nil
+
+	data, err := this.api("POST", "/cgi-bin/message/wxopen/template/send", map[string]string{
+		"access_token": accessToken,
+	}, "", msgJson)
+	if err != nil {
+		return result, err
+	}
+
+	err = DecodeJson(data, &result)
+	return result, err
 }
 
 //手动拼接参数
@@ -761,6 +803,40 @@ func (this *WxSdk) AddQrcode(data WxSdkSendQrcode) (WxSdkReceiveQrcode, error) {
 	return result, err
 }
 
+// 创建小程序二维码(B接口)
+func (this *WxSdk) AddMiniProgramQrcode(data WxSdkMiniProgarSendQrcode) ([]byte, error) {
+	result := []byte{}
+
+	dataJson, err := EncodeJson(data)
+	if err != nil {
+		return result, err
+	}
+
+	ajaxOption := &Ajax{
+		Url:          `https://api.weixin.qq.com/wxa/getwxacodeunlimit?access_token=` + this.AccessToken,
+		Data:         dataJson,
+		ResponseData: &result,
+		DataType:     "",
+	}
+	err = DefaultAjaxPool.Post(ajaxOption)
+
+	if err != nil {
+		panic(err)
+	}
+	if len(result) > 0 && result[0] == '{' {
+		errInfo := WxSdkCommonResult{}
+		err = DecodeJson(result, &errInfo)
+		if err != nil {
+			return result, err
+		}
+		if errInfo.Errcode != 0 {
+			return result, errors.New("errcode:" + strconv.Itoa(errInfo.Errcode) + ",errmsg:" + errInfo.Errmsg)
+		}
+	}
+
+	return result, err
+}
+
 //Js接口
 func (this *WxSdk) GetJsApiTicket(accessToken string) (WxSdkJsTicket, error) {
 	result := WxSdkJsTicket{}
@@ -831,15 +907,15 @@ func (this *WxSdk) DecryptByMiniProgram(sessionKey, encryptedData, iv string) (*
 		return nil, errors.New("aes.NewCipher,err:" + err.Error())
 	}
 	mode := cipher.NewCBCDecrypter(block, ivBytes)
-	origData := make([]byte, len(cipherText))
-	mode.CryptBlocks(origData, cipherText)
-	length := len(origData)
-	unpadding := int(origData[length-1])
-	userData := origData[:(length - unpadding)]
-	var userInfo WxMiniProgramUserInfo
-	err = json.Unmarshal(userData, &userInfo)
+	mode.CryptBlocks(cipherText, cipherText)
+	cipherText, err = pkcs7Unpad(cipherText, block.BlockSize())
 	if err != nil {
-		return nil, errors.New("json.Unmarshal,err:" + err.Error())
+		return nil, err
+	}
+	var userInfo WxMiniProgramUserInfo
+	err = json.Unmarshal(cipherText, &userInfo)
+	if err != nil {
+		return nil, err
 	}
 	if userInfo.Watermark.AppID != this.AppId {
 		return nil, errors.New("app id not match")
@@ -878,15 +954,10 @@ func pkcs7Unpad(data []byte, blockSize int) ([]byte, error) {
 	if len(data)%blockSize != 0 || len(data) == 0 {
 		return nil, errors.New("invalid PKCS7 data")
 	}
-	c := data[len(data)-1]
-	n := int(c)
-	if n == 0 || n > len(data) {
-		return nil, errors.New("invalid padding on input")
+	length := len(data)
+	unPadding := int(data[length-1])
+	if unPadding < 1 || unPadding > 32 {
+		unPadding = 0
 	}
-	for i := 0; i < n; i++ {
-		if data[len(data)-n+i] != c {
-			return nil, errors.New("invalid padding on input")
-		}
-	}
-	return data[:len(data)-n], nil
+	return data[:(length - unPadding)], nil
 }
