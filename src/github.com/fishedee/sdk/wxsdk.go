@@ -821,7 +821,7 @@ func (this *WxSdk) AddMiniProgramQrcode(data WxSdkMiniProgarSendQrcode) ([]byte,
 	err = DefaultAjaxPool.Post(ajaxOption)
 
 	if err != nil {
-		panic(err)
+		return result, err
 	}
 	if len(result) > 0 && result[0] == '{' {
 		errInfo := WxSdkCommonResult{}
