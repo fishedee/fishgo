@@ -485,6 +485,37 @@ func TestQuerySort(t *testing.T) {
 				QueryInnerStruct2{QueryInnerStruct{3}, 4, 3.1},
 			},
 		},
+		{
+			"Name asc",
+			[]contentType{
+				contentType{"4", 7, true, 0, 0, nowTime},
+				contentType{"0", -1, false, 1.1, 1.1, zeroTime},
+				contentType{"5", -9, true, 0, 0, nowTime},
+				contentType{"5", 3, true, 0, 0, nowTime},
+				contentType{"4", 13, true, 0, 0, nowTime},
+				contentType{"7", -1, false, 1.1, 1.1, zeroTime},
+				contentType{"5", 9, true, 0, 0, nowTime},
+				contentType{"5", 1, true, -1.1, -1.1, oldTime},
+				contentType{"1", -1, false, 1.1, 1.1, zeroTime},
+				contentType{"4", 6, true, 0, 0, nowTime},
+				contentType{"5", 2, false, 0, 0, zeroTime},
+				contentType{"5", 7, true, 0, 0, nowTime},
+			},
+			[]contentType{
+				contentType{"0", -1, false, 1.1, 1.1, zeroTime},
+				contentType{"1", -1, false, 1.1, 1.1, zeroTime},
+				contentType{"4", 7, true, 0, 0, nowTime},
+				contentType{"4", 13, true, 0, 0, nowTime},
+				contentType{"4", 6, true, 0, 0, nowTime},
+				contentType{"5", -9, true, 0, 0, nowTime},
+				contentType{"5", 3, true, 0, 0, nowTime},
+				contentType{"5", 9, true, 0, 0, nowTime},
+				contentType{"5", 1, true, -1.1, -1.1, oldTime},
+				contentType{"5", 2, false, 0, 0, zeroTime},
+				contentType{"5", 7, true, 0, 0, nowTime},
+				contentType{"7", -1, false, 1.1, 1.1, zeroTime},
+			},
+		},
 	}
 
 	for singleTestCaseIndex, singleTestCase := range testCase {

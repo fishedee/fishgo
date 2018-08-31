@@ -117,7 +117,7 @@ func QuerySort(data interface{}, sortType string) interface{} {
 		targetElemType: dataElemType,
 		targetCompare:  targetCompare,
 	}
-	sort.Sort(&arraySlice)
+	sort.Stable(&arraySlice)
 
 	return dataResult.Interface()
 }
