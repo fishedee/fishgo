@@ -138,11 +138,24 @@ var WxSdkMaterialType = struct {
 	Video string
 	Voice string
 	News  string
+	Thumb string
 }{
 	Image: "image",
 	Video: "video",
 	Voice: "voice",
 	News:  "news",
+	Thumb: "thumb",
+}
+
+type WxSdkMaterialNews struct {
+	ThumbMediaId     string `json:"thumb_media_id"`
+	Title            string `json:"title"`
+	ShowCoverPic     string `json:"show_cover_pic"`
+	Author           string `json:"author"`
+	Content          string `json:"content"`
+	Digest           string `json:"digest"`
+	Url              string `json:"url"`
+	ContentSourceUrl string `json:"content_source_url"`
 }
 
 type WxSdkReceiveBatchgetMaterial struct {
@@ -151,21 +164,44 @@ type WxSdkReceiveBatchgetMaterial struct {
 	Item       []struct {
 		MediaId string `json:"media_id"`
 		Name    string `json:"name"`
-		Content []struct {
-			NewsItem []struct {
-				ThumbMediaId     string `json:"thumb_media_id"`
-				Title            string `json:"title"`
-				ShowCoverPic     string `json:"show_cover_pic"`
-				Author           string `json:"author"`
-				Content          string `json:"content"`
-				Digest           string `json:"digest"`
-				Url              string `json:"url"`
-				ContentSourceUrl string `json:"content_source_url"`
-			} `json:"news_item"`
+		Content struct {
+			NewsItem []WxSdkMaterialNews `json:"news_item"`
 		} `json:"content"`
 		Url        string `json:"url"`
 		UpdateTime string `json:"update_time"`
 	} `json:"item"`
+}
+
+type WxSdkAddMaterialOther struct {
+	Media       []byte
+	Name        string
+	Type        string
+	Description struct {
+		Title        string `json:"title"`
+		Introduction string `json:"introduction"`
+	}
+}
+
+type WxSdkAddMaterialOtherResult struct {
+	MediaId string `json:"media_id"`
+	Url     string `json:"url"`
+}
+
+type WxSdkAddMaterialNews struct {
+	Articles []WxSdkMaterialNews `json:"articles"`
+}
+
+type WxSdkAddMaterialNewsResult struct {
+	MediaId string `json:"media_id"`
+}
+
+type WxSdkUpdateMaterialNews struct {
+	MediaId  string            `json:"media_id"`
+	Index    int               `json:"index"`
+	Articles WxSdkMaterialNews `json:"articles"`
+}
+
+type WxSdkUpdateMaterialNewsResult struct {
 }
 
 type WxSdkAddMaterial struct {
@@ -177,6 +213,89 @@ type WxSdkReceiveMaterial struct {
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	DownUrl     string `json:"down_url"`
+}
+
+var WxSdkMassMessageType = struct {
+	MpNews  string
+	Text    string
+	Voice   string
+	Image   string
+	MpVideo string
+	WxCard  string
+}{
+	MpNews:  "mpnews",
+	Text:    "text",
+	Voice:   "voice",
+	Image:   "image",
+	MpVideo: "mpvideo",
+	WxCard:  "wxcard",
+}
+
+type WxSdkMassMpNewsMessage struct {
+	MediaId string `json:"media_id"`
+}
+
+type WxSdkMassTextMessage struct {
+	Content string `json:"content"`
+}
+
+type WxSdkMassVoiceMessage struct {
+	MediaId string `json:"media_id"`
+}
+
+type WxSdkMassImageMessage struct {
+	MediaId string `json:"media_id"`
+}
+
+type WxSdkMassMpVideoMessage struct {
+	MediaId string `json:"media_id"`
+}
+
+type WxSdkMassWxCardMessage struct {
+	CardId  string `json:"card_id"`
+	CardExt struct {
+		Code      string `json:"code"`
+		OpenId    string `json:"openid"`
+		TimeStamp string `json:"timestamp"`
+		Signature string `json:"signature"`
+	} `json:"card_id"`
+}
+
+type WxSdkSendMassMessageAll struct {
+	Filter struct {
+		IsToAll bool `json:"is_to_all"`
+		TagId   int  `json:"tag_id,omitempty"`
+	} `json:"filter"`
+	MpNews            WxSdkMassMpNewsMessage  `json:"mpnews,omitempty"`
+	Text              WxSdkMassTextMessage    `json:"text,omitempty"`
+	Voice             WxSdkMassVoiceMessage   `json:"voice,omitempty"`
+	Image             WxSdkMassImageMessage   `json:"image,omitempty"`
+	MpVideo           WxSdkMassMpVideoMessage `json:"mpvideo,omitempty"`
+	WxCard            WxSdkMassWxCardMessage  `json:"wxcard,omitempty"`
+	MsgType           string                  `json:"msgtype"`
+	SendIgnoreReprint int                     `json:"send_ignore_reprint"`
+}
+
+type WxSdkSendMassMessageAllResult struct {
+	MsgId     int `json:"msg_id"`
+	MsgDataId int `json:"msg_data_id"`
+}
+
+type WxSdkPreviewMassMessage struct {
+	ToUser            string                  `json:"touser,omitempty"`
+	ToWxName          string                  `json:"towxname,omitempty"`
+	MpNews            WxSdkMassMpNewsMessage  `json:"mpnews,omitempty"`
+	Text              WxSdkMassTextMessage    `json:"text,omitempty"`
+	Voice             WxSdkMassVoiceMessage   `json:"voice,omitempty"`
+	Image             WxSdkMassImageMessage   `json:"image,omitempty"`
+	MpVideo           WxSdkMassMpVideoMessage `json:"mpvideo,omitempty"`
+	WxCard            WxSdkMassWxCardMessage  `json:"wxcard,omitempty"`
+	MsgType           string                  `json:"msgtype"`
+	SendIgnoreReprint int                     `json:"send_ignore_reprint"`
+}
+
+type WxSdkPreviewMassMessageResult struct {
+	MsgId string `json:"msg_id"`
 }
 
 type WxSdkReceiveMessage struct {
@@ -465,7 +584,59 @@ func (this *WxSdk) GetBatchgetMaterial(data WxSdkSendBatchgetMaterial) (WxSdkRec
 	return result, nil
 }
 
-// 添加素材
+//添加永久图文素材
+func (this *WxSdk) AddMaterialNews(news WxSdkAddMaterialNews) (WxSdkAddMaterialNewsResult, error) {
+	var result WxSdkAddMaterialNewsResult
+
+	err := this.apiJson("POST", "/cgi-bin/material/add_news", map[string]string{
+		"access_token": this.AccessToken,
+	}, "", news, &result)
+	if err != nil {
+		return result, err
+	}
+	return result, nil
+}
+
+//修改永久图文素材
+func (this *WxSdk) UpdateMaterialNews(news WxSdkUpdateMaterialNews) (WxSdkUpdateMaterialNewsResult, error) {
+	var result WxSdkUpdateMaterialNewsResult
+	err := this.apiJson("POST", "/cgi-bin/material/update_news", map[string]string{
+		"access_token": this.AccessToken,
+	}, "", news, &result)
+	if err != nil {
+		return result, err
+	}
+	return result, nil
+}
+
+//添加永久其他类型的素材
+func (this *WxSdk) AddMaterialOther(message WxSdkAddMaterialOther) (WxSdkAddMaterialOtherResult, error) {
+	var result WxSdkAddMaterialOtherResult
+
+	description, err := EncodeJson(message.Description)
+	if err != nil {
+		return result, err
+	}
+
+	data, err := this.api("POST", "/cgi-bin/material/add_material", map[string]string{
+		"access_token": this.AccessToken,
+		"type":         message.Type,
+	}, "form", map[string]interface{}{
+		"media":       []interface{}{message.Name, message.Media},
+		"description": string(description),
+	})
+	if err != nil {
+		return result, err
+	}
+
+	err = DecodeJson(data, &result)
+	if err != nil {
+		return result, err
+	}
+	return result, nil
+}
+
+// 添加永久其他类型的素材（旧版）
 // 参数 fileAddress 上传文件的本地地址
 // 参数 materialType WxSdkMaterialType类型
 // 参数 title 多媒体标题
@@ -552,6 +723,31 @@ func (this *WxSdk) DownloadMedia(accessToken, mediaId string) ([]byte, error) {
 		"access_token": accessToken,
 		"media_id":     mediaId,
 	}, "", nil)
+}
+
+//群发消息发送接口
+func (this *WxSdk) SendMassMessageAll(message WxSdkSendMassMessageAll) (WxSdkSendMassMessageAllResult, error) {
+	var result WxSdkSendMassMessageAllResult
+	err := this.apiJson("POST", "/cgi-bin/message/mass/sendall", map[string]string{
+		"access_token": this.AccessToken,
+	}, "", message, &result)
+	if err != nil {
+		return result, err
+	}
+	return result, nil
+}
+
+//群发消息预览接口
+func (this *WxSdk) PreviewMassMessage(message WxSdkPreviewMassMessage) (WxSdkPreviewMassMessageResult, error) {
+	var result WxSdkPreviewMassMessageResult
+
+	err := this.apiJson("POST", "/cgi-bin/message/mass/preview", map[string]string{
+		"access_token": this.AccessToken,
+	}, "", message, &result)
+	if err != nil {
+		return result, err
+	}
+	return result, nil
 }
 
 //用户接口
