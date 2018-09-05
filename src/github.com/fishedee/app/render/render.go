@@ -50,6 +50,9 @@ func NewRenderFactory(config RenderConfig) (RenderFactory, error) {
 		func() (RenderFormatter, error) {
 			return NewJsonFormatter()
 		},
+		func() (RenderFormatter, error) {
+			return NewFileFormatter()
+		},
 	}
 	if config.TemplateDir != "" {
 		preFormatter = append(preFormatter, func() (RenderFormatter, error) {

@@ -519,7 +519,8 @@ func (this *Ajax) saveResponse(response *http.Response) error {
 		return err
 	}
 
-	if response.StatusCode != 200 {
+	if response.StatusCode < 200 ||
+		response.StatusCode >= 300 {
 		return &AjaxStatusCodeError{
 			statusCode: response.StatusCode,
 			body:       data,

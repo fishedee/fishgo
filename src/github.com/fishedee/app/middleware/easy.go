@@ -31,6 +31,12 @@ func NewEasyMiddleware(log Log, validatorFactory ValidatorFactory, sessionFactor
 				} else {
 					return result
 				}
+			} else if renderName == "file" {
+				if err.GetCode() != 0 {
+					return "error.html"
+				} else {
+					return result
+				}
 			} else if renderName == "text" {
 				if err.GetCode() != 0 {
 					return err.GetMessage()
