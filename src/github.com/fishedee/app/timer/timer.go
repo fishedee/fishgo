@@ -1,4 +1,4 @@
-package web
+package timer
 
 import (
 	. "github.com/fishedee/app/log"
