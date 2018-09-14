@@ -187,6 +187,15 @@ type WxSdkAddMaterialOtherResult struct {
 	Url     string `json:"url"`
 }
 
+type WxSdkAddMaterialNewsImage struct {
+	Media []byte
+	Name  string
+}
+
+type WxSdkAddMaterialNewsImageResult struct {
+	Url string `json:"url"`
+}
+
 type WxSdkAddMaterialNews struct {
 	Articles []WxSdkMaterialNews `json:"articles"`
 }
@@ -591,6 +600,26 @@ func (this *WxSdk) AddMaterialNews(news WxSdkAddMaterialNews) (WxSdkAddMaterialN
 	err := this.apiJson("POST", "/cgi-bin/material/add_news", map[string]string{
 		"access_token": this.AccessToken,
 	}, "", news, &result)
+	if err != nil {
+		return result, err
+	}
+	return result, nil
+}
+
+//添加永久图文素材中的图片
+func (this *WxSdk) AddMaterialNewsImage(newsImage WxSdkAddMaterialNewsImage) (WxSdkAddMaterialNewsImageResult, error) {
+	var result WxSdkAddMaterialNewsImageResult
+
+	data, err := this.api("POST", "/cgi-bin/material/add_material", map[string]string{
+		"access_token": this.AccessToken,
+	}, "form", map[string]interface{}{
+		"media": []interface{}{newsImage.Name, newsImage.Media},
+	})
+	if err != nil {
+		return result, err
+	}
+
+	err = DecodeJson(data, &result)
 	if err != nil {
 		return result, err
 	}
