@@ -121,7 +121,7 @@ func NewDatabase(config DatabaseConfig) (Database, error) {
 	var dblink string
 	if config.Driver == "mysql" {
 		if config.Charset == "" {
-			config.Charset = "utf8"
+			config.Charset = "utf8mb4"
 		}
 		if config.Collation == "" {
 			config.Collation = "utf8_general_ci"
