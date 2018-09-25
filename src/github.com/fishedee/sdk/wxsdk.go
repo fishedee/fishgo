@@ -610,7 +610,7 @@ func (this *WxSdk) AddMaterialNews(news WxSdkAddMaterialNews) (WxSdkAddMaterialN
 func (this *WxSdk) AddMaterialNewsImage(newsImage WxSdkAddMaterialNewsImage) (WxSdkAddMaterialNewsImageResult, error) {
 	var result WxSdkAddMaterialNewsImageResult
 
-	data, err := this.api("POST", "/cgi-bin/material/add_material", map[string]string{
+	data, err := this.api("POST", "/cgi-bin/media/uploadimg", map[string]string{
 		"access_token": this.AccessToken,
 	}, "form", map[string]interface{}{
 		"media": []interface{}{newsImage.Name, newsImage.Media},
