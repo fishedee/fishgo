@@ -21,7 +21,7 @@ func getWxSdk() *WxSdk {
 	}
 }
 
-func testBasic(t *testing.T, wxSdk *WxSdk) string {
+func testBasicInner(t *testing.T, wxSdk *WxSdk) string {
 	//基础接口
 	urlInfo, _ := url.Parse("http://api.hongbeibang.com/weixin/getMessage?signature=82e52de654bff034e3865a8fb3e6fc3dbf3eeebd&timestamp=1461633261&nonce=1773859070")
 	err := wxSdk.CheckSignature(urlInfo)
@@ -241,10 +241,10 @@ func testJs(t *testing.T, wxSdk *WxSdk, accessToken string) {
 	assertWxSdkEqual(t, sig, target)
 }
 
-func TestBasic(t *testing.T) {
+func testBasic(t *testing.T) {
 	wxSdk := getWxSdk()
 
-	accessToken := testBasic(t, wxSdk)
+	accessToken := testBasicInner(t, wxSdk)
 	testUser(t, wxSdk, accessToken)
 	testMessage(t, wxSdk, accessToken)
 	testMenu(t, wxSdk, accessToken)

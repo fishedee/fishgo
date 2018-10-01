@@ -28,6 +28,7 @@ type WxSdk struct {
 	AppId       string
 	AppSecret   string
 	Token       string
+	AESKey      string
 	AccessToken string
 	JsApiTicket string
 }
@@ -815,6 +816,19 @@ func (this *WxSdk) ReceiveMessage(data []byte) (WxSdkReceiveMessage, error) {
 	return result, err
 }
 
+func (this *WxSdk) DecryptReceiveMessage(msgSignature string, timestamp string, nonce string, data []byte) (WxSdkReceiveMessage, error) {
+	wxCryptSdk := &WxCryptSdk{
+		AppId:  this.AppId,
+		Token:  this.Token,
+		AESKey: this.AESKey,
+	}
+	_, packaget, err := wxCryptSdk.Decrypt(msgSignature, timestamp, nonce, data)
+	if err != nil {
+		return WxSdkReceiveMessage{}, err
+	}
+	return this.ReceiveMessage(packaget)
+}
+
 func (this *WxSdk) generateXml(data interface{}) string {
 	result := ""
 	if mapData, isOk := data.(map[string]interface{}); isOk {
@@ -843,6 +857,22 @@ func (this *WxSdk) SendMessage(message WxSdkSendMessage) ([]byte, error) {
 	body := this.generateXml(data)
 	result := []byte("<xml>" + body + "</xml>")
 	return result, nil
+}
+
+func (this *WxSdk) EncryptSendMessage(message WxSdkSendMessage) ([]byte, error) {
+	data, err := this.SendMessage(message)
+	if err != nil {
+		return nil, err
+	}
+	wxCryptSdk := &WxCryptSdk{
+		AppId:  this.AppId,
+		Token:  this.Token,
+		AESKey: this.AESKey,
+	}
+
+	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
+	nonce := wxCryptSdk.getRandomStr(32)
+	return wxCryptSdk.Encrypt(timestamp, string(nonce), data)
 }
 
 func (this *WxSdk) SendPairMessage(requestUrl *url.URL) ([]byte, error) {

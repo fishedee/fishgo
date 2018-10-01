@@ -7,20 +7,28 @@ import (
 	"testing"
 )
 
-func TestWxPluginSdkEncodingAndDecoding(t *testing.T) {
-	//打包
+func TestWxPluginSdkCrypt(t *testing.T) {
+	//准备
+	msg := WxPluginSdkMessage{
+		ToUserName:            "fish",
+		AppId:                 "123",
+		CreateTime:            1413192605,
+		InfoType:              "component_verify_ticket",
+		ComponentVerifyTicket: "123456",
+	}
 	encodingAesKey := "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG"
 	token := "pamtest"
-	timeStamp := "1409304348"
-	nonce := "xxxxxx"
 	appId := "wxb11529c136998cb6"
-	text := "<xml><ToUserName><![CDATA[oia2Tj我是中文jewbmiOUlr6X-1crbLOvLw]]></ToUserName><FromUserName><![CDATA[gh_7f083739789a]]></FromUserName><CreateTime>1407743423</CreateTime><MsgType><![CDATA[video]]></MsgType><Video><MediaId><![CDATA[eYJ1MbwPRJtOvIEabaxHs7TX2D-HV71s79GUxqdUkjm6Gs2Ed1KF3ulAOA9H1xG0]]></MediaId><Title><![CDATA[testCallBackReplyVideo]]></Title><Description><![CDATA[testCallBackReplyVideo]]></Description></Video></xml>"
+	text, err := xml.Marshal(msg)
+	AssertEqual(t, err, nil)
+
+	//打包
 	wxPluginSdk := &WxPluginSdk{
 		ComponentAppId: appId,
 		MessageToken:   token,
 		MessageAESKey:  encodingAesKey,
 	}
-	result, err := wxPluginSdk.encodePackaget(timeStamp, nonce, []byte(text))
+	result, err := wxPluginSdk.EncryptMessage(text)
 	AssertEqual(t, err, nil)
 
 	//分析
@@ -34,9 +42,10 @@ func TestWxPluginSdkEncodingAndDecoding(t *testing.T) {
 	AssertEqual(t, err, nil)
 
 	//解包
-	encryptXml := fmt.Sprintf("<xml><ToUserName><![CDATA[toUser]]></ToUserName><Encrypt><![CDATA[%s]]></Encrypt></xml>", resultObject.Encrypt)
-	toUserName, text2, err := wxPluginSdk.decodePackaget(resultObject.MsgSignature, resultObject.TimeStamp, resultObject.Nonce, []byte(encryptXml))
+	encryptXml := fmt.Sprintf(
+		"<xml><ToUserName><![CDATA[fish]]></ToUserName><Encrypt><![CDATA[%s]]></Encrypt></xml>",
+		resultObject.Encrypt)
+	msg2, err := wxPluginSdk.DecryptMessage(resultObject.MsgSignature, resultObject.TimeStamp, resultObject.Nonce, []byte(encryptXml))
 	AssertEqual(t, err, nil)
-	AssertEqual(t, toUserName, "toUser")
-	AssertEqual(t, string(text2), text)
+	AssertEqual(t, msg, msg2)
 }

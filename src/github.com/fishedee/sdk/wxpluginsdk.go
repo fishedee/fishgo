@@ -1,22 +1,12 @@
 package sdk
 
 import (
-	"bytes"
-	"crypto/aes"
-	"crypto/cipher"
-	"crypto/sha1"
-	"encoding/base64"
-	"encoding/binary"
 	"encoding/xml"
-	"errors"
 	"fmt"
-	"io"
-	"math/rand"
 	"strconv"
 	"time"
 
 	. "github.com/fishedee/encoding"
-	. "github.com/fishedee/language"
 	. "github.com/fishedee/util"
 )
 
@@ -428,162 +418,19 @@ func (this *WxPluginSdk) GetAuthorizerList(request WxPluginSdkGetAuthorizerListR
 	return result, nil
 }
 
-//编码和解码Message
-func (this *WxPluginSdk) getSignature(token string, timestamp string, nonce string, msg string) string {
-	arrayInfo := []string{token, timestamp, nonce, msg}
-	arrayInfo = ArraySort(arrayInfo).([]string)
-	arrayInfoString := Implode(arrayInfo, "")
-	return this.encodeSha1(arrayInfoString)
-}
-
-func (this *WxPluginSdk) getRandomStr(length int) []byte {
-	chars := []byte("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz")
-	result := make([]byte, length, length)
-	for i := 0; i < length; i++ {
-		key := rand.Intn(len(chars))
-		result[i] = chars[key]
-	}
-	return result
-}
-
-func (this *WxPluginSdk) encodeSha1(data string) string {
-	t := sha1.New()
-	io.WriteString(t, data)
-	return fmt.Sprintf("%x", t.Sum(nil))
-}
-
-func (this *WxPluginSdk) decodeXml(msg []byte, data interface{}) error {
-	return xml.Unmarshal(msg, data)
-}
-
-func (this *WxPluginSdk) encodeXml(encrypt string, signature string, timestamp string, nonce string) ([]byte, error) {
-	return []byte(fmt.Sprintf(`<xml>
-		<Encrypt><![CDATA[%s]]></Encrypt>
-		<MsgSignature><![CDATA[%s]]></MsgSignature>
-		<TimeStamp>%s</TimeStamp>
-		<Nonce><![CDATA[%s]]></Nonce>
-		</xml>`, encrypt, signature, timestamp, nonce)), nil
-}
-
-func (this *WxPluginSdk) pkcs7Unpadding(data []byte, blockSize int) []byte {
-	length := len(data)
-	unPadding := int(data[length-1])
-	return data[:(length - unPadding)]
-}
-
-func (this *WxPluginSdk) pkcs7Padding(data []byte, blockSize int) []byte {
-	padding := blockSize - len(data)%blockSize
-	padtext := bytes.Repeat([]byte{byte(padding)}, padding)
-	return append(data, padtext...)
-}
-
-func (this *WxPluginSdk) decodeAES(AESKey string, msg string) ([]byte, error) {
-	aesKey, err := base64.StdEncoding.DecodeString(AESKey + "=")
-	if err != nil {
-		return nil, err
-	}
-	cipherText, err := base64.StdEncoding.DecodeString(msg)
-	if err != nil {
-		return nil, err
-	}
-	iv := aesKey[0:16]
-	block, err := aes.NewCipher(aesKey)
-	if err != nil {
-		return nil, err
-	}
-	mode := cipher.NewCBCDecrypter(block, iv)
-	mode.CryptBlocks(cipherText, cipherText)
-	cipherText = this.pkcs7Unpadding(cipherText, block.BlockSize())
-	return cipherText, nil
-}
-
-func (this *WxPluginSdk) encodeAES(AESKey string, msg []byte) (string, error) {
-	aesKey, err := base64.StdEncoding.DecodeString(AESKey + "=")
-	if err != nil {
-		return "", err
-	}
-	iv := aesKey[0:16]
-	block, err := aes.NewCipher(aesKey)
-	if err != nil {
-		return "", err
-	}
-	cipherText := this.pkcs7Padding([]byte(msg), block.BlockSize())
-	mode := cipher.NewCBCEncrypter(block, iv)
-	mode.CryptBlocks(cipherText, cipherText)
-	cipherTextEncode := base64.StdEncoding.EncodeToString(cipherText)
-	return cipherTextEncode, nil
-}
-
-func (this *WxPluginSdk) decodeMeta(packaget []byte) ([]byte, string) {
-	//头四位随机字符串
-	packaget = packaget[16:]
-	//长度标记
-	msgLen := binary.BigEndian.Uint32(packaget[0:4])
-	packaget = packaget[4:]
-	//数据
-	msg := packaget[0:msgLen]
-	packaget = packaget[msgLen:]
-	//appId
-	appId := packaget
-	return msg, string(appId)
-}
-
-func (this *WxPluginSdk) encodeMeta(packaget []byte, appId string) []byte {
-	var buffer bytes.Buffer
-	//头四位随机字符串
-	buffer.Write(this.getRandomStr(16))
-	//长度标记
-	lengthBuffer := make([]byte, 4, 4)
-	binary.BigEndian.PutUint32(lengthBuffer, uint32(len(packaget)))
-	buffer.Write(lengthBuffer)
-	//数据
-	buffer.Write(packaget)
-	//appId
-	buffer.WriteString(appId)
-	return buffer.Bytes()
-}
-
-func (this *WxPluginSdk) decodePackaget(msgSignature string, timestamp string, nonce string, msg []byte) (string, []byte, error) {
-	//解包外层xml
-	var encryptMessage struct {
-		ToUserName string `xml:"ToUserName"`
-		Encrypt    string `xml:"Encrypt"`
-	}
-	err := this.decodeXml(msg, &encryptMessage)
-	if err != nil {
-		return "", nil, err
-	}
-	//检查签名
-	realSignature := this.getSignature(
-		this.MessageToken,
-		timestamp,
-		nonce,
-		encryptMessage.Encrypt)
-	if realSignature != msgSignature {
-		return "", nil, errors.New("消息签名错误")
-	}
-	//解包内层xml
-	packaget, err := this.decodeAES(
-		this.MessageAESKey,
-		encryptMessage.Encrypt,
-	)
-	if err != nil {
-		return "", nil, err
-	}
-	packaget, appId := this.decodeMeta(packaget)
-	if appId != this.ComponentAppId {
-		return "", nil, errors.New("消息appId校验错误")
-	}
-	return encryptMessage.ToUserName, packaget, nil
-}
-
-func (this *WxPluginSdk) DecodeMessage(msgSignature string, timestamp string, nonce string, msg []byte) (WxPluginSdkMessage, error) {
+//解密Message
+func (this *WxPluginSdk) DecryptMessage(msgSignature string, timestamp string, nonce string, msg []byte) (WxPluginSdkMessage, error) {
 	result := WxPluginSdkMessage{}
-	toUserName, packaget, err := this.decodePackaget(msgSignature, timestamp, nonce, msg)
+	wxCryptSdk := &WxCryptSdk{
+		AppId:  this.ComponentAppId,
+		Token:  this.MessageToken,
+		AESKey: this.MessageAESKey,
+	}
+	toUserName, packaget, err := wxCryptSdk.Decrypt(msgSignature, timestamp, nonce, msg)
 	if err != nil {
 		return WxPluginSdkMessage{}, err
 	}
-	err = this.decodeXml(packaget, &result)
+	err = xml.Unmarshal(packaget, &result)
 	if err != nil {
 		return WxPluginSdkMessage{}, err
 	}
@@ -591,29 +438,15 @@ func (this *WxPluginSdk) DecodeMessage(msgSignature string, timestamp string, no
 	return result, nil
 }
 
-func (this *WxPluginSdk) encodePackaget(timestamp string, nonce string, msg []byte) ([]byte, error) {
-	//打包内层xml
-	msgWithMeta := this.encodeMeta(
-		msg,
-		this.ComponentAppId)
-	encodeMsg, err := this.encodeAES(
-		this.MessageAESKey,
-		msgWithMeta)
-	if err != nil {
-		return nil, err
+//加密Message
+func (this *WxPluginSdk) EncryptMessage(msg []byte) ([]byte, error) {
+	wxCryptSdk := &WxCryptSdk{
+		AppId:  this.ComponentAppId,
+		Token:  this.MessageToken,
+		AESKey: this.MessageAESKey,
 	}
-	//生成签名
-	signature := this.getSignature(
-		this.MessageToken,
-		timestamp,
-		nonce,
-		encodeMsg)
-	//打包外层xml
-	return this.encodeXml(encodeMsg, signature, timestamp, nonce)
-}
 
-func (this *WxPluginSdk) EncodeMessage(msg []byte) ([]byte, error) {
 	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
-	nonce := this.getRandomStr(32)
-	return this.encodePackaget(timestamp, string(nonce), msg)
+	nonce := wxCryptSdk.getRandomStr(32)
+	return wxCryptSdk.Encrypt(timestamp, string(nonce), msg)
 }
