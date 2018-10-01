@@ -66,8 +66,10 @@ func (this *Router) combineParent(current routerFactoryPathInfo, parent routerFa
 	for method, parentMethodInfo := range parent {
 		currentMethodInfo, isExist := current[method]
 		if isExist == false {
-			current[method] = parentMethodInfo
-			continue
+			currentMethodInfo = &routerFactoryHandler{
+				urlPrefixHandler: map[int]*routerFactoryUrlPrefixHandler{},
+			}
+			current[method] = currentMethodInfo
 		}
 		//合并urlPrefixHandler
 		for seg, parentUrlPrefixHandler := range parentMethodInfo.urlPrefixHandler {

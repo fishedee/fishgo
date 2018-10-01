@@ -29,8 +29,9 @@ type WxPluginSdkPreAuthCode struct {
 }
 
 type WxPluginSdkSingleFuncInfo struct {
-	FuncScopeCategory string `json:"funcscope_category"`
-	Id                string `json:"id"`
+	FuncScopeCategory struct {
+		Id int `json:"id"`
+	} `json:"funcscope_category"`
 }
 
 type WxPluginSdkAuthorizationInfoDetail struct {

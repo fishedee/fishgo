@@ -19,6 +19,7 @@ type testInterface interface {
 	GET_do5(w http.ResponseWriter, r *http.Request)
 	POST_Do6_Json(w http.ResponseWriter, r *http.Request)
 	Do7_Text(v Validator, s Session) interface{}
+	NONE_Do8_Text(v Validator, s Session) interface{}
 }
 type testObject struct {
 }
@@ -49,6 +50,10 @@ func (this *testObject) POST_Do6_Json(w http.ResponseWriter, r *http.Request) {
 
 func (this *testObject) Do7_Text(v Validator, s Session) interface{} {
 	return "do7"
+}
+
+func (this *testObject) NONE_Do8_Text(v Validator, s Session) interface{} {
+	return "do8"
 }
 
 func TestRouterObject(t *testing.T) {
@@ -82,6 +87,8 @@ func TestRouterObject(t *testing.T) {
 		{"GET", "/do5", "do5"},
 		{"POST", "/do6", "do6"},
 		{"ANY", "/do7", "do7"},
+		{"ANY", "/none", "404"},
+		{"ANY", "/do8", "404"},
 		{"ANY", "/mc/do1", "do1"},
 		{"ANY", "/mc/do2", "do2"},
 		{"ANY", "/mc/do3", "do3"},
@@ -89,6 +96,8 @@ func TestRouterObject(t *testing.T) {
 		{"GET", "/mc/do5", "do5"},
 		{"POST", "/mc/do6", "do6"},
 		{"ANY", "/mc/do7", "do7"},
+		{"ANY", "/mc/none", "404"},
+		{"ANY", "/mc/do8", "404"},
 		{"ANY", "/mj/do1", "do1"},
 		{"ANY", "/mj/do2", "do2"},
 		{"ANY", "/mj/do3", "do3"},
@@ -96,6 +105,8 @@ func TestRouterObject(t *testing.T) {
 		{"GET", "/mj/do5", "do5"},
 		{"POST", "/mj/do6", "do6"},
 		{"ANY", "/mj/do7", "do7"},
+		{"ANY", "/mj/none", "404"},
+		{"ANY", "/mj/do8", "404"},
 	}
 	router := routerFactory.Create()
 	for index, singleTestCase := range testCase {
@@ -108,7 +119,7 @@ func TestRouterObject(t *testing.T) {
 				singleTestCase.method == entrys[i] {
 				AssertEqual(t, w.Read(), singleTestCase.data, index)
 			} else {
-				AssertEqual(t, w.Read(), "do4", index)
+				AssertEqual(t, w.Read(), "404", index)
 			}
 		}
 	}

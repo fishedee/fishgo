@@ -266,6 +266,47 @@ func TestRouterMethod(t *testing.T) {
 	}
 }
 
+func TestRouterMethod2(t *testing.T) {
+	testData := []struct {
+		insertData func(*RouterFactory, string, interface{}) *RouterFactory
+		url        string
+	}{
+		{(*RouterFactory).Any, "/"},
+		{(*RouterFactory).GET, "/a"},
+		{(*RouterFactory).POST, "/ab"},
+	}
+	testCase := []struct {
+		method string
+		url    string
+		data   string
+	}{
+		{"GET", "/", "/"},
+		{"POST", "/", "/"},
+		{"GET", "/a", "/a"},
+		{"POST", "/a", "404"},
+		{"GET", "/ab", "404"},
+		{"POST", "/ab", "/ab"},
+	}
+	routerFactory := NewRouterFactory()
+	routerFactory.NotFound(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("404"))
+	})
+	for _, singleTestData := range testData {
+		func(url string) {
+			singleTestData.insertData(routerFactory, singleTestData.url, func(w http.ResponseWriter, r *http.Request) {
+				w.Write([]byte(url))
+			})
+		}(singleTestData.url)
+	}
+	router := routerFactory.Create()
+	for singleTestCaseIndex, singleTestCase := range testCase {
+		r, _ := http.NewRequest(singleTestCase.method, singleTestCase.url, nil)
+		w := &fakeWriter{}
+		router.ServeHTTP(w, r)
+		AssertEqual(t, w.Read(), singleTestCase.data, singleTestCaseIndex)
+	}
+}
+
 func TestRouterStatic(t *testing.T) {
 	routerFactory := NewRouterFactory()
 	routerFactory.NotFound(func(w http.ResponseWriter, r *http.Request) {

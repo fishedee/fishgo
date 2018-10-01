@@ -26,6 +26,7 @@ func analyseObjectRouter(factory *RouterFactory, name string) (func(path string,
 		"delete":  factory.DELETE,
 		"patch":   factory.PATCH,
 		"any":     factory.Any,
+		"none":    nil,
 	}
 	method := factory.Any
 	functionName := "/"
@@ -36,12 +37,13 @@ func analyseObjectRouter(factory *RouterFactory, name string) (func(path string,
 		method = router
 		if len(nameArray) == 1 {
 			return method, functionName
+		} else {
+			return method, nameArray[1]
 		}
 	} else {
 		functionName = nameArray[0]
 		return method, functionName
 	}
-	return method, nameArray[1]
 }
 
 func ObjectRouter(factory *RouterFactory, basePath string, handler interface{}) {
@@ -55,6 +57,9 @@ func ObjectRouter(factory *RouterFactory, basePath string, handler interface{}) 
 			continue
 		}
 		addRouter, path := analyseObjectRouter(factory, methodName)
+		if addRouter == nil {
+			continue
+		}
 		addRouter(basePath+"/"+path, RouterMiddlewareContext{
 			Data: map[string]interface{}{
 				"name": methodName,
