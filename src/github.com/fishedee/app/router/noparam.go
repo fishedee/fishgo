@@ -5,18 +5,24 @@ import (
 	"net/http"
 	"reflect"
 	"runtime"
-	"strings"
 )
 
 func NewNoParamMiddleware() RouterMiddleware {
 	return func(prev RouterMiddlewareContext) RouterMiddlewareContext {
 		if _, isExist := prev.Data["name"]; isExist == false {
 			name := runtime.FuncForPC(reflect.ValueOf(prev.Handler).Pointer()).Name()
-			if rbc := strings.LastIndexByte(name, ')'); rbc != -1 {
-				name = name[0:rbc]
-			}
 			nameInfo := Explode(name, ".")
-			prev.Data["name"] = nameInfo[len(nameInfo)-1]
+			lastName := nameInfo[len(nameInfo)-1]
+			if len(lastName) >= 3 && lastName[len(lastName)-3:] == "-fm" {
+				lastName = lastName[0 : len(lastName)-3]
+			}
+			if lastName[0] == '(' {
+				lastName = lastName[1:]
+			}
+			if lastName[len(lastName)-1] == ')' {
+				lastName = lastName[:len(lastName)-1]
+			}
+			prev.Data["name"] = lastName
 		}
 		last := prev.Handler
 		var netHandler http.HandlerFunc

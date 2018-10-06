@@ -42,6 +42,10 @@ func (this *dStruct) f_Json(v Validator, s Session) interface{} {
 	return "my god4"
 }
 
+func (this *dStruct) G_Json(v Validator, s Session) interface{} {
+	return "my god5"
+}
+
 func jsonToArray(data string) interface{} {
 	var result interface{}
 	err := DecodeJson([]byte(data), &result)
@@ -68,6 +72,7 @@ func TestEasy(t *testing.T) {
 	factory.GET("/d", d_Json)
 	factory.GET("/e", e_Json)
 	factory.GET("/f", d.f_Json)
+	factory.GET("/g", d.G_Json)
 	router := factory.Create()
 
 	r, _ := http.NewRequest("GET", "http://example.com/a?key=mmc", nil)
@@ -100,4 +105,9 @@ func TestEasy(t *testing.T) {
 	w6 := &fakeWriter{}
 	router.ServeHTTP(w6, r6)
 	AssertEqual(t, jsonToArray(w6.Read()), map[string]interface{}{"code": 0.0, "data": "my god4", "msg": ""})
+
+	r7, _ := http.NewRequest("GET", "http://example.com/g", nil)
+	w7 := &fakeWriter{}
+	router.ServeHTTP(w7, r7)
+	AssertEqual(t, jsonToArray(w7.Read()), map[string]interface{}{"code": 0.0, "data": "my god5", "msg": ""})
 }
