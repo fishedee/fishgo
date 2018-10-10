@@ -120,7 +120,6 @@ type WxPluginSdkGetAuthorizerListResponse struct {
 }
 
 type WxPluginSdkMessage struct {
-	ToUserName                   string
 	AppId                        string `xml:"AppId"`
 	CreateTime                   int    `xml:"CreateTime"`
 	InfoType                     string `xml:"InfoType"`
@@ -427,7 +426,7 @@ func (this *WxPluginSdk) DecryptMessage(msgSignature string, timestamp string, n
 		Token:  this.MessageToken,
 		AESKey: this.MessageAESKey,
 	}
-	toUserName, packaget, err := wxCryptSdk.Decrypt(msgSignature, timestamp, nonce, msg)
+	_, packaget, err := wxCryptSdk.Decrypt(msgSignature, timestamp, nonce, msg)
 	if err != nil {
 		return WxPluginSdkMessage{}, err
 	}
@@ -435,7 +434,6 @@ func (this *WxPluginSdk) DecryptMessage(msgSignature string, timestamp string, n
 	if err != nil {
 		return WxPluginSdkMessage{}, err
 	}
-	result.ToUserName = toUserName
 	return result, nil
 }
 
