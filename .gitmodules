@@ -214,3 +214,6 @@
 [submodule "src/github.com/streadway/amqp"]
 	path = src/github.com/streadway/amqp
 	url = git@github.com:streadway/amqp.git
+[submodule "src/github.com/upyun/go-sdk"]
+	path = src/github.com/upyun/go-sdk
+	url = git@github.com:upyun/go-sdk.git
