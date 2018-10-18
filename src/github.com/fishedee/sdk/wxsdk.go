@@ -1,7 +1,6 @@
 package sdk
 
 import (
-	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/sha1"
@@ -13,7 +12,6 @@ import (
 	"io"
 	"math/rand"
 	"net/url"
-	"os/exec"
 	"sort"
 	"strconv"
 	"strings"
@@ -664,61 +662,6 @@ func (this *WxSdk) AddMaterialOther(message WxSdkAddMaterialOther) (WxSdkAddMate
 		return result, err
 	}
 	return result, nil
-}
-
-// 添加永久其他类型的素材（旧版）
-// 参数 fileAddress 上传文件的本地地址
-// 参数 materialType WxSdkMaterialType类型
-// 参数 title 多媒体标题
-// 参数 introduction 多媒体描述
-func (this *WxSdk) AddMaterial(fileAddress, materialType, title, introduction string) (WxSdkAddMaterial, error) {
-
-	var result WxSdkAddMaterial
-
-	description := struct {
-		Title        string `json:"title"`
-		Introduction string `json:"introduction"`
-	}{
-		Title:        title,
-		Introduction: introduction,
-	}
-
-	descriptionJson, err := EncodeJson(description)
-	if err != nil {
-		return result, err
-	}
-
-	cmd := exec.Command("curl", "https://api.weixin.qq.com/cgi-bin/material/add_material?access_token="+this.AccessToken+"&type="+materialType,
-		"-F", "media=@"+fileAddress,
-		"-F", "description="+string(descriptionJson))
-	cmd.Stdin = strings.NewReader("some input")
-	var outCmd bytes.Buffer
-	var errCmd bytes.Buffer
-	cmd.Stdout = &outCmd
-	cmd.Stderr = &errCmd
-	err = cmd.Run()
-
-	if err != nil {
-		return result, errors.New("err:" + err.Error() + ",errCmd:" + string(errCmd.Bytes()) + ",outCmd:" + string(outCmd.Bytes()))
-	}
-
-	var errInfo struct {
-		ErrorCode int    `json:"errcode"`
-		ErrorMsg  string `json:"errmsg"`
-	}
-
-	err = DecodeJson(outCmd.Bytes(), &errInfo)
-	if err != nil {
-		return result, err
-	}
-
-	if errInfo.ErrorCode != 0 {
-		return result, &WxSdkError{Code: errInfo.ErrorCode, Message: errInfo.ErrorMsg}
-	}
-
-	err = DecodeJson(outCmd.Bytes(), &result)
-	return result, err
-
 }
 
 // 获取素材接口
