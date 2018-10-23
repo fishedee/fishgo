@@ -14,6 +14,8 @@ type UeditSdk struct {
 
 type UeditSdkUploadCallback func([]byte) (string, error)
 
+type UeditSdkCatchCalllback func(string) (string, error)
+
 type UeditSdkConfig struct {
 	//图片配置项
 	ImageMaxSize        int                    `json:"imageMaxSize"`
@@ -21,7 +23,9 @@ type UeditSdkConfig struct {
 	ImageCompressBorder int                    `json:"imageCompressBorder"`
 	ImageInsertAlign    string                 `json:"imageInsertAlign"`
 	ImageUploadCallback UeditSdkUploadCallback `json:"-"`
-
+	//抓取远程图片
+	CatcherLocalDomain []string               `json:"catcherLocalDomain"`
+	CatcherCallback    UeditSdkCatchCalllback `json:"-"`
 	//涂鸦配置项
 	ScrawlMaxSize        int                    `json:"ScrawlMaxSize"`
 	ScrawlInsertAlign    string                 `json:"scrawlInsertAlign"`
@@ -41,6 +45,10 @@ type ueditSdkConfigReal struct {
 	ImageActionName string `json:"imageActionName"`
 	ImageFieldName  string `json:"imageFieldName"`
 	ImageUrlPrefix  string `json:"imageUrlPrefix"`
+
+	CatcherActionName string `json:"catcherActionName"`
+	CatcherFieldName  string `json:"catcherFieldName"`
+	CatcherUrlPrefix  string `json:"catcherUrlPrefix"`
 
 	ScrawlActionName string `json:"scrawlActionName"`
 	ScrawlFieldName  string `json:"scrawlFieldName"`
@@ -74,6 +82,14 @@ func (this *UeditSdk) getConfig(config UeditSdkConfig) ueditSdkConfigReal {
 	}
 	if result.ImageInsertAlign == "" {
 		result.ImageInsertAlign = "none"
+	}
+
+	//抓取远程图片配置项
+	result.CatcherActionName = "catchimage"
+	result.CatcherFieldName = "upfile"
+	result.CatcherUrlPrefix = ""
+	if len(result.CatcherLocalDomain) == 0 {
+		result.CatcherLocalDomain = []string{"127.0.0.1", "localhost"}
 	}
 
 	//涂鸦配置项
@@ -142,6 +158,8 @@ func (this *UeditSdk) handleAction(config ueditSdkConfigReal, action string, req
 			CallBack:   config.ScrawlUploadCallback,
 		}
 		result, err = this.handleUploadAction(uploadConfig, request)
+	} else if action == "catchimage" {
+		result, err = this.handleCatchImageAction(config, request)
 	} else {
 		err = &UeditSdkError{"请求地址出错"}
 	}
@@ -157,6 +175,31 @@ func (this *UeditSdk) handleAction(config ueditSdkConfigReal, action string, req
 	} else {
 		return result, nil
 	}
+}
+
+func (this *UeditSdk) handleCatchImageAction(config ueditSdkConfigReal, request *http.Request) (interface{}, error) {
+	err := request.ParseForm()
+	if err != nil {
+		return nil, err
+	}
+	value := request.PostForm["upfile[]"]
+	result := []map[string]interface{}{}
+	for _, oldValue := range value {
+		singleResult := map[string]interface{}{}
+		newValue, err := config.CatcherCallback(oldValue)
+		if err != nil {
+			singleResult["state"] = err.Error()
+		} else {
+			singleResult["state"] = "SUCCESS"
+			singleResult["source"] = oldValue
+			singleResult["url"] = newValue
+		}
+		result = append(result, singleResult)
+	}
+	return map[string]interface{}{
+		"state": "SUCCESS",
+		"list":  result,
+	}, nil
 }
 
 func (this *UeditSdk) handleUploadAction(config ueditSdkUploadConfig, request *http.Request) (interface{}, error) {
