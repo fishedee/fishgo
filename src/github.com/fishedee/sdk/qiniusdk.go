@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/pili-engineering/pili-sdk-go.v2/pili"
+	"io"
 	"qiniupkg.com/api.v7/kodo"
 )
 
@@ -127,6 +128,24 @@ func (this *QiniuSdk) RuploadFile(bucketName, fileAddr string) (string, error) {
 	}
 
 	return putRet.Hash, nil
+}
+
+/**
+* [List 列举七牛的文件]
+* @param  string      bucketName [储存区域]
+* @param  string      prefix     [指定前缀，只有资源名匹配该前缀的资源会被列出]
+* @param  string      delimiter  [指定目录分隔符，列出所有公共前缀（模拟列出目录效果）]
+* @param  string      marker     [上一次列举返回的位置标记，作为本次列举的起点信息]
+* @param  string      limit      [本次列举的条目数，范围为1-1000]
+* @return kodo.ListItem,[]string,string,error          [返回条目的数组,返回目录名的数组,有剩余条目则返回非空字符串，作为下一次列举的参数传入]
+ */
+func (this *QiniuSdk) List(bucketName string, prefix, delimiter, marker string, limit int) ([]kodo.ListItem, []string, string, error) {
+	bucket := this.getBucket(bucketName)
+	entries, commonPrefixes, markerOut, err := bucket.List(nil, prefix, delimiter, marker, limit)
+	if err == io.EOF {
+		err = nil
+	}
+	return entries, commonPrefixes, markerOut, err
 }
 
 // 检查文件大小
