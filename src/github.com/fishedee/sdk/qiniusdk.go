@@ -21,6 +21,7 @@ const (
 type QiniuSdk struct {
 	AccessKey string
 	SecretKey string
+	Zone      int
 }
 
 /**
@@ -159,7 +160,16 @@ func (this *QiniuSdk) getClient() *kodo.Client {
 		AccessKey: this.AccessKey,
 		SecretKey: this.SecretKey,
 	}
-	return kodo.New(0, cfg)
+	zone := this.Zone
+	if zone == 2 {
+		//华南地区
+		zone = 0
+		cfg.UpHosts = []string{"http://up-z2.qiniup.com", "http://upload-z2.qiniup.com"}
+		cfg.IoHost = "http://iovip-z2.qbox.me"
+		cfg.RSHost = "http://rs-z2.qbox.me"
+		cfg.RSFHost = "http://rsf-z2.qbox.me"
+	}
+	return kodo.New(zone, cfg)
 }
 
 /**
