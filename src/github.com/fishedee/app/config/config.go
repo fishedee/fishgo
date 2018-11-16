@@ -61,7 +61,7 @@ func NewConfig(driver string, file string) (Config, error) {
 	var runMode string
 	if envRunMode := os.Getenv("RUNMODE"); envRunMode != "" {
 		runMode = envRunMode
-	} else if configRunMode := configer.String("RunMode"); configRunMode != "" {
+	} else if configRunMode := configer.String("runmode"); configRunMode != "" {
 		runMode = configRunMode
 	} else {
 		runMode = "dev"

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	. "github.com/fishedee/assert"
 	"os"
 	"testing"
@@ -30,10 +31,22 @@ func TestConfigNormal(t *testing.T) {
 	})
 }
 
-func TestConfigProd(t *testing.T) {
+func TestConfigDefaultDev(t *testing.T) {
+	config, _ := NewConfig("ini", "testdata/prod.ini")
+	AssertEqual(t, config.MustInt("a"), 7)
+}
+
+func TestConfigEnvProd(t *testing.T) {
 	os.Setenv("RUNMODE", "prod")
 	config, _ := NewConfig("ini", "testdata/prod.ini")
 	AssertEqual(t, config.MustInt("a"), 8)
+}
+
+func TestConfigConfigTest(t *testing.T) {
+	os.Setenv("RUNMODE", "")
+	config, _ := NewConfig("ini", "testdata/test.ini")
+	fmt.Println(config.String("runmode"))
+	AssertEqual(t, config.MustInt("a"), 9)
 }
 
 func TestConfigError(t *testing.T) {
