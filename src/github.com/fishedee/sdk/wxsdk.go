@@ -383,11 +383,56 @@ type WxSdkSendMessage struct {
 	Voice WxSdkSendVoiceMessage `xml:"Voice,omitempty"`
 	//视频消息
 	Video WxSdkSendVideoMessage `xml:"Video,omitempty"`
-	//视频消息
+	//音乐消息
 	Music WxSdkSendMusicMessage `xml:"Music,omitempty"`
 	//图文消息
 	ArticleCount int                       `xml:"ArticleCount,omitempty"`
 	Articles     []WxSdkSendArticleMessage `xml:"Articles,omitempty"`
+}
+
+type WxSdkSendCustomServiceTextMessage struct {
+	Content string `json:"content"`
+}
+
+type WxSdkSendCustomServiceImageMessage struct {
+	MediaId string `json:"media_id"`
+}
+
+type WxSdkSendCustomServiceVoiceMessage struct {
+	MediaId string `json:"media_id"`
+}
+
+type WxSdkSendCustomServiceVideoMessage struct {
+	MediaId      string `json:"media_id"`
+	ThumbMediaId string `json:"thumb_media_id"`
+	Title        string `json:"title"`
+	Description  string `json:"description"`
+}
+
+type WxSdkSendCustomServiceMusicMessage struct {
+	Title        string `json:"title"`
+	Description  string `json:"description"`
+	MusicUrl     string `json:"musicurl"`
+	HqMusicUrl   string `json:"hqmusicurl"`
+	ThumbMediaId string `json:"thumb_media_id"`
+}
+
+type WxSdkSendCustomServiceMessage struct {
+	ToUser  string `json:"touser"`
+	MsgType string `json:"msgtype"`
+	//文本消息
+	Text WxSdkSendCustomServiceTextMessage `json:"text,omitempty"`
+	//图片信息
+	Image WxSdkSendCustomServiceImageMessage `json:"image,omitempty"`
+	//语音信息
+	Voice WxSdkSendCustomServiceVoiceMessage `json:"voice,omitempty"`
+	//视频信息
+	Video WxSdkSendCustomServiceVideoMessage `json:"video,omitempty"`
+	//音乐信息
+	Music WxSdkSendCustomServiceMusicMessage `json:"music,omitempty"`
+}
+
+type WxSdkSendCustomServiceMessageResult struct {
 }
 
 type WxSdkSendQrcode struct {
@@ -759,17 +804,21 @@ func (this *WxSdk) ReceiveMessage(data []byte) (WxSdkReceiveMessage, error) {
 	return result, err
 }
 
-func (this *WxSdk) DecryptReceiveMessage(msgSignature string, timestamp string, nonce string, data []byte) (WxSdkReceiveMessage, error) {
+func (this *WxSdk) DecryptReceiveMessage(msgSignature string, timestamp string, nonce string, data []byte) (string, WxSdkReceiveMessage, error) {
 	wxCryptSdk := &WxCryptSdk{
 		AppId:  this.AppId,
 		Token:  this.Token,
 		AESKey: this.AESKey,
 	}
-	_, packaget, err := wxCryptSdk.Decrypt(msgSignature, timestamp, nonce, data)
+	toUserName, packaget, err := wxCryptSdk.Decrypt(msgSignature, timestamp, nonce, data)
 	if err != nil {
-		return WxSdkReceiveMessage{}, err
+		return "", WxSdkReceiveMessage{}, err
 	}
-	return this.ReceiveMessage(packaget)
+	msg, err := this.ReceiveMessage(packaget)
+	if err != nil {
+		return "", WxSdkReceiveMessage{}, err
+	}
+	return toUserName, msg, nil
 }
 
 func (this *WxSdk) generateXml(data interface{}) string {
@@ -869,6 +918,18 @@ func (this *WxSdk) DelMenu(accessToken string) error {
 		return err
 	}
 	return nil
+}
+
+//发送客服消息
+func (this *WxSdk) SendCustomServiceMessage(msg WxSdkSendCustomServiceMessage) (WxSdkSendCustomServiceMessageResult, error) {
+	result := WxSdkSendCustomServiceMessageResult{}
+	err := this.apiJson("POST", "/cgi-bin/message/custom/send", map[string]string{
+		"access_token": this.AccessToken,
+	}, "", nil, &result)
+	if err != nil {
+		return WxSdkSendCustomServiceMessageResult{}, err
+	}
+	return result, nil
 }
 
 // 发送公众号消息模板
