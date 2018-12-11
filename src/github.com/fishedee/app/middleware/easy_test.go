@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"errors"
 	. "github.com/fishedee/app/log"
 	. "github.com/fishedee/app/render"
@@ -44,6 +45,10 @@ func (this *dStruct) f_Json(v Validator, s Session) interface{} {
 
 func (this *dStruct) G_Json(v Validator, s Session) interface{} {
 	return "my god5"
+}
+
+func (this *dStruct) h_Json(ctx context.Context, v Validator, s Session) interface{} {
+	return ctx.Value("db")
 }
 
 func jsonToArray(data string) interface{} {
@@ -110,4 +115,39 @@ func TestEasy(t *testing.T) {
 	w7 := &fakeWriter{}
 	router.ServeHTTP(w7, r7)
 	AssertEqual(t, jsonToArray(w7.Read()), map[string]interface{}{"code": 0.0, "data": "my god5", "msg": ""})
+}
+
+func TestEasy2(t *testing.T) {
+	log, _ := NewLog(LogConfig{Driver: "console"})
+	renderFactory, _ := NewRenderFactory(RenderConfig{})
+	validatorFactory, _ := NewValidatorFactory(ValidatorConfig{})
+	sessionFactory, _ := NewSessionFactory(SessionConfig{Driver: "memory", CookieName: "fishmm"})
+	middleware := NewEasyMiddleware(log, validatorFactory, sessionFactory, renderFactory)
+
+	factory := NewRouterFactory()
+	factory.Use(NewLogMiddleware(log))
+	factory.Use(middleware)
+	factory.Use(func(prev RouterMiddlewareContext) RouterMiddlewareContext {
+		lastHandler, isOk := prev.Handler.(func(ctx context.Context, v Validator, s Session) interface{})
+		if isOk == false {
+			return prev
+		}
+		return RouterMiddlewareContext{
+			Data: prev.Data,
+			Handler: func(v Validator, s Session) interface{} {
+				newContext := context.Background()
+				newContext = context.WithValue(newContext, "db", "contextDbValue")
+				return lastHandler(newContext, v, s)
+			},
+		}
+	})
+
+	d := &dStruct{}
+	factory.GET("/a", d.h_Json)
+	router := factory.Create()
+
+	r, _ := http.NewRequest("GET", "http://example.com/a", nil)
+	w := &fakeWriter{}
+	router.ServeHTTP(w, r)
+	AssertEqual(t, jsonToArray(w.Read()), map[string]interface{}{"code": 0.0, "msg": "", "data": "contextDbValue"})
 }
