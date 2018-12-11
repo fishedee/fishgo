@@ -40,6 +40,11 @@ func (this *UpyunSdk) PutFile(path string, fileAddr string) error {
 	})
 }
 
+func (this *UpyunSdk) GetInfo(path string)(*upyun.FileInfo,error){
+	client := this.getClient()
+	return client.GetInfo(path)
+}
+
 func (this *UpyunSdk) Mkdir(path string) error {
 	client := this.getClient()
 	return client.Mkdir(path)
