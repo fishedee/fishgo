@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"regexp"
 	"sort"
 	"strings"
 )
@@ -220,6 +221,10 @@ func generateSingleFileImport(data []ParserInfo, source string) (string, error) 
 type generateTypeInfo map[string]FunctionInfo
 
 func generateGetTypeInfo(data ParserInfo, result map[string]generateTypeInfo) error {
+	reg, err := regexp.CompilePOSIX(Config.typeregex)
+	if err != nil {
+		return err
+	}
 	for _, fun := range data.functions {
 		if len(fun.receiver) == 0 {
 			continue
@@ -228,8 +233,7 @@ func generateGetTypeInfo(data ParserInfo, result map[string]generateTypeInfo) er
 		if receiverName[0] == '*' {
 			receiverName = receiverName[1:]
 		}
-		if strings.HasSuffix(receiverName, "Ao") == false &&
-			strings.HasSuffix(receiverName, "Db") == false {
+		if reg.Match([]byte(receiverName)) == false {
 			continue
 		}
 		if fun.name[0] < 'A' || fun.name[0] > 'Z' {
