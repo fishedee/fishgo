@@ -182,15 +182,15 @@ func ToURL(payUrl string, m map[string]string) string {
 	return fmt.Sprintf("%s?%s", payUrl, strings.Join(buf, "&"))
 }
 
-func struct2Map(obj interface{}) (map[string]string,error) {
+func struct2Map(obj interface{}) (map[string]string, error) {
 
 	j2 := make(map[string]string)
 
 	j1, err := json.Marshal(obj)
 	if err != nil {
-		return  j2, err
+		return j2, err
 	}
 
 	err2 := json.Unmarshal(j1, &j2)
-	return j2,err2
+	return j2, err2
 }

@@ -1,15 +1,15 @@
 package gopay
 
 import (
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"github.com/fishedee/sdk/pay/client"
 	"github.com/fishedee/sdk/pay/common"
 	"github.com/fishedee/sdk/pay/constant"
 	"net/http"
 	"testing"
-	"crypto/x509"
-	"encoding/pem"
-	"crypto/rsa"
 )
 
 func TestPay(t *testing.T) {

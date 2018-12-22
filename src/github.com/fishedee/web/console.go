@@ -10,6 +10,6 @@ func InitModel(handler interface{}) {
 	injectIoc(target, basic)
 }
 
-func InitController(handler interface{}){
+func InitController(handler interface{}) {
 	InitModel(handler)
 }

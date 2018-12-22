@@ -51,12 +51,11 @@ func NewHTTPSClient(certPEMBlock, keyPEMBlock []byte) *HTTPSClient {
 				cert,
 			},
 		}
-	}else{
+	} else {
 		config = &tls.Config{
 			InsecureSkipVerify: true,
 		}
 	}
-
 
 	tr := &http.Transport{
 		TLSClientConfig: config,

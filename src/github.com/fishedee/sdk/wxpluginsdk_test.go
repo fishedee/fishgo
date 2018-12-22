@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestWxPluginSdkCrypt2(t *testing.T){
+func TestWxPluginSdkCrypt2(t *testing.T) {
 	wxPluginSdk := &WxPluginSdk{
 		ComponentAppId: "wxd2f16fa1336812b4",
 		MessageToken:   "outswxtest",
@@ -21,11 +21,11 @@ func TestWxPluginSdkCrypt2(t *testing.T){
 	timestamp := "1539147826"
 	nonce := "1382272705"
 	msgSignature := "f71541607f56c5f7b2638d3fda2620f525d0fb94"
-	msg, err := wxPluginSdk.DecryptMessage(msgSignature, 
-		timestamp, 
+	msg, err := wxPluginSdk.DecryptMessage(msgSignature,
+		timestamp,
 		nonce, []byte(encryptXml))
 	AssertEqual(t, err, nil)
-	AssertEqual(t,msg,WxPluginSdkMessage{
+	AssertEqual(t, msg, WxPluginSdkMessage{
 		AppId:                 "wxd2f16fa1336812b4",
 		CreateTime:            1539147826,
 		InfoType:              "component_verify_ticket",
