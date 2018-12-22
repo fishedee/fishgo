@@ -88,7 +88,7 @@ func deepValueEqual(v1, v2 reflect.Value, visited map[visit]bool, depth int, err
 	case reflect.Struct:
 		_, isTime := v1.Interface().(time.Time)
 		if isTime {
-			return true
+			return v1.Interface().(time.Time).Equal(v2.Interface().(time.Time))
 		}
 		for i, n := 0, v1.NumField(); i < n; i++ {
 			fieldInfo := v1.Type().Field(i)

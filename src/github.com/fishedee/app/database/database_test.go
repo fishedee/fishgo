@@ -125,3 +125,51 @@ func TestDatabase(t *testing.T) {
 	}
 	testDatabaseSingle(t, database2)
 }
+
+func TestDabaseTest(t *testing.T) {
+	database := NewDatabaseTest()
+	database.MustExec(`
+		create table t_user(
+			userId integer primary key autoincrement,
+			name varchar(128) not null,
+			createTime datetime not null,
+			modifyTime datetime not null
+		);
+		create table t_category(
+			categoryId integer primary key autoincrement,
+			name varchar(128) not null,
+			createTime datetime not null,
+			modifyTime datetime not null
+		);
+	`)
+	//查询空
+	count := database.MustCount(&User{})
+	AssertEqual(t, count, int64(0))
+
+	//插入
+	user1 := User{
+		Name: "fish",
+	}
+	database.MustInsert(user1)
+	user2 := User{
+		Name: "jk",
+	}
+	database.MustInsert(user2)
+
+	//查询
+	var users []User
+	database.MustFind(&users)
+	for key, _ := range users {
+		users[key].UserId = 0
+		users[key].CreateTime = time.Time{}
+		users[key].ModifyTime = time.Time{}
+	}
+	t.Logf("%v,%v", users, []User{
+		user1,
+		user2,
+	})
+	AssertEqual(t, users, []User{
+		user1,
+		user2,
+	})
+}

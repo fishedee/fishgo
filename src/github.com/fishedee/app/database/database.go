@@ -117,6 +117,17 @@ type databaseSessionImplement struct {
 	*xorm.Session
 }
 
+func NewDatabaseTest() Database {
+	db, err := NewDatabase(DatabaseConfig{
+		Driver:   "sqlite3",
+		Database: ":memory:",
+	})
+	if err != nil {
+		panic(err)
+	}
+	return db
+}
+
 func NewDatabase(config DatabaseConfig) (Database, error) {
 	var dblink string
 	if config.Driver == "mysql" {
