@@ -11,27 +11,41 @@ import (
 
 //左右参数比较工具
 func AssertEqual(t *testing.T, left interface{}, right interface{}, testcase ...interface{}) {
-	//打印出错的行数
+	//调整为testing.T的输出行数的方式
+	t.Helper()
 	if equalDesc, isEqual := DeepEqual(left, right); isEqual == false {
-		_, filename, line, _ := runtime.Caller(1)
-		t.Errorf("%+v ,testCase:%v , assert fail: %v", path.Base(filename)+":"+strconv.Itoa(line), testcase, equalDesc)
+		output := ""
+		if len(testcase) != 0 {
+			output = fmt.Sprintf("testCase: %v , ", testcase)
+		}
+		t.Error(output + "assert equal fail: " + equalDesc)
 	}
 }
 
 func AssertException(t *testing.T, code int, message string, handler func(), testcase ...interface{}) {
-	defer CatchCrash(func(e Exception) {
-		if e.GetCode() != code {
-			_, filename, line, _ := runtime.Caller(7)
-			t.Errorf("%+v ,testCase:%v , assert exception code fail: %v != %v", path.Base(filename)+":"+strconv.Itoa(line), testcase, e.GetCode(), code)
+	//调整为testing.T的输出行数的方式
+	t.Helper()
+	failDesc := ""
+	func() {
+		defer CatchCrash(func(e Exception) {
+			if e.GetCode() != code {
+				failDesc = fmt.Sprintf("assert exception code fail: %v != %v", code, e.GetCode())
+			}
+			if e.GetMessage() != message {
+				failDesc = fmt.Sprintf("assert exception message fail: %v != %v", message, e.GetMessage())
+			}
+		})
+		handler()
+		failDesc = "assert exception fail: no exception!"
+	}()
+	if failDesc != "" {
+		output := ""
+		if len(testcase) != 0 {
+			output = fmt.Sprintf("testCase: %v , ", testcase)
 		}
-		if e.GetMessage() != message {
-			_, filename, line, _ := runtime.Caller(7)
-			t.Errorf("%+v ,testCase:%v , assert exception message fail: %v != %v", path.Base(filename)+":"+strconv.Itoa(line), testcase, e.GetMessage(), message)
-		}
-	})
-	handler()
-	_, filename, line, _ := runtime.Caller(1)
-	t.Errorf("%+v ,testCase:%v , assert exception fail: no exception!", path.Base(filename)+":"+strconv.Itoa(line), testcase)
+		t.Error(output + failDesc)
+	}
+
 }
 
 //抛出异常比对工具

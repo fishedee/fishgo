@@ -49,3 +49,5 @@ func TestCatch(t *testing.T) {
 		AssertEqual(t, msg, singleTestCase.target, singleIndex)
 	}
 }
+
+//FIXME check exception stack
