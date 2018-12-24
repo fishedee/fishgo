@@ -58,7 +58,7 @@ func generateSingleInterface(typeName string, methods []FunctionInfo) string {
 func generateSingleMock(typeName string, methods []FunctionInfo) string {
 	funResult := []string{}
 	for _, method := range methods {
-		methodFieldName := strings.ToLower(method.name[0:1]) + method.name[1:]
+		methodFieldName := method.name + "Handler"
 		single := methodFieldName + " func" +
 			"(" + generateSingleField(method.params) + ")" +
 			"(" + generateSingleResult(method.results) + ")"
@@ -76,7 +76,7 @@ func generateSingleMock(typeName string, methods []FunctionInfo) string {
 		for _, param := range method.params {
 			paramNames = append(paramNames, param.name)
 		}
-		methodFieldName := strings.ToLower(method.name[0:1]) + method.name[1:]
+		methodFieldName := method.name + "Handler"
 		returnSingle := "this." + methodFieldName + "(" + strings.Join(paramNames, ",") + ")"
 		if len(method.results) == 0 {
 			single = single + returnSingle + "\n}\n"
