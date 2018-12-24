@@ -45,7 +45,7 @@ func (this *Ioc) dfs(t reflect.Type, visit map[reflect.Type]bool) (reflect.Value
 	for _, singleDepType := range info.depType {
 		singleDepValue, err := this.dfs(singleDepType, visit)
 		if err != nil {
-			return reflect.Value{}, err
+			return reflect.Value{}, errors.New("-> " + t.Name() + " " + err.Error())
 		}
 		args = append(args, singleDepValue)
 	}
@@ -94,7 +94,7 @@ func (this *Ioc) Invoke(createFun interface{}) error {
 		singleNumInType := typeType.In(i)
 		singleNumInValue, err := this.dfs(singleNumInType, visit)
 		if err != nil {
-			return err
+			return errors.New("build [invoke] " + err.Error())
 		}
 		numIn = append(numIn, singleNumInValue)
 	}
