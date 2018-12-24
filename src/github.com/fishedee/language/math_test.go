@@ -1,8 +1,6 @@
 package language
 
 import (
-	. "github.com/fishedee/assert"
-
 	"testing"
 )
 

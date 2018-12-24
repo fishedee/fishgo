@@ -1,7 +1,6 @@
 package language
 
 import (
-	. "github.com/fishedee/assert"
 	"testing"
 )
 
@@ -50,4 +49,68 @@ func TestCatch(t *testing.T) {
 	}
 }
 
-//FIXME check exception stack
+func getLastStackTraceLine(e Exception)string{
+	lines := Explode(e.GetStackTraceLine(0),"/")
+	return lines[len(lines)-1]
+}
+
+func TestCatchStack1(t *testing.T){
+	defer Catch(func( e Exception){
+		AssertEqual(t,getLastStackTraceLine(e),"exception_test.go:61")
+	})
+	Throw(1,"test1")
+}
+
+func TestCatchStack2(t *testing.T){
+	defer CatchCrash(func( e Exception){
+		AssertEqual(t,getLastStackTraceLine(e),"exception_test.go:68")
+	})
+	Throw(1,"test2")
+}
+
+func TestCatchStack3(t *testing.T){
+	defer CatchCrash(func( e Exception){
+		AssertEqual(t,getLastStackTraceLine(e),"exception_test.go:75")
+	})
+	panic("test3")
+}
+
+func TestCatchStack4(t *testing.T){
+	defer CatchCrash(func( e Exception){
+		AssertEqual(t,getLastStackTraceLine(e),"exception_test.go:85")
+	})
+	defer Catch(func( e Exception){
+		AssertEqual(t,"should not be here!",false)
+	})
+	panic("test4")
+}
+
+func TestCatchStack5(t *testing.T){
+	defer CatchCrash(func( e Exception){
+		AssertEqual(t,getLastStackTraceLine(e),"exception_test.go:95")
+	})
+	defer Catch(func( e Exception){
+		panic(&e)
+	})
+	Throw(1,"test5")
+}
+
+func TestCatchStack6(t *testing.T){
+	defer Catch(func( e Exception){
+		AssertEqual(t,getLastStackTraceLine(e),"exception_test.go:105")
+	})
+	defer Catch(func( e Exception){
+		panic(&e)
+	})
+	Throw(1,"test6")
+}
+
+func TestCatchStack7(t *testing.T){
+	defer CatchCrash(func( e Exception){
+		AssertEqual(t,getLastStackTraceLine(e),"exception_test.go:115")
+	})
+	defer CatchCrash(func( e Exception){
+		panic(&e)
+	})
+	panic("test7")
+}
