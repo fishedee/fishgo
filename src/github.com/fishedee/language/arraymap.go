@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+var decimalType = reflect.TypeOf(Decimal("0"))
+
 func nameMapper(name string) string {
 	return strings.ToLower(name[0:1]) + name[1:]
 }
@@ -200,6 +202,10 @@ func arrayToMapInner(dataValue reflect.Value, tag string) (reflect.Value, bool) 
 		} else if dataType.kind == TypeKind.INTERFACE ||
 			dataType.kind == TypeKind.PTR {
 			result, isEmpty = arrayToMapInner(dataValue.Elem(), tag)
+		} else if dataType.kind == TypeKind.STRING && dataValue.Type() == decimalType {
+			decimalString := dataValue.Interface().(Decimal).String()
+			result = reflect.ValueOf(decimalString)
+			isEmpty = (decimalString == "0")
 		} else {
 			result = dataValue
 			isEmpty = IsEmptyValue(dataValue)
@@ -309,8 +315,18 @@ func mapToFloat(dataValue reflect.Value, target reflect.Value) error {
 
 func mapToString(dataValue reflect.Value, target reflect.Value) error {
 	stringValue := fmt.Sprintf("%v", dataValue.Interface())
-	target.SetString(stringValue)
-	return nil
+	if target.Type() == decimalType {
+		_, err := NewDecimal(stringValue)
+		if err != nil {
+			return errors.New(fmt.Sprintf("不是十进制数字，其值为[%s]", stringValue))
+		}
+		target.SetString(stringValue)
+		return nil
+	} else {
+		target.SetString(stringValue)
+		return nil
+	}
+
 }
 
 func mapToArray(dataValue reflect.Value, target reflect.Value, tag string) error {

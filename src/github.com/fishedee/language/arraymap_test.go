@@ -17,6 +17,8 @@ func TestArrayToMapBasic(t *testing.T) {
 		{1, 1},
 		{1.2, 1.2},
 		{"12", "12"},
+		{Decimal("1.2"), "1.2"},
+		{Decimal(""), "0"},
 		{now, now.Format("2006-01-02 15:04:05")},
 		{[]int{1, 2, 3}, []interface{}{1, 2, 3}},
 		{map[string]string{
@@ -427,6 +429,7 @@ func TestMapToArrayError(t *testing.T) {
 		{"zz", time.Now(), "不是时间，其值为[zz]"},
 		{"1c", 1, "不是整数，其值为[1c]"},
 		{"1.2c", 1.2, "不是浮点数，其值为[1.2c]"},
+		{"1.2d", Decimal("1.2d"), "不是十进制数字，其值为[1.2d]"},
 		{map[string]interface{}{
 			"first": "1m",
 		}, struct {

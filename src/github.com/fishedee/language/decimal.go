@@ -1,95 +1,64 @@
 package language
 
 import (
-	"fmt"
-	"math"
-	"strconv"
+	"github.com/shopspring/decimal"
 )
 
 /*
-* 使用64位整数来实现精度为0.0001的小数运算
-* 为什么不直接用decimal包，因为decimal包的转储需要用string，不方便在数据库和前端进行运算，并且绝大多数的业务仅需保留4位小数就已经足够了
+* 为什么不直接用decimal包，因为decimal包原始格式无法序列化，转储只能用string，才能在数据库和前端进行无损的传递，常见的javascript就处理不了[64位长整数](https://www.zhihu.com/question/34564427)
 * 详情看[这里](https://fishedee.com/2016/03/16/mysql%E7%BB%8F%E9%AA%8C%E6%B1%87%E6%80%BB/)的浮点数章节
 * 本目录下的math.go的实现是错误的，将decimal包直接用float64转储会[爆炸](https://github.com/fishedee/Demo/blob/master/go/decimal/main.go)
  */
-type Decimal int
+type Decimal string
 
-func roundDecimal(a int, precision int) int {
-	if precision == 4 {
-		return a
+func NewDecimal(in string) (Decimal, error) {
+	_, err := decimal.NewFromString(in)
+	if err != nil {
+		return "", err
 	}
-	precisionMap := []int{10000, 1000, 100, 10}
-	p := precisionMap[precision]
-	sign := 1
-	if a < 0 {
-		sign = -1
-		a = -a
-	}
-	main := a / p * p
-	exp := a % p
-	if exp >= (p / 2) {
-		return (main + p) * sign
-	} else {
-		return (main) * sign
-	}
+	return Decimal(in), nil
 }
 
+func getDecimal(a Decimal) decimal.Decimal {
+	if string(a) == "" {
+		return decimal.Decimal{}
+	}
+	r, err := decimal.NewFromString(string(a))
+	if err != nil {
+		panic(err)
+	}
+	return r
+}
 func (left Decimal) Add(right Decimal) Decimal {
-	a := int(left)
-	b := int(right)
-	return Decimal(a + b)
+	l := getDecimal(left)
+	r := getDecimal(right)
+	return Decimal(l.Add(r).String())
 }
 
 func (left Decimal) Sub(right Decimal) Decimal {
-	a := int(left)
-	b := int(right)
-	return Decimal(a - b)
+	l := getDecimal(left)
+	r := getDecimal(right)
+	return Decimal(l.Sub(r).String())
 }
 
 func (left Decimal) Mul(right Decimal) Decimal {
-	a := int(left)
-	b := int(right)
-	r := a * b
-	r = roundDecimal(r, 0)
-	return Decimal(r / 10000)
+	l := getDecimal(left)
+	r := getDecimal(right)
+	return Decimal(l.Mul(r).String())
 }
 
 func (left Decimal) Div(right Decimal) Decimal {
-	a := int(left)
-	b := int(right)
-	a = a * 100000
-	r := a / b
-	r = roundDecimal(r, 3)
-	return Decimal(r / 10)
+	l := getDecimal(left)
+	r := getDecimal(right)
+	return Decimal(l.Div(r).String())
 }
 
 func (left Decimal) Round(precision int) Decimal {
-	a := int(left)
-	r := roundDecimal(a, precision)
-	return Decimal(r)
+	l := getDecimal(left)
+	return Decimal(l.Round(int32(precision)).String())
 }
 
 func (left Decimal) String() string {
-	a := int(left)
-	sign := ""
-	if a < 0 {
-		sign = "-"
-		a = -a
-	}
-	main := a / 10000
-	exp := a % 10000
-	return fmt.Sprintf("%s%d.%04d", sign, main, exp)
-}
-
-func NewDecimalFromString(a string) (Decimal, error) {
-	data, err := strconv.ParseFloat(a, 64)
-	if err != nil {
-		return 0, err
-	}
-	result := NewDecimal(data)
-	return result, nil
-}
-
-func NewDecimal(a float64) Decimal {
-	return Decimal(int(math.Round(a * 10000)))
+	l := getDecimal(left)
+	return l.String()
 }
