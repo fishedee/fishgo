@@ -1,6 +1,7 @@
 package language
 
 import (
+	"fmt"
 	"math"
 	"strconv"
 )
@@ -12,6 +13,26 @@ import (
 * 本目录下的math.go的实现是错误的，将decimal包直接用float64转储会[爆炸](https://github.com/fishedee/Demo/blob/master/go/decimal/main.go)
  */
 type Decimal int
+
+func roundDecimal(a int, precision int) int {
+	if precision == 4 {
+		return a
+	}
+	precisionMap := []int{10000, 1000, 100, 10}
+	p := precisionMap[precision]
+	sign := 1
+	if a < 0 {
+		sign = -1
+		a = -a
+	}
+	main := a / p * p
+	exp := a % p
+	if exp >= (p / 2) {
+		return (main + p) * sign
+	} else {
+		return (main) * sign
+	}
+}
 
 func (left Decimal) Add(right Decimal) Decimal {
 	a := int(left)
@@ -29,13 +50,8 @@ func (left Decimal) Mul(right Decimal) Decimal {
 	a := int(left)
 	b := int(right)
 	r := a * b
-	exp := r % 10000
-	main := r / 10000
-	if exp >= 5000 {
-		return Decimal(main + 1)
-	} else {
-		return Decimal(main)
-	}
+	r = roundDecimal(r, 0)
+	return Decimal(r / 10000)
 }
 
 func (left Decimal) Div(right Decimal) Decimal {
@@ -43,29 +59,26 @@ func (left Decimal) Div(right Decimal) Decimal {
 	b := int(right)
 	a = a * 100000
 	r := a / b
-	main := r / 10
-	exp := r % 10
-	if exp >= 5 {
-		return Decimal(main + 1)
-	} else {
-		return Decimal(main)
-	}
+	r = roundDecimal(r, 3)
+	return Decimal(r / 10)
 }
 
 func (left Decimal) Round(precision int) Decimal {
 	a := int(left)
-	if precision == 4 {
-		return Decimal(a)
+	r := roundDecimal(a, precision)
+	return Decimal(r)
+}
+
+func (left Decimal) String() string {
+	a := int(left)
+	sign := ""
+	if a < 0 {
+		sign = "-"
+		a = -a
 	}
-	precisionMap := []int{10000, 1000, 100, 10}
-	p := precisionMap[precision]
-	main := a / p * p
-	exp := a % p
-	if exp >= (p / 2) {
-		return Decimal(main + p)
-	} else {
-		return Decimal(main)
-	}
+	main := a / 10000
+	exp := a % 10000
+	return fmt.Sprintf("%s%d.%04d", sign, main, exp)
 }
 
 func NewDecimalFromString(a string) (Decimal, error) {
