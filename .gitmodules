@@ -220,3 +220,15 @@
 [submodule "src/github.com/Pallinder/go-iap"]
 	path = src/github.com/Pallinder/go-iap
 	url = https://github.com/Pallinder/go-iap.git
+[submodule "src/github.com/aliyun/aliyun-oss-go-sdk"]
+	path = src/github.com/aliyun/aliyun-oss-go-sdk
+	url = git@github.com:aliyun/aliyun-oss-go-sdk.git
+[submodule "src/github.com/qiniu/api.v7"]
+	path = src/github.com/qiniu/api.v7
+	url = git@github.com:qiniu/api.v7.git
+[submodule "src/github.com/qiniu/x"]
+	path = src/github.com/qiniu/x
+	url = git@github.com:qiniu/x.git
+[submodule "src/github.com/aliyun/alibaba-cloud-sdk-go"]
+	path = src/github.com/aliyun/alibaba-cloud-sdk-go
+	url = git@github.com:aliyun/alibaba-cloud-sdk-go.git
