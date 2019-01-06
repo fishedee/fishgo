@@ -111,7 +111,7 @@ func QuerySort(data interface{}, sortType string) interface{} {
 	reflect.Copy(dataResult, dataValue)
 
 	//排序
-	targetCompare := getQueryCompares(dataElemType, sortType)
+	targetCompare := getQueryExtractAndCompares(dataElemType, sortType)
 	arraySlice := querySortSlice{
 		target:         dataResult,
 		targetElemType: dataElemType,
@@ -130,26 +130,18 @@ func QueryJoin(leftData interface{}, rightData interface{}, joinPlace string, jo
 	leftDataType := leftDataValue.Type()
 	leftDataElemType := leftDataType.Elem()
 	leftDataValueLen := leftDataValue.Len()
-	leftDataJoinStruct, ok := getFieldByName(leftDataElemType, leftJoinType)
-	if !ok {
-		panic(leftDataElemType.Name() + " has no field " + leftJoinType)
-	}
-	leftDataJoin := leftDataJoinStruct.Index
+	leftDataJoinType, leftDataJoinExtract := getQueryExtract(leftDataElemType, leftJoinType)
 
 	rightData = QuerySort(rightData, rightJoinType+" asc")
 	rightDataValue := reflect.ValueOf(rightData)
 	rightDataType := rightDataValue.Type()
 	rightDataElemType := rightDataType.Elem()
 	rightDataValueLen := rightDataValue.Len()
-	rightDataJoinStruct, ok := getFieldByName(rightDataElemType, rightJoinType)
-	if !ok {
-		panic(rightDataElemType.Name() + " has no field " + rightJoinType)
-	}
-	rightDataJoin := rightDataJoinStruct.Index
+	_, rightDataJoinExtract := getQueryExtract(rightDataElemType, rightJoinType)
 
 	joinFuctorValue := reflect.ValueOf(joinFuctor)
 	joinFuctorType := joinFuctorValue.Type()
-	joinCompare := getSingleQueryCompare(leftDataJoinStruct.Type)
+	joinCompare := getQueryCompare(leftDataJoinType)
 	resultValue := reflect.MakeSlice(reflect.SliceOf(joinFuctorType.Out(0)), 0, 0)
 
 	rightHaveJoin := make([]bool, rightDataValueLen, rightDataValueLen)
@@ -162,15 +154,15 @@ func QueryJoin(leftData interface{}, rightData interface{}, joinPlace string, jo
 	for i := 0; i != leftDataValueLen; i++ {
 		//二分查找右边对应的键
 		singleLeftData := leftDataValue.Index(i)
-		singleLeftDataJoin := singleLeftData.FieldByIndex(leftDataJoin)
+		singleLeftDataJoin := leftDataJoinExtract(singleLeftData)
 		j := sort.Search(rightDataValueLen, func(j int) bool {
-			return joinCompare(rightDataValue.Index(j).FieldByIndex(rightDataJoin), singleLeftDataJoin) >= 0
+			return joinCompare(rightDataJoinExtract(rightDataValue.Index(j)), singleLeftDataJoin) >= 0
 		})
 		//合并双边满足条件
 		haveFound := false
 		for ; j < rightDataValueLen; j++ {
 			singleRightData := rightDataValue.Index(j)
-			singleRightDataJoin := singleRightData.FieldByIndex(rightDataJoin)
+			singleRightDataJoin := rightDataJoinExtract(singleRightData)
 			if joinCompare(singleLeftDataJoin, singleRightDataJoin) != 0 {
 				break
 			}
@@ -209,7 +201,7 @@ func QueryGroup(data interface{}, groupType string, groupFuctor interface{}) int
 	dataType := dataValue.Type()
 	dataValueLen := dataValue.Len()
 	dataElemType := dataType.Elem()
-	dataCompare := getQueryCompares(dataElemType, groupType)
+	dataCompare := getQueryExtractAndCompares(dataElemType, groupType)
 
 	groupFuctorValue := reflect.ValueOf(groupFuctor)
 	groupFuctorType := groupFuctorValue.Type()
@@ -283,13 +275,14 @@ func analyseSort(sortType string) (result1 []string, result2 []bool) {
 	return result1, result2
 }
 
-func getQueryCompares(dataType reflect.Type, sortTypeStr string) []queryCompare {
+func getQueryExtractAndCompares(dataType reflect.Type, sortTypeStr string) []queryCompare {
 	sortName, sortType := analyseSort(sortTypeStr)
 	targetCompare := []queryCompare{}
 	for index, singleSortName := range sortName {
 		singleSortType := sortType[index]
-		singleCompare := getQueryCompare(dataType, singleSortName)
+		singleCompare := getQueryExtractAndCompare(dataType, singleSortName)
 		if !singleSortType {
+			//逆序
 			singleTempCompare := singleCompare
 			singleCompare = func(left reflect.Value, right reflect.Value) int {
 				return singleTempCompare(right, left)
@@ -300,7 +293,7 @@ func getQueryCompares(dataType reflect.Type, sortTypeStr string) []queryCompare 
 	return targetCompare
 }
 
-func getSingleQueryCompare(fieldType reflect.Type) queryCompare {
+func getQueryCompare(fieldType reflect.Type) queryCompare {
 	typeKind := GetTypeKind(fieldType)
 	if typeKind == TypeKind.BOOL {
 		return func(left reflect.Value, right reflect.Value) int {
@@ -379,16 +372,31 @@ func getSingleQueryCompare(fieldType reflect.Type) queryCompare {
 	}
 }
 
-func getQueryCompare(dataType reflect.Type, name string) queryCompare {
-	field, ok := getFieldByName(dataType, name)
-	if !ok {
-		panic(dataType.Name() + " has not name " + name)
+type queryExtract func(reflect.Value) reflect.Value
+
+func getQueryExtract(dataType reflect.Type, name string) (reflect.Type, queryExtract) {
+	if name == "." {
+		return dataType, func(v reflect.Value) reflect.Value {
+			return v
+		}
+	} else {
+		field, ok := getFieldByName(dataType, name)
+		if !ok {
+			panic(dataType.Name() + " has not name " + name)
+		}
+		fieldIndex := field.Index
+		fieldType := field.Type
+		return fieldType, func(v reflect.Value) reflect.Value {
+			return v.FieldByIndex(fieldIndex)
+		}
 	}
-	fieldIndex := field.Index
-	fieldType := field.Type
-	compare := getSingleQueryCompare(fieldType)
+}
+
+func getQueryExtractAndCompare(dataType reflect.Type, name string) queryCompare {
+	fieldType, extract := getQueryExtract(dataType, name)
+	compare := getQueryCompare(fieldType)
 	return func(left reflect.Value, right reflect.Value) int {
-		return compare(left.FieldByIndex(fieldIndex), right.FieldByIndex(fieldIndex))
+		return compare(extract(left), extract(right))
 	}
 }
 
@@ -495,18 +503,30 @@ func QueryColumn(data interface{}, column string) interface{} {
 	dataType := dataValue.Type().Elem()
 	dataLen := dataValue.Len()
 	column = strings.Trim(column, " ")
-	dataFieldIndexStruct, ok := getFieldByName(dataType, column)
-	if !ok {
-		panic(dataType.Name() + " has no field " + column)
-	}
-	dataFieldIndex := dataFieldIndexStruct.Index
+	dataFieldType, dataFieldExtract := getQueryExtract(dataType, column)
 
-	resultValue := reflect.MakeSlice(reflect.SliceOf(dataFieldIndexStruct.Type), dataLen, dataLen)
+	resultValue := reflect.MakeSlice(reflect.SliceOf(dataFieldType), dataLen, dataLen)
 
 	for i := 0; i != dataLen; i++ {
 		singleDataValue := dataValue.Index(i)
-		singleResultValue := singleDataValue.FieldByIndex(dataFieldIndex)
+		singleResultValue := dataFieldExtract(singleDataValue)
 		resultValue.Index(i).Set(singleResultValue)
+	}
+	return resultValue.Interface()
+}
+
+func QueryColumnMap(data interface{}, column string) interface{} {
+	dataValue := reflect.ValueOf(data)
+	dataType := dataValue.Type().Elem()
+	dataLen := dataValue.Len()
+	column = strings.Trim(column, " ")
+	dataFieldType, dataFieldExtract := getQueryExtract(dataType, column)
+
+	resultValue := reflect.MakeMap(reflect.MapOf(dataFieldType, dataType))
+	for i := dataLen - 1; i >= 0; i-- {
+		singleDataValue := dataValue.Index(i)
+		singleResultValue := dataFieldExtract(singleDataValue)
+		resultValue.SetMapIndex(singleResultValue, singleDataValue)
 	}
 	return resultValue.Interface()
 }
@@ -526,18 +546,12 @@ func QueryReverse(data interface{}) interface{} {
 func QueryDistinct(data interface{}, columnNames string) interface{} {
 	//提取信息
 	name := Explode(columnNames, ",")
-	nameInfo := []arrayColumnMapInfo{}
+	extractInfo := []queryExtract{}
 	dataValue := reflect.ValueOf(data)
 	dataType := dataValue.Type().Elem()
 	for _, singleName := range name {
-		singleField, ok := getFieldByName(dataType, singleName)
-		if !ok {
-			panic(dataType.Name() + " struct has not field " + singleName)
-		}
-		nameInfo = append(nameInfo, arrayColumnMapInfo{
-			Index: singleField.Index,
-			Type:  singleField.Type,
-		})
+		_, extract := getQueryExtract(dataType, singleName)
+		extractInfo = append(extractInfo, extract)
 	}
 
 	//整合map
@@ -547,9 +561,9 @@ func QueryDistinct(data interface{}, columnNames string) interface{} {
 	for i := 0; i != dataLen; i++ {
 		singleValue := dataValue.Index(i)
 		newData := reflect.New(dataType).Elem()
-		for _, singleNameInfo := range nameInfo {
-			singleField := singleValue.FieldByIndex(singleNameInfo.Index)
-			newData.FieldByIndex(singleNameInfo.Index).Set(singleField)
+		for _, singleExtract := range extractInfo {
+			singleField := singleExtract(singleValue)
+			singleExtract(newData).Set(singleField)
 		}
 		newDataValue := newData.Interface()
 		_, isExist := existsMap[newDataValue]
