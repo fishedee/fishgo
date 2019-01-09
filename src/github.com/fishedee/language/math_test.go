@@ -302,7 +302,7 @@ func TestDivDecimal_Error(t *testing.T) {
 	}
 
 	for singleTestKey, singleTestCase := range testCase {
-		AssertError(t, "division by zero", func() {
+		AssertError(t, "decimal division by 0", func() {
 			DivDecimal(singleTestCase.a, singleTestCase.b)
 		}, singleTestKey)
 	}

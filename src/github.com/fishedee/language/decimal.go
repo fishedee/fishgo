@@ -29,6 +29,7 @@ func getDecimal(a Decimal) decimal.Decimal {
 	}
 	return r
 }
+
 func (left Decimal) Add(right Decimal) Decimal {
 	l := getDecimal(left)
 	r := getDecimal(right)
@@ -56,6 +57,28 @@ func (left Decimal) Div(right Decimal) Decimal {
 func (left Decimal) Round(precision int) Decimal {
 	l := getDecimal(left)
 	return Decimal(l.Round(int32(precision)).String())
+}
+
+func (left Decimal) Cmp(right Decimal) int {
+	l := getDecimal(left)
+	r := getDecimal(right)
+	return l.Cmp(r)
+}
+
+func (left Decimal) Equal(right Decimal) bool {
+	l := getDecimal(left)
+	r := getDecimal(right)
+	return l.Equal(r)
+}
+
+func (left Decimal) Sign() int {
+	l := getDecimal(left)
+	return l.Sign()
+}
+
+func (left Decimal) Abs() Decimal {
+	l := getDecimal(left)
+	return Decimal(l.Abs().String())
 }
 
 func (left Decimal) String() string {

@@ -114,6 +114,31 @@ func TestDecimalRound(t *testing.T) {
 	}
 }
 
+func TestDecimalOther(t *testing.T) {
+	//cmp
+	AssertEqual(t, Decimal("10").Cmp(Decimal("12")), -1)
+	AssertEqual(t, Decimal("12").Cmp(Decimal("12")), 0)
+	AssertEqual(t, Decimal("15").Cmp(Decimal("12")), 1)
+
+	//equal
+	AssertEqual(t, Decimal("12").Equal(Decimal("12")), true)
+	AssertEqual(t, Decimal("-12").Equal(Decimal("-12")), true)
+	AssertEqual(t, Decimal("0").Equal(Decimal("")), true)
+	AssertEqual(t, Decimal("").Equal(Decimal("0")), true)
+	AssertEqual(t, Decimal("-0").Equal(Decimal("0")), true)
+	AssertEqual(t, Decimal("-1").Equal(Decimal("0")), false)
+
+	//Sign
+	AssertEqual(t, Decimal("-12").Sign(), -1)
+	AssertEqual(t, Decimal("0").Sign(), 0)
+	AssertEqual(t, Decimal("12").Sign(), 1)
+
+	//Abs
+	AssertEqual(t, Decimal("-12").Abs(), Decimal("12"))
+	AssertEqual(t, Decimal("0").Abs(), Decimal("0"))
+	AssertEqual(t, Decimal("12").Abs(), Decimal("12"))
+}
+
 func TestDecimalToString(t *testing.T) {
 	testCase := []struct {
 		origin string
