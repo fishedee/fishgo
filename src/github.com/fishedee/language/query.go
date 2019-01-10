@@ -1,6 +1,7 @@
 package language
 
 import (
+	"fmt"
 	"math"
 	"reflect"
 	"sort"
@@ -539,6 +540,23 @@ func QueryReverse(data interface{}) interface{} {
 
 	for i := 0; i != dataLen; i++ {
 		result.Index(dataLen - i - 1).Set(dataValue.Index(i))
+	}
+	return result.Interface()
+}
+
+func QueryCombine(leftData interface{}, rightData interface{}, combineFuctor interface{}) interface{} {
+	leftValue := reflect.ValueOf(leftData)
+	rightValue := reflect.ValueOf(rightData)
+	if leftValue.Len() != rightValue.Len() {
+		panic(fmt.Sprintf("len dos not equal %v != %v", leftValue.Len(), rightValue.Len()))
+	}
+	dataLen := leftValue.Len()
+	combineFuctorValue := reflect.ValueOf(combineFuctor)
+	resultType := combineFuctorValue.Type().Out(0)
+	result := reflect.MakeSlice(reflect.SliceOf(resultType), dataLen, dataLen)
+	for i := 0; i != dataLen; i++ {
+		singleResultValue := combineFuctorValue.Call([]reflect.Value{leftValue.Index(i), rightValue.Index(i)})
+		result.Index(i).Set(singleResultValue[0])
 	}
 	return result.Interface()
 }

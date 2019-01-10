@@ -1567,6 +1567,56 @@ func TestQueryReverse(t *testing.T) {
 	}
 }
 
+func TestQueryCombine(t *testing.T) {
+	type contentType struct {
+		Name      string
+		Age       int
+		Ok        bool
+		Money     float32
+		CardMoney float64
+		Register  time.Time
+	}
+	testCase := []struct {
+		origin  interface{}
+		origin2 interface{}
+		functor interface{}
+		target  interface{}
+	}{
+		{
+			[]contentType{},
+			[]contentType{},
+			func(left contentType, right contentType) contentType {
+				return contentType{}
+			},
+			[]contentType{},
+		},
+		{
+			[]contentType{
+				contentType{Name: "1"},
+				contentType{Name: "2"},
+				contentType{Name: "3"},
+			},
+			[]int{1, 2, 3},
+			func(left contentType, right int) contentType {
+				return contentType{
+					Name: left.Name,
+					Age:  right,
+				}
+			},
+			[]contentType{
+				contentType{Name: "1", Age: 1},
+				contentType{Name: "2", Age: 2},
+				contentType{Name: "3", Age: 3},
+			},
+		},
+	}
+
+	for _, singleTestCase := range testCase {
+		result := QueryCombine(singleTestCase.origin, singleTestCase.origin2, singleTestCase.functor)
+		AssertEqual(t, result, singleTestCase.target)
+	}
+}
+
 func TestQueryDistinct(t *testing.T) {
 
 	type contentType struct {
