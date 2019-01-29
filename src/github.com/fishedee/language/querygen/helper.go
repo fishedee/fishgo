@@ -92,7 +92,11 @@ func getTypeDeclareCode(line string, t types.Type) string {
 		return "map[" + keyType + "]" + elemType
 	} else if tNamed, ok := t.(*types.Named); ok {
 		obj := tNamed.Obj()
-		return obj.Pkg().Name() + "." + obj.Name()
+		if obj.Pkg().Path() == globalGeneratePackagePath {
+			return obj.Name()
+		} else {
+			return obj.Pkg().Name() + "." + obj.Name()
+		}
 	} else {
 		Throw(1, "%v:unknown type to declare: %v", t.String())
 		return ""
@@ -124,14 +128,23 @@ func getTypeDefineCodeInner(line string, t types.Type, isTop bool) string {
 		obj := tNamed.Obj()
 		underType := tNamed.Underlying()
 		if _, isStruct := underType.(*types.Struct); isStruct {
-			declareName := obj.Pkg().Name() + "." + obj.Name()
+			declareName := ""
+			if obj.Pkg().Path() == globalGeneratePackagePath {
+				declareName = obj.Name()
+			} else {
+				declareName = obj.Pkg().Name() + "." + obj.Name()
+			}
 			if isTop == true {
 				declareName = declareName + "{}"
 			}
 			return declareName
 		} else {
 			underTypeDefine := getTypeDefineCode(line, underType)
-			return obj.Pkg().Name() + "." + obj.Name() + "(" + underTypeDefine + ")"
+			if obj.Pkg().Path() == globalGeneratePackagePath {
+				return obj.Name() + "(" + underTypeDefine + ")"
+			} else {
+				return obj.Pkg().Name() + "." + obj.Name() + "(" + underTypeDefine + ")"
+			}
 		}
 	} else {
 		Throw(1, "%v:unknown type to define %v", line, t.String())
@@ -192,3 +205,7 @@ func excuteTemplate(tmpl *template.Template, data map[string]string) string {
 	}
 	return buffer.String()
 }
+
+var (
+	globalGeneratePackagePath = ""
+)

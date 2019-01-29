@@ -56,11 +56,11 @@ var (
 func init() {
 	var err error
 	queryColumnFuncTmpl, err = template.New("name").Parse(`
-	func queryColumn_{{ .signature }}(data interface{},column interface{})interface{}{
+	func queryColumn_{{ .signature }}(data interface{},column string)interface{}{
 		dataIn := data.([]{{ .firstArgElemType }})
 		result := make([]{{ .firstArgElemColumnType }},len(dataIn),len(dataIn))
 
-		for _,single := range dataIn{
+		for i,single := range dataIn{
 			result[i] = single.{{ .column }}
 		}
 		return result

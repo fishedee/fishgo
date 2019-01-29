@@ -499,7 +499,24 @@ func QueryMin(data interface{}) interface{} {
 	}
 }
 
+type QueryColumnMacroHandler func(data interface{}, column string) interface{}
+
+func QueryColumnMacroRegister(data interface{}, column string, handler QueryColumnMacroHandler) {
+	id := reflect.TypeOf(data).String() + "_" + column
+	queryColumnMacroMapper[id] = handler
+}
+
 func QueryColumn(data interface{}, column string) interface{} {
+	id := reflect.TypeOf(data).String() + "_" + column
+	handler, isExist := queryColumnMacroMapper[id]
+	if isExist {
+		return handler(data, column)
+	} else {
+		return QueryColumnReflect(data, column)
+	}
+}
+
+func QueryColumnReflect(data interface{}, column string) interface{} {
 	dataValue := reflect.ValueOf(data)
 	dataType := dataValue.Type().Elem()
 	dataLen := dataValue.Len()
@@ -593,3 +610,7 @@ func QueryDistinct(data interface{}, columnNames string) interface{} {
 	}
 	return result.Interface()
 }
+
+var (
+	queryColumnMacroMapper = map[string]QueryColumnMacroHandler{}
+)

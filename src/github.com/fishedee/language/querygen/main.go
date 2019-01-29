@@ -10,8 +10,10 @@ import (
 	"go/format"
 	"go/token"
 	"go/types"
+	"io/ioutil"
 	"log"
 	"os"
+	"sort"
 )
 
 var (
@@ -51,16 +53,76 @@ type queryGenResponse struct {
 
 type queryGenHandler func(request queryGenRequest) *queryGenResponse
 
-func handleQueryGen(name string, request queryGenRequest) (*queryGenResponse, bool) {
+func handleQueryGen(name string, request queryGenRequest) *queryGenResponse {
 	handler, isExist := queryGenMapper[name]
 	if isExist == false {
-		return nil, false
+		return nil
 	}
-	return handler(request), true
+	return handler(request)
 }
 
 func registerQueryGen(name string, handler queryGenHandler) {
 	queryGenMapper[name] = handler
+}
+
+func formatSource(data string) []byte {
+	result, err := format.Source([]byte(data))
+	if err != nil {
+		Throw(1, "format source fail!%v,%v", err, data)
+	}
+	return result
+}
+
+func generate(packageName string, packagePath string, packages []queryGenResponse) {
+	gopath, _ := os.LookupEnv("GOPATH")
+	fileDir := gopath + "/src/" + packagePath
+	fileSegment := Explode(fileDir, "/")
+	filePath := fileDir + "/" + fileSegment[len(fileSegment)-1] + "_querygen.go"
+
+	//处理导入包
+	importPackageMap := map[string]bool{}
+	for _, singlePackage := range packages {
+		for singleImport, _ := range singlePackage.importPackage {
+			importPackageMap[singleImport] = true
+		}
+	}
+	importPackageMap["github.com/fishedee/language"] = true
+	delete(importPackageMap, packagePath)
+	importPackageList := []string{}
+	for singlePackage, _ := range importPackageMap {
+		importPackageList = append(importPackageList, "\""+singlePackage+"\"")
+	}
+	sort.Slice(importPackageList, func(i int, j int) bool {
+		return importPackageList[i] < importPackageList[j]
+	})
+	importBody := Implode(importPackageList, "\n")
+
+	//处理funcBody和initBody
+	sort.Slice(packages, func(i int, j int) bool {
+		return packages[i].funcName < packages[j].funcName
+	})
+	var funcBody bytes.Buffer
+	var initBody bytes.Buffer
+	for _, singlePackage := range packages {
+		funcBody.WriteString(singlePackage.funcBody)
+		initBody.WriteString(singlePackage.initBody)
+	}
+
+	//写入数据
+	result := `package ` + packageName + "\n" +
+		"import (\n" + importBody + ")\n" +
+		funcBody.String() + "\n" +
+		"func init(){\n" +
+		initBody.String() + "\n" +
+		"}\n"
+	oldData, _ := ioutil.ReadFile(filePath)
+	if string(oldData) == result {
+		return
+	}
+	err := ioutil.WriteFile(filePath, formatSource(result), os.ModePerm)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func run() {
@@ -85,8 +147,13 @@ func run() {
 		}
 	}
 
+	genPackage := []queryGenResponse{}
+	initPackageName := ""
+	globalGeneratePackagePath = args[0]
 	err := macro.Walk(func(pkg MacroPackage) {
-
+		if pkg.Package().Path() == args[0] {
+			initPackageName = pkg.Package().Name()
+		}
 		pkg.OnFuncCall(func(expr *ast.CallExpr, caller *types.Func, args []types.TypeAndValue) {
 			callerFullName := caller.FullName()
 			request := queryGenRequest{
@@ -95,10 +162,9 @@ func run() {
 				caller: caller,
 				args:   args,
 			}
-			response, hasHandle := handleQueryGen(callerFullName, request)
-			if hasHandle == true {
-				//should generate
-				fmt.Println(response)
+			response := handleQueryGen(callerFullName, request)
+			if response != nil {
+				genPackage = append(genPackage, *response)
 			}
 		})
 		pkg.Inspect()
@@ -106,6 +172,8 @@ func run() {
 	if err != nil {
 		panic(err)
 	}
+
+	generate(initPackageName, args[0], genPackage)
 }
 
 func main() {
