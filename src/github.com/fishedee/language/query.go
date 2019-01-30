@@ -9,8 +9,15 @@ import (
 	"time"
 )
 
-//基础类函数
-func QuerySelect(data interface{}, selectFuctor interface{}) interface{} {
+//基础类函数QuerySelect
+type QuerySelectMacroHandler func(data interface{}, selectFunctor interface{}) interface{}
+
+func QuerySelectMacroRegister(data interface{}, selectFunctor interface{}, handler QuerySelectMacroHandler) {
+	id := reflect.TypeOf(data).String() + "_" + reflect.TypeOf(selectFunctor).String()
+	querySelectMacroMapper[id] = handler
+}
+
+func QuerySelectReflect(data interface{}, selectFuctor interface{}) interface{} {
 	dataValue := reflect.ValueOf(data)
 	dataLen := dataValue.Len()
 
@@ -19,13 +26,25 @@ func QuerySelect(data interface{}, selectFuctor interface{}) interface{} {
 	selectFuctorOuterType := selectFuctorType.Out(0)
 	resultType := reflect.SliceOf(selectFuctorOuterType)
 	resultValue := reflect.MakeSlice(resultType, dataLen, dataLen)
+	callArgument := []reflect.Value{reflect.Value{}}
 
 	for i := 0; i != dataLen; i++ {
 		singleDataValue := dataValue.Index(i)
-		singleResultValue := selectFuctorValue.Call([]reflect.Value{singleDataValue})[0]
+		callArgument[0] = singleDataValue
+		singleResultValue := selectFuctorValue.Call(callArgument)[0]
 		resultValue.Index(i).Set(singleResultValue)
 	}
 	return resultValue.Interface()
+}
+
+func QuerySelect(data interface{}, selectFunctor interface{}) interface{} {
+	id := reflect.TypeOf(data).String() + "_" + reflect.TypeOf(selectFunctor).String()
+	handler, isExist := querySelectMacroMapper[id]
+	if isExist {
+		return handler(data, selectFunctor)
+	} else {
+		return QuerySelectReflect(data, selectFunctor)
+	}
 }
 
 func QueryWhere(data interface{}, whereFuctor interface{}) interface{} {
@@ -613,4 +632,5 @@ func QueryDistinct(data interface{}, columnNames string) interface{} {
 
 var (
 	queryColumnMacroMapper = map[string]QueryColumnMacroHandler{}
+	querySelectMacroMapper = map[string]QuerySelectMacroHandler{}
 )

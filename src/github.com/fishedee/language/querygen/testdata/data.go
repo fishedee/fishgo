@@ -10,6 +10,13 @@ type User struct {
 	Name   string
 }
 
-func init() {
+type Sex struct {
+	IsMale bool
+}
+
+func logic() {
 	QueryColumn([]User{}, "UserId")
+	QuerySelect([]User{}, func(d User) Sex {
+		return Sex{}
+	})
 }

@@ -38,15 +38,49 @@ func getContantStringValue(line string, value constant.Value) string {
 func getNamedType(line string, t types.Type) *types.Named {
 	t1, isNamed := t.(*types.Named)
 	if isNamed == false {
-		Throw(1, "%v:should be named type!%v", t)
+		Throw(1, "%v:should be named type!%v", line, t)
 	}
 	return t1
+}
+
+func getFunctionType(line string, t types.Type) *types.Signature {
+	t1, isFunc := t.(*types.Signature)
+	if isFunc == false {
+		Throw(1, "%v:should be function type!%v", line, t)
+	}
+	if t1.Recv() != nil {
+		Throw(1, "%v:should be pure function", line)
+	}
+	if t1.Variadic() == true {
+		Throw(1, "%v:should not variadic function")
+	}
+	return t1
+}
+
+func getArgumentType(line string, t *types.Signature) []types.Type {
+	arguments := t.Params()
+	length := arguments.Len()
+	r := make([]types.Type, length, length)
+	for i := 0; i != length; i++ {
+		r[i] = arguments.At(i).Type()
+	}
+	return r
+}
+
+func getReturnType(line string, t *types.Signature) []types.Type {
+	arguments := t.Results()
+	length := arguments.Len()
+	r := make([]types.Type, length, length)
+	for i := 0; i != length; i++ {
+		r[i] = arguments.At(i).Type()
+	}
+	return r
 }
 
 func getSliceType(line string, t types.Type) *types.Slice {
 	t1, isSlice := t.(*types.Slice)
 	if isSlice == false {
-		Throw(1, "%v:should be slice type!%v", t)
+		Throw(1, "%v:should be slice type!%v", line, t)
 	}
 	return t1
 }
@@ -80,7 +114,7 @@ func getTypeDeclareCode(line string, t types.Type) string {
 		case types.String:
 			return "string"
 		default:
-			Throw(1, "%v:unknown basic type %v", t.String())
+			Throw(1, "%v:unknown basic type %v", line, t.String())
 			return ""
 		}
 	} else if tSlice, ok := t.(*types.Slice); ok {
@@ -90,6 +124,27 @@ func getTypeDeclareCode(line string, t types.Type) string {
 		keyType := getTypeDeclareCode(line, tMap.Key())
 		elemType := getTypeDeclareCode(line, tMap.Elem())
 		return "map[" + keyType + "]" + elemType
+	} else if tSignature, ok := t.(*types.Signature); ok {
+		argumentTypes := getArgumentType(line, tSignature)
+		returnTypes := getReturnType(line, tSignature)
+		argumentTypeCode := []string{}
+		for _, argumentType := range argumentTypes {
+			argumentTypeCode = append(argumentTypeCode, getTypeDeclareCode(line, argumentType))
+		}
+		argumentTypeCodeString := "(" + Implode(argumentTypeCode, ",") + ")"
+		returnTypeCode := []string{}
+		for _, returnType := range returnTypes {
+			returnTypeCode = append(returnTypeCode, getTypeDeclareCode(line, returnType))
+		}
+		returnTypeCodeString := ""
+		if len(returnTypeCode) == 0 {
+			returnTypeCodeString = ""
+		} else if len(returnTypeCode) == 1 {
+			returnTypeCodeString = returnTypeCode[0]
+		} else {
+			returnTypeCodeString = "(" + Implode(returnTypeCode, ",") + ")"
+		}
+		return "func" + argumentTypeCodeString + returnTypeCodeString
 	} else if tNamed, ok := t.(*types.Named); ok {
 		obj := tNamed.Obj()
 		if obj.Pkg().Path() == globalGeneratePackagePath {
@@ -98,13 +153,13 @@ func getTypeDeclareCode(line string, t types.Type) string {
 			return obj.Pkg().Name() + "." + obj.Name()
 		}
 	} else {
-		Throw(1, "%v:unknown type to declare: %v", t.String())
+		Throw(1, "%v:unknown type to declare: %v", line, t.String())
 		return ""
 	}
 
 }
 
-func getTypeDefineCodeInner(line string, t types.Type, isTop bool) string {
+func getTypeDefineCode(line string, t types.Type) string {
 	if tBasic, ok := t.(*types.Basic); ok {
 		switch tBasic.Kind() {
 		case types.Bool:
@@ -114,16 +169,15 @@ func getTypeDefineCodeInner(line string, t types.Type, isTop bool) string {
 		case types.String:
 			return "\"\""
 		default:
-			Throw(1, "%v:unknown basic type %v", t.String())
+			Throw(1, "%v:unknown basic type %v", line, t.String())
 			return ""
 		}
 	} else if tSlice, ok := t.(*types.Slice); ok {
-		elemType := tSlice.Elem()
-		return "[]" + getTypeDefineCodeInner(line, elemType, false) + "{}"
+		return getTypeDeclareCode(line, tSlice) + "{}"
 	} else if tMap, ok := t.(*types.Map); ok {
-		keyType := getTypeDefineCodeInner(line, tMap.Key(), false)
-		elemType := getTypeDefineCodeInner(line, tMap.Elem(), false)
-		return "map[" + keyType + "]" + elemType + "{}"
+		return getTypeDeclareCode(line, tMap) + "{}"
+	} else if tSignature, ok := t.(*types.Signature); ok {
+		return "(" + getTypeDeclareCode(line, tSignature) + ")(nil)"
 	} else if tNamed, ok := t.(*types.Named); ok {
 		obj := tNamed.Obj()
 		underType := tNamed.Underlying()
@@ -134,10 +188,7 @@ func getTypeDefineCodeInner(line string, t types.Type, isTop bool) string {
 			} else {
 				declareName = obj.Pkg().Name() + "." + obj.Name()
 			}
-			if isTop == true {
-				declareName = declareName + "{}"
-			}
-			return declareName
+			return declareName + "{}"
 		} else {
 			underTypeDefine := getTypeDefineCode(line, underType)
 			if obj.Pkg().Path() == globalGeneratePackagePath {
@@ -170,10 +221,6 @@ func setImportPackage(line string, t types.Type, importPkg map[string]bool) {
 	} else {
 		Throw(1, "%v:unknown type to define %v", line, t.String())
 	}
-}
-
-func getTypeDefineCode(line string, t types.Type) string {
-	return getTypeDefineCodeInner(line, t, true)
 }
 
 func getCompareCode(line string, name1 string, name1Type types.Type, name2 string, name2Type types.Type) string {
