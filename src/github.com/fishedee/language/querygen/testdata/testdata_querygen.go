@@ -36,6 +36,20 @@ func querySelect_330d97a8f08ab419926dd507be00ec1c6a1de660(data interface{}, sele
 	return result
 }
 
+func queryWhere_73d00d0e091a8cd964916be9d13848bedc08c8bb(data interface{}, whereFunctor interface{}) interface{} {
+	dataIn := data.([]User)
+	whereFunctorIn := whereFunctor.(func(User) bool)
+	result := make([]User, 0, len(dataIn))
+
+	for _, single := range dataIn {
+		shouldStay := whereFunctorIn(single)
+		if shouldStay == true {
+			result = append(result, single)
+		}
+	}
+	return result
+}
+
 func init() {
 
 	language.QueryColumnMacroRegister([]User{}, "UserId", queryColumn_4cb77d7ba8d1eeb02c714a053eefbaa439c736f0)
@@ -43,5 +57,7 @@ func init() {
 	language.QueryColumnMacroRegister([]subtest.Address{}, "City", queryColumn_b60cd8d06e3e435a78322ac375157c99ea3ee15e)
 
 	language.QuerySelectMacroRegister([]User{}, (func(User) Sex)(nil), querySelect_330d97a8f08ab419926dd507be00ec1c6a1de660)
+
+	language.QueryWhereMacroRegister([]User{}, (func(User) bool)(nil), queryWhere_73d00d0e091a8cd964916be9d13848bedc08c8bb)
 
 }

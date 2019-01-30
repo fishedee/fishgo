@@ -47,7 +47,15 @@ func QuerySelect(data interface{}, selectFunctor interface{}) interface{} {
 	}
 }
 
-func QueryWhere(data interface{}, whereFuctor interface{}) interface{} {
+//基础类函数QueryWhere
+type QueryWhereMacroHandler func(data interface{}, whereFunctor interface{}) interface{}
+
+func QueryWhereMacroRegister(data interface{}, whereFunctor interface{}, handler QueryWhereMacroHandler) {
+	id := reflect.TypeOf(data).String() + "_" + reflect.TypeOf(whereFunctor).String()
+	queryWhereMacroMapper[id] = handler
+}
+
+func QueryWhereReflect(data interface{}, whereFuctor interface{}) interface{} {
 	dataValue := reflect.ValueOf(data)
 	dataType := dataValue.Type()
 	dataLen := dataValue.Len()
@@ -66,24 +74,14 @@ func QueryWhere(data interface{}, whereFuctor interface{}) interface{} {
 	return resultValue.Interface()
 }
 
-func QueryReduce(data interface{}, reduceFuctor interface{}, resultReduce interface{}) interface{} {
-	dataValue := reflect.ValueOf(data)
-	dataLen := dataValue.Len()
-
-	reduceFuctorValue := reflect.ValueOf(reduceFuctor)
-	resultReduceType := reduceFuctorValue.Type().In(0)
-	resultReduceValue := reflect.New(resultReduceType)
-	err := MapToArray(resultReduce, resultReduceValue.Interface(), "json")
-	if err != nil {
-		panic(err)
+func QueryWhere(data interface{}, whereFuctor interface{}) interface{} {
+	id := reflect.TypeOf(data).String() + "_" + reflect.TypeOf(whereFuctor).String()
+	handler, isExist := queryWhereMacroMapper[id]
+	if isExist {
+		return handler(data, whereFuctor)
+	} else {
+		return QueryWhereReflect(data, whereFuctor)
 	}
-	resultReduceValue = resultReduceValue.Elem()
-
-	for i := 0; i != dataLen; i++ {
-		singleDataValue := dataValue.Index(i)
-		resultReduceValue = reduceFuctorValue.Call([]reflect.Value{resultReduceValue, singleDataValue})[0]
-	}
-	return resultReduceValue.Interface()
 }
 
 type queryCompare func(reflect.Value, reflect.Value) int
@@ -437,6 +435,26 @@ func QueryOuterJoin(leftData interface{}, rightData interface{}, joinType string
 	return QueryJoin(leftData, rightData, "outer", joinType, joinFuctor)
 }
 
+func QueryReduce(data interface{}, reduceFuctor interface{}, resultReduce interface{}) interface{} {
+	dataValue := reflect.ValueOf(data)
+	dataLen := dataValue.Len()
+
+	reduceFuctorValue := reflect.ValueOf(reduceFuctor)
+	resultReduceType := reduceFuctorValue.Type().In(0)
+	resultReduceValue := reflect.New(resultReduceType)
+	err := MapToArray(resultReduce, resultReduceValue.Interface(), "json")
+	if err != nil {
+		panic(err)
+	}
+	resultReduceValue = resultReduceValue.Elem()
+
+	for i := 0; i != dataLen; i++ {
+		singleDataValue := dataValue.Index(i)
+		resultReduceValue = reduceFuctorValue.Call([]reflect.Value{resultReduceValue, singleDataValue})[0]
+	}
+	return resultReduceValue.Interface()
+}
+
 func QuerySum(data interface{}) interface{} {
 	dataType := reflect.TypeOf(data).Elem()
 	if dataType.Kind() == reflect.Int {
@@ -633,4 +651,5 @@ func QueryDistinct(data interface{}, columnNames string) interface{} {
 var (
 	queryColumnMacroMapper = map[string]QueryColumnMacroHandler{}
 	querySelectMacroMapper = map[string]QuerySelectMacroHandler{}
+	queryWhereMacroMapper  = map[string]QueryWhereMacroHandler{}
 )

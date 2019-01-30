@@ -19,4 +19,7 @@ func logic() {
 	QuerySelect([]User{}, func(d User) Sex {
 		return Sex{}
 	})
+	QueryWhere([]User{}, func(c User) bool {
+		return true
+	})
 }
