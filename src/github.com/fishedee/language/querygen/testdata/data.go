@@ -2,12 +2,14 @@ package testdata
 
 import (
 	. "github.com/fishedee/language"
+	"time"
 )
 
 type User struct {
-	UserId int
-	Age    int
-	Name   string
+	UserId     int
+	Age        int
+	Name       string
+	CreateTime time.Time
 }
 
 type Sex struct {
@@ -22,4 +24,6 @@ func logic() {
 	QueryWhere([]User{}, func(c User) bool {
 		return true
 	})
+	QuerySort([]User{}, "UserId desc,Name asc,CreateTime asc")
+	QuerySort([]User{}, "UserId asc")
 }

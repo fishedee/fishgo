@@ -8,6 +8,7 @@ import (
 	"go/constant"
 	"go/types"
 	"html/template"
+	"strings"
 )
 
 func getFunctionSignature(line string, arguments []types.TypeAndValue, isConstant []bool) string {
@@ -251,6 +252,74 @@ func excuteTemplate(tmpl *template.Template, data map[string]string) string {
 		Throw(1, "execute fail %v", err)
 	}
 	return buffer.String()
+}
+
+func analyseSortType(sortType string) (result1 []string, result2 []bool) {
+	sortTypeArray := strings.Split(sortType, ",")
+	for _, singleSortTypeArray := range sortTypeArray {
+		singleSortTypeArrayTemp := strings.Split(singleSortTypeArray, " ")
+		singleSortTypeArray := []string{}
+		for _, singleSort := range singleSortTypeArrayTemp {
+			singleSort = strings.Trim(singleSort, " ")
+			if singleSort == "" {
+				continue
+			}
+			singleSortTypeArray = append(singleSortTypeArray, singleSort)
+		}
+		var singleSortName string
+		var singleSortType bool
+		if len(singleSortTypeArray) >= 2 {
+			singleSortName = singleSortTypeArray[0]
+			singleSortType = (strings.ToLower(strings.Trim(singleSortTypeArray[1], " ")) == "asc")
+		} else {
+			singleSortName = singleSortTypeArray[0]
+			singleSortType = true
+		}
+		result1 = append(result1, singleSortName)
+		result2 = append(result2, singleSortType)
+	}
+	return result1, result2
+}
+
+func getLessCompareCode(line string, name1 string, name2 string, sortFieldName string, sortFieldIsAsc bool, sortFieldType types.Type) string {
+	lessTrueCode := ""
+	lessFalseCode := ""
+	if sortFieldIsAsc {
+		lessTrueCode = "true"
+		lessFalseCode = "false"
+	} else {
+		lessTrueCode = "false"
+		lessFalseCode = "true"
+	}
+	_, isBasic := sortFieldType.(*types.Basic)
+	if isBasic {
+		return "if " + name1 + "." + sortFieldName + "<" + name2 + "." + sortFieldName + "{\n" +
+			"return " + lessTrueCode + "\n" +
+			"} else if " + name1 + "." + sortFieldName + ">" + name2 + "." + sortFieldName + "{\n" +
+			"return " + lessFalseCode + "\n" +
+			"}\n"
+	} else {
+		tNamed, isNamed := sortFieldType.(*types.Named)
+		if isNamed && tNamed.String() == "time.Time" {
+			return "if " + name1 + "." + sortFieldName + ".Before(" + name2 + "." + sortFieldName + "){\n" +
+				"return " + lessTrueCode + "\n" +
+				"} else if " + name1 + "." + sortFieldName + ".After(" + name2 + "." + sortFieldName + "){\n" +
+				"return " + lessFalseCode + "\n" +
+				"}\n"
+		} else {
+			Throw(1, "line:unknown how to sort type : %v", line, sortFieldType.String)
+			return ""
+		}
+	}
+}
+
+func getCombineLessCompareCode(line string, name1 string, name2 string, sortFieldNames []string, sortFieldIsAscs []bool, sortFieldTypes []types.Type) string {
+	code := []string{}
+	for i := range sortFieldNames {
+		singleCode := getLessCompareCode(line, name1, name2, sortFieldNames[i], sortFieldIsAscs[i], sortFieldTypes[i])
+		code = append(code, singleCode)
+	}
+	return Implode(code, "\n")
 }
 
 var (

@@ -13,7 +13,7 @@ import (
 type QuerySelectMacroHandler func(data interface{}, selectFunctor interface{}) interface{}
 
 func QuerySelectMacroRegister(data interface{}, selectFunctor interface{}, handler QuerySelectMacroHandler) {
-	id := reflect.TypeOf(data).String() + "_" + reflect.TypeOf(selectFunctor).String()
+	id := registerQueryTypeId([]string{reflect.TypeOf(data).String(), reflect.TypeOf(selectFunctor).String()})
 	querySelectMacroMapper[id] = handler
 }
 
@@ -38,7 +38,7 @@ func QuerySelectReflect(data interface{}, selectFuctor interface{}) interface{} 
 }
 
 func QuerySelect(data interface{}, selectFunctor interface{}) interface{} {
-	id := reflect.TypeOf(data).String() + "_" + reflect.TypeOf(selectFunctor).String()
+	id := getQueryTypeId([]string{reflect.TypeOf(data).String(), reflect.TypeOf(selectFunctor).String()})
 	handler, isExist := querySelectMacroMapper[id]
 	if isExist {
 		return handler(data, selectFunctor)
@@ -51,7 +51,7 @@ func QuerySelect(data interface{}, selectFunctor interface{}) interface{} {
 type QueryWhereMacroHandler func(data interface{}, whereFunctor interface{}) interface{}
 
 func QueryWhereMacroRegister(data interface{}, whereFunctor interface{}, handler QueryWhereMacroHandler) {
-	id := reflect.TypeOf(data).String() + "_" + reflect.TypeOf(whereFunctor).String()
+	id := registerQueryTypeId([]string{reflect.TypeOf(data).String(), reflect.TypeOf(whereFunctor).String()})
 	queryWhereMacroMapper[id] = handler
 }
 
@@ -75,7 +75,7 @@ func QueryWhereReflect(data interface{}, whereFuctor interface{}) interface{} {
 }
 
 func QueryWhere(data interface{}, whereFuctor interface{}) interface{} {
-	id := reflect.TypeOf(data).String() + "_" + reflect.TypeOf(whereFuctor).String()
+	id := getQueryTypeId([]string{reflect.TypeOf(data).String(), reflect.TypeOf(whereFuctor).String()})
 	handler, isExist := queryWhereMacroMapper[id]
 	if isExist {
 		return handler(data, whereFuctor)
@@ -84,41 +84,42 @@ func QueryWhere(data interface{}, whereFuctor interface{}) interface{} {
 	}
 }
 
-type queryCompare func(reflect.Value, reflect.Value) int
-type querySortSlice struct {
-	target         reflect.Value
-	targetElemType reflect.Type
-	targetCompare  []queryCompare
+//基础类函数QuerySort
+type querySortInterface struct {
+	lenHandler  func() int
+	lessHandler func(i int, j int) bool
+	swapHandler func(i int, j int)
 }
 
-func (this *querySortSlice) Len() int {
-	return this.target.Len()
+func (this *querySortInterface) Len() int {
+	return this.lenHandler()
 }
 
-func (this *querySortSlice) Less(i, j int) bool {
-	left := this.target.Index(i)
-	right := this.target.Index(j)
-	for _, singleCompare := range this.targetCompare {
-		compareResult := singleCompare(left, right)
-		if compareResult < 0 {
-			return true
-		} else if compareResult > 0 {
-			return false
-		}
-	}
-	return false
+func (this *querySortInterface) Less(i int, j int) bool {
+	return this.lessHandler(i, j)
 }
 
-func (this *querySortSlice) Swap(i, j int) {
-	temp := reflect.New(this.targetElemType).Elem()
-	left := this.target.Index(i)
-	right := this.target.Index(j)
-	temp.Set(left)
-	left.Set(right)
-	right.Set(temp)
+func (this *querySortInterface) Swap(i int, j int) {
+	this.swapHandler(i, j)
 }
 
-func QuerySort(data interface{}, sortType string) interface{} {
+func QuerySortInternal(lenHanlder func() int, lessHandler func(i, j int) bool, swapHandler func(i, j int)) {
+	sort.Stable(&querySortInterface{
+		lenHandler:  lenHanlder,
+		lessHandler: lessHandler,
+		swapHandler: swapHandler,
+	})
+
+}
+
+type QuerySortMacroHandler func(data interface{}, sortType string) interface{}
+
+func QuerySortMacroRegister(data interface{}, sortType string, handler QuerySortMacroHandler) {
+	id := registerQueryTypeId([]string{reflect.TypeOf(data).String(), sortType})
+	querySortMacroMapper[id] = handler
+}
+
+func QuerySortReflect(data interface{}, sortType string) interface{} {
 	//拷贝一份
 	dataValue := reflect.ValueOf(data)
 	dataType := dataValue.Type()
@@ -129,15 +130,30 @@ func QuerySort(data interface{}, sortType string) interface{} {
 	reflect.Copy(dataResult, dataValue)
 
 	//排序
-	targetCompare := getQueryExtractAndCompares(dataElemType, sortType)
-	arraySlice := querySortSlice{
-		target:         dataResult,
-		targetElemType: dataElemType,
-		targetCompare:  targetCompare,
-	}
-	sort.Stable(&arraySlice)
+	targetCompares := getQueryExtractAndCompares(dataElemType, sortType)
+	targetCompare := combineQueryCompare(targetCompares)
+	result := dataResult.Interface()
+	swapper := reflect.Swapper(result)
 
-	return dataResult.Interface()
+	QuerySortInternal(func() int {
+		return dataValueLen
+	}, func(i int, j int) bool {
+		left := dataResult.Index(i)
+		right := dataResult.Index(j)
+		return targetCompare(left, right)
+	}, swapper)
+
+	return result
+}
+
+func QuerySort(data interface{}, sortType string) interface{} {
+	id := getQueryTypeId([]string{reflect.TypeOf(data).String(), sortType})
+	handler, isExist := querySortMacroMapper[id]
+	if isExist {
+		return handler(data, sortType)
+	} else {
+		return QuerySortReflect(data, sortType)
+	}
 }
 
 func QueryJoin(leftData interface{}, rightData interface{}, joinPlace string, joinType string, joinFuctor interface{}) interface{} {
@@ -390,6 +406,22 @@ func getQueryCompare(fieldType reflect.Type) queryCompare {
 	}
 }
 
+type queryCompare func(reflect.Value, reflect.Value) int
+
+func combineQueryCompare(targetCompare []queryCompare) func(i reflect.Value, j reflect.Value) bool {
+	return func(left reflect.Value, right reflect.Value) bool {
+		for _, singleCompare := range targetCompare {
+			compareResult := singleCompare(left, right)
+			if compareResult < 0 {
+				return true
+			} else if compareResult > 0 {
+				return false
+			}
+		}
+		return false
+	}
+}
+
 type queryExtract func(reflect.Value) reflect.Value
 
 func getQueryExtract(dataType reflect.Type, name string) (reflect.Type, queryExtract) {
@@ -539,18 +571,8 @@ func QueryMin(data interface{}) interface{} {
 type QueryColumnMacroHandler func(data interface{}, column string) interface{}
 
 func QueryColumnMacroRegister(data interface{}, column string, handler QueryColumnMacroHandler) {
-	id := reflect.TypeOf(data).String() + "_" + column
+	id := registerQueryTypeId([]string{reflect.TypeOf(data).String(), column})
 	queryColumnMacroMapper[id] = handler
-}
-
-func QueryColumn(data interface{}, column string) interface{} {
-	id := reflect.TypeOf(data).String() + "_" + column
-	handler, isExist := queryColumnMacroMapper[id]
-	if isExist {
-		return handler(data, column)
-	} else {
-		return QueryColumnReflect(data, column)
-	}
 }
 
 func QueryColumnReflect(data interface{}, column string) interface{} {
@@ -568,6 +590,16 @@ func QueryColumnReflect(data interface{}, column string) interface{} {
 		resultValue.Index(i).Set(singleResultValue)
 	}
 	return resultValue.Interface()
+}
+
+func QueryColumn(data interface{}, column string) interface{} {
+	id := getQueryTypeId([]string{reflect.TypeOf(data).String(), column})
+	handler, isExist := queryColumnMacroMapper[id]
+	if isExist {
+		return handler(data, column)
+	} else {
+		return QueryColumnReflect(data, column)
+	}
 }
 
 func QueryColumnMap(data interface{}, column string) interface{} {
@@ -648,8 +680,35 @@ func QueryDistinct(data interface{}, columnNames string) interface{} {
 	return result.Interface()
 }
 
+func registerQueryTypeId(data []string) int64 {
+	var result int64
+	for _, m := range data {
+		id, isExist := queryTypeIdMapper[m]
+		if isExist == false {
+			id = int64(len(queryTypeIdMapper)) + 1
+			queryTypeIdMapper[m] = id
+		}
+		result = result<<10 + id
+	}
+	return result
+}
+
+func getQueryTypeId(data []string) int64 {
+	var result int64
+	for _, m := range data {
+		id, isExist := queryTypeIdMapper[m]
+		if isExist == false {
+			return -1
+		}
+		result = result<<10 + id
+	}
+	return result
+}
+
 var (
-	queryColumnMacroMapper = map[string]QueryColumnMacroHandler{}
-	querySelectMacroMapper = map[string]QuerySelectMacroHandler{}
-	queryWhereMacroMapper  = map[string]QueryWhereMacroHandler{}
+	queryColumnMacroMapper = map[int64]QueryColumnMacroHandler{}
+	querySelectMacroMapper = map[int64]QuerySelectMacroHandler{}
+	queryWhereMacroMapper  = map[int64]QueryWhereMacroHandler{}
+	querySortMacroMapper   = map[int64]QuerySortMacroHandler{}
+	queryTypeIdMapper      = map[string]int64{}
 )
