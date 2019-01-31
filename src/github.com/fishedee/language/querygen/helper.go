@@ -285,11 +285,11 @@ func getLessCompareCode(line string, name1 string, name2 string, sortFieldName s
 	lessTrueCode := ""
 	lessFalseCode := ""
 	if sortFieldIsAsc {
-		lessTrueCode = "true"
-		lessFalseCode = "false"
+		lessTrueCode = "-1"
+		lessFalseCode = "1"
 	} else {
-		lessTrueCode = "false"
-		lessFalseCode = "true"
+		lessTrueCode = "1"
+		lessFalseCode = "-1"
 	}
 	_, isBasic := sortFieldType.(*types.Basic)
 	if isBasic {

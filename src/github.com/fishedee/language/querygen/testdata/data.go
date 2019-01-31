@@ -5,6 +5,12 @@ import (
 	"time"
 )
 
+type Department struct {
+	DepartmentId int
+	Name         string
+	Employees    []User
+}
+
 type User struct {
 	UserId     int
 	Age        int
@@ -27,4 +33,7 @@ func logic() {
 	QuerySort([]User{}, "UserId desc,Name asc,CreateTime asc")
 	QuerySort([]User{}, "UserId asc")
 	QueryColumnMap([]User{}, "UserId")
+	QueryGroup([]User{}, "UserId", func(user []User) Department {
+		return Department{}
+	})
 }

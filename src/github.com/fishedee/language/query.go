@@ -103,10 +103,14 @@ func (this *querySortInterface) Swap(i int, j int) {
 	this.swapHandler(i, j)
 }
 
-func QuerySortInternal(lenHanlder func() int, lessHandler func(i, j int) bool, swapHandler func(i, j int)) {
+func QuerySortInternal(length int, lessHandler func(i, j int) int, swapHandler func(i, j int)) {
 	sort.Stable(&querySortInterface{
-		lenHandler:  lenHanlder,
-		lessHandler: lessHandler,
+		lenHandler: func() int {
+			return length
+		},
+		lessHandler: func(i int, j int) bool {
+			return lessHandler(i, j) < 0
+		},
 		swapHandler: swapHandler,
 	})
 
@@ -135,9 +139,7 @@ func QuerySortReflect(data interface{}, sortType string) interface{} {
 	result := dataResult.Interface()
 	swapper := reflect.Swapper(result)
 
-	QuerySortInternal(func() int {
-		return dataValueLen
-	}, func(i int, j int) bool {
+	QuerySortInternal(dataValueLen, func(i int, j int) int {
 		left := dataResult.Index(i)
 		right := dataResult.Index(j)
 		return targetCompare(left, right)
@@ -228,18 +230,42 @@ func QueryJoin(leftData interface{}, rightData interface{}, joinPlace string, jo
 	return resultValue.Interface()
 }
 
-func QueryGroup(data interface{}, groupType string, groupFuctor interface{}) interface{} {
-	//解析配置
-	data = QuerySort(data, groupType)
+//基础类函数 QueryGroup
+func QueryGroupInternal(length int, lessHandler func(i int, j int) int, swapHandler func(i int, j int), groupHandler func(i int, j int)) {
+	QuerySortInternal(length, lessHandler, swapHandler)
+	for i := 0; i != length; {
+		j := i
+		for i++; i != length; i++ {
+			if lessHandler(j, i) != 0 {
+				break
+			}
+		}
+		groupHandler(j, i)
+	}
+
+}
+
+type QueryGroupMacroHandler func(data interface{}, groupType string, groupFunctor interface{}) interface{}
+
+func QueryGroupMacroRegister(data interface{}, groupType string, groupFunctor interface{}, handler QueryGroupMacroHandler) {
+	id := registerQueryTypeId([]string{reflect.TypeOf(data).String(), groupType, reflect.TypeOf(groupFunctor).String()})
+	queryGroupMacroMapper[id] = handler
+}
+
+func QueryGroupReflect(data interface{}, groupType string, groupFunctor interface{}) interface{} {
+	//拷贝一份
 	dataValue := reflect.ValueOf(data)
 	dataType := dataValue.Type()
-	dataValueLen := dataValue.Len()
 	dataElemType := dataType.Elem()
-	dataCompare := getQueryExtractAndCompares(dataElemType, groupType)
+	dataValueLen := dataValue.Len()
 
-	groupFuctorValue := reflect.ValueOf(groupFuctor)
+	dataResult := reflect.MakeSlice(dataType, dataValueLen, dataValueLen)
+	reflect.Copy(dataResult, dataValue)
+
+	groupFuctorValue := reflect.ValueOf(groupFunctor)
 	groupFuctorType := groupFuctorValue.Type()
 
+	//计算最终数据
 	var resultValue reflect.Value
 	resultType := groupFuctorType.Out(0)
 	if resultType.Kind() == reflect.Slice {
@@ -248,31 +274,34 @@ func QueryGroup(data interface{}, groupType string, groupFuctor interface{}) int
 		resultValue = reflect.MakeSlice(reflect.SliceOf(resultType), 0, 0)
 	}
 
-	//开始group
-	for i := 0; i != dataValueLen; {
-		singleDataValue := dataValue.Index(i)
-		j := i
-		for i++; i != dataValueLen; i++ {
-			singleRightDataValue := dataValue.Index(i)
-			isSame := true
-			for _, singleDataCompare := range dataCompare {
-				if singleDataCompare(singleDataValue, singleRightDataValue) != 0 {
-					isSame = false
-					break
-				}
-			}
-			if !isSame {
-				break
-			}
-		}
-		singleResult := groupFuctorValue.Call([]reflect.Value{dataValue.Slice(j, i)})[0]
+	//分组操作
+	targetCompares := getQueryExtractAndCompares(dataElemType, groupType)
+	targetCompare := combineQueryCompare(targetCompares)
+	result := dataResult.Interface()
+	swapper := reflect.Swapper(result)
+	QueryGroupInternal(dataValueLen, func(i int, j int) int {
+		left := dataResult.Index(i)
+		right := dataResult.Index(j)
+		return targetCompare(left, right)
+	}, swapper, func(i int, j int) {
+		singleResult := groupFuctorValue.Call([]reflect.Value{dataResult.Slice(i, j)})[0]
 		if singleResult.Kind() == reflect.Slice {
 			resultValue = reflect.AppendSlice(resultValue, singleResult)
 		} else {
 			resultValue = reflect.Append(resultValue, singleResult)
 		}
-	}
+	})
 	return resultValue.Interface()
+}
+
+func QueryGroup(data interface{}, groupType string, groupFunctor interface{}) interface{} {
+	id := getQueryTypeId([]string{reflect.TypeOf(data).String(), groupType, reflect.TypeOf(groupFunctor).String()})
+	handler, isExist := queryGroupMacroMapper[id]
+	if isExist {
+		return handler(data, groupType, groupFunctor)
+	} else {
+		return QueryGroupReflect(data, groupType, groupFunctor)
+	}
 }
 
 func analyseJoin(joinType string) (string, string) {
@@ -408,17 +437,17 @@ func getQueryCompare(fieldType reflect.Type) queryCompare {
 
 type queryCompare func(reflect.Value, reflect.Value) int
 
-func combineQueryCompare(targetCompare []queryCompare) func(i reflect.Value, j reflect.Value) bool {
-	return func(left reflect.Value, right reflect.Value) bool {
+func combineQueryCompare(targetCompare []queryCompare) queryCompare {
+	return func(left reflect.Value, right reflect.Value) int {
 		for _, singleCompare := range targetCompare {
 			compareResult := singleCompare(left, right)
 			if compareResult < 0 {
-				return true
+				return -1
 			} else if compareResult > 0 {
-				return false
+				return 1
 			}
 		}
-		return false
+		return 0
 	}
 }
 
@@ -729,6 +758,7 @@ var (
 	querySelectMacroMapper    = map[int64]QuerySelectMacroHandler{}
 	queryWhereMacroMapper     = map[int64]QueryWhereMacroHandler{}
 	querySortMacroMapper      = map[int64]QuerySortMacroHandler{}
+	queryGroupMacroMapper     = map[int64]QueryGroupMacroHandler{}
 	queryColumnMapMacroMapper = map[int64]QueryColumnMapMacroHandler{}
 	queryTypeIdMapper         = map[string]int64{}
 )
