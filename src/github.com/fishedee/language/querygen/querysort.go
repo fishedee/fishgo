@@ -42,7 +42,7 @@ func QuerySortGen(request queryGenRequest) *queryGenResponse {
 	})
 	return &queryGenResponse{
 		importPackage: importPackage,
-		funcName:      "queryWhere_" + signature,
+		funcName:      "querySort_" + signature,
 		funcBody:      funcBody,
 		initBody:      initBody,
 	}

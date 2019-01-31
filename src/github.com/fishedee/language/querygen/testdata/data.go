@@ -26,4 +26,5 @@ func logic() {
 	})
 	QuerySort([]User{}, "UserId desc,Name asc,CreateTime asc")
 	QuerySort([]User{}, "UserId asc")
+	QueryColumnMap([]User{}, "UserId")
 }

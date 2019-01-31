@@ -5,6 +5,16 @@ import (
 	"github.com/fishedee/language/querygen/testdata/subtest"
 )
 
+func queryColumnMap_4cb77d7ba8d1eeb02c714a053eefbaa439c736f0(data interface{}, column string) interface{} {
+	dataIn := data.([]User)
+	result := make(map[int]User, len(dataIn))
+
+	for _, single := range dataIn {
+		result[single.UserId] = single
+	}
+	return result
+}
+
 func queryColumn_4cb77d7ba8d1eeb02c714a053eefbaa439c736f0(data interface{}, column string) interface{} {
 	dataIn := data.([]User)
 	result := make([]int, len(dataIn), len(dataIn))
@@ -32,20 +42,6 @@ func querySelect_330d97a8f08ab419926dd507be00ec1c6a1de660(data interface{}, sele
 
 	for i, single := range dataIn {
 		result[i] = selectFunctorIn(single)
-	}
-	return result
-}
-
-func queryWhere_73d00d0e091a8cd964916be9d13848bedc08c8bb(data interface{}, whereFunctor interface{}) interface{} {
-	dataIn := data.([]User)
-	whereFunctorIn := whereFunctor.(func(User) bool)
-	result := make([]User, 0, len(dataIn))
-
-	for _, single := range dataIn {
-		shouldStay := whereFunctorIn(single)
-		if shouldStay == true {
-			result = append(result, single)
-		}
 	}
 	return result
 }
@@ -104,7 +100,23 @@ func querySort_c0c7516f15f736e69120d675686e3649b43feff4(data interface{}, sortTy
 	return newData
 }
 
+func queryWhere_73d00d0e091a8cd964916be9d13848bedc08c8bb(data interface{}, whereFunctor interface{}) interface{} {
+	dataIn := data.([]User)
+	whereFunctorIn := whereFunctor.(func(User) bool)
+	result := make([]User, 0, len(dataIn))
+
+	for _, single := range dataIn {
+		shouldStay := whereFunctorIn(single)
+		if shouldStay == true {
+			result = append(result, single)
+		}
+	}
+	return result
+}
+
 func init() {
+
+	language.QueryColumnMapMacroRegister([]User{}, "UserId", queryColumnMap_4cb77d7ba8d1eeb02c714a053eefbaa439c736f0)
 
 	language.QueryColumnMacroRegister([]User{}, "UserId", queryColumn_4cb77d7ba8d1eeb02c714a053eefbaa439c736f0)
 
@@ -112,10 +124,10 @@ func init() {
 
 	language.QuerySelectMacroRegister([]User{}, (func(User) Sex)(nil), querySelect_330d97a8f08ab419926dd507be00ec1c6a1de660)
 
-	language.QueryWhereMacroRegister([]User{}, (func(User) bool)(nil), queryWhere_73d00d0e091a8cd964916be9d13848bedc08c8bb)
-
 	language.QuerySortMacroRegister([]User{}, "UserId asc", querySort_8e0b118cde44520b4231889be9e1bb2d83505d2f)
 
 	language.QuerySortMacroRegister([]User{}, "UserId desc,Name asc,CreateTime asc", querySort_c0c7516f15f736e69120d675686e3649b43feff4)
+
+	language.QueryWhereMacroRegister([]User{}, (func(User) bool)(nil), queryWhere_73d00d0e091a8cd964916be9d13848bedc08c8bb)
 
 }

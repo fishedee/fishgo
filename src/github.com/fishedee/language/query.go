@@ -450,6 +450,75 @@ func getQueryExtractAndCompare(dataType reflect.Type, name string) queryCompare 
 	}
 }
 
+//扩展类函数 QueryColumn
+type QueryColumnMacroHandler func(data interface{}, column string) interface{}
+
+func QueryColumnMacroRegister(data interface{}, column string, handler QueryColumnMacroHandler) {
+	id := registerQueryTypeId([]string{reflect.TypeOf(data).String(), column})
+	queryColumnMacroMapper[id] = handler
+}
+
+func QueryColumnReflect(data interface{}, column string) interface{} {
+	dataValue := reflect.ValueOf(data)
+	dataType := dataValue.Type().Elem()
+	dataLen := dataValue.Len()
+	column = strings.Trim(column, " ")
+	dataFieldType, dataFieldExtract := getQueryExtract(dataType, column)
+
+	resultValue := reflect.MakeSlice(reflect.SliceOf(dataFieldType), dataLen, dataLen)
+
+	for i := 0; i != dataLen; i++ {
+		singleDataValue := dataValue.Index(i)
+		singleResultValue := dataFieldExtract(singleDataValue)
+		resultValue.Index(i).Set(singleResultValue)
+	}
+	return resultValue.Interface()
+}
+
+func QueryColumn(data interface{}, column string) interface{} {
+	id := getQueryTypeId([]string{reflect.TypeOf(data).String(), column})
+	handler, isExist := queryColumnMacroMapper[id]
+	if isExist {
+		return handler(data, column)
+	} else {
+		return QueryColumnReflect(data, column)
+	}
+}
+
+//扩展类函数 QueryColumnMap
+type QueryColumnMapMacroHandler func(data interface{}, column string) interface{}
+
+func QueryColumnMapMacroRegister(data interface{}, column string, handler QueryColumnMapMacroHandler) {
+	id := registerQueryTypeId([]string{reflect.TypeOf(data).String(), column})
+	queryColumnMapMacroMapper[id] = handler
+}
+
+func QueryColumnMapReflect(data interface{}, column string) interface{} {
+	dataValue := reflect.ValueOf(data)
+	dataType := dataValue.Type().Elem()
+	dataLen := dataValue.Len()
+	column = strings.Trim(column, " ")
+	dataFieldType, dataFieldExtract := getQueryExtract(dataType, column)
+
+	resultValue := reflect.MakeMap(reflect.MapOf(dataFieldType, dataType))
+	for i := dataLen - 1; i >= 0; i-- {
+		singleDataValue := dataValue.Index(i)
+		singleResultValue := dataFieldExtract(singleDataValue)
+		resultValue.SetMapIndex(singleResultValue, singleDataValue)
+	}
+	return resultValue.Interface()
+}
+
+func QueryColumnMap(data interface{}, column string) interface{} {
+	id := getQueryTypeId([]string{reflect.TypeOf(data).String(), column})
+	handler, isExist := queryColumnMapMacroMapper[id]
+	if isExist {
+		return handler(data, column)
+	} else {
+		return QueryColumnMapReflect(data, column)
+	}
+}
+
 //扩展类函数
 func QueryLeftJoin(leftData interface{}, rightData interface{}, joinType string, joinFuctor interface{}) interface{} {
 	return QueryJoin(leftData, rightData, "left", joinType, joinFuctor)
@@ -568,56 +637,6 @@ func QueryMin(data interface{}) interface{} {
 	}
 }
 
-type QueryColumnMacroHandler func(data interface{}, column string) interface{}
-
-func QueryColumnMacroRegister(data interface{}, column string, handler QueryColumnMacroHandler) {
-	id := registerQueryTypeId([]string{reflect.TypeOf(data).String(), column})
-	queryColumnMacroMapper[id] = handler
-}
-
-func QueryColumnReflect(data interface{}, column string) interface{} {
-	dataValue := reflect.ValueOf(data)
-	dataType := dataValue.Type().Elem()
-	dataLen := dataValue.Len()
-	column = strings.Trim(column, " ")
-	dataFieldType, dataFieldExtract := getQueryExtract(dataType, column)
-
-	resultValue := reflect.MakeSlice(reflect.SliceOf(dataFieldType), dataLen, dataLen)
-
-	for i := 0; i != dataLen; i++ {
-		singleDataValue := dataValue.Index(i)
-		singleResultValue := dataFieldExtract(singleDataValue)
-		resultValue.Index(i).Set(singleResultValue)
-	}
-	return resultValue.Interface()
-}
-
-func QueryColumn(data interface{}, column string) interface{} {
-	id := getQueryTypeId([]string{reflect.TypeOf(data).String(), column})
-	handler, isExist := queryColumnMacroMapper[id]
-	if isExist {
-		return handler(data, column)
-	} else {
-		return QueryColumnReflect(data, column)
-	}
-}
-
-func QueryColumnMap(data interface{}, column string) interface{} {
-	dataValue := reflect.ValueOf(data)
-	dataType := dataValue.Type().Elem()
-	dataLen := dataValue.Len()
-	column = strings.Trim(column, " ")
-	dataFieldType, dataFieldExtract := getQueryExtract(dataType, column)
-
-	resultValue := reflect.MakeMap(reflect.MapOf(dataFieldType, dataType))
-	for i := dataLen - 1; i >= 0; i-- {
-		singleDataValue := dataValue.Index(i)
-		singleResultValue := dataFieldExtract(singleDataValue)
-		resultValue.SetMapIndex(singleResultValue, singleDataValue)
-	}
-	return resultValue.Interface()
-}
-
 func QueryReverse(data interface{}) interface{} {
 	dataValue := reflect.ValueOf(data)
 	dataType := dataValue.Type()
@@ -706,9 +725,10 @@ func getQueryTypeId(data []string) int64 {
 }
 
 var (
-	queryColumnMacroMapper = map[int64]QueryColumnMacroHandler{}
-	querySelectMacroMapper = map[int64]QuerySelectMacroHandler{}
-	queryWhereMacroMapper  = map[int64]QueryWhereMacroHandler{}
-	querySortMacroMapper   = map[int64]QuerySortMacroHandler{}
-	queryTypeIdMapper      = map[string]int64{}
+	queryColumnMacroMapper    = map[int64]QueryColumnMacroHandler{}
+	querySelectMacroMapper    = map[int64]QuerySelectMacroHandler{}
+	queryWhereMacroMapper     = map[int64]QueryWhereMacroHandler{}
+	querySortMacroMapper      = map[int64]QuerySortMacroHandler{}
+	queryColumnMapMacroMapper = map[int64]QueryColumnMapMacroHandler{}
+	queryTypeIdMapper         = map[string]int64{}
 )
