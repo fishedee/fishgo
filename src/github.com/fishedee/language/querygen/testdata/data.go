@@ -18,6 +18,18 @@ type User struct {
 	CreateTime time.Time
 }
 
+type Admin struct {
+	AdminId int
+	Level   int
+}
+
+type AdminUser struct {
+	AdminId    int
+	Level      int
+	Age        int
+	Name       string
+	CreateTime time.Time
+}
 type Sex struct {
 	IsMale bool
 }
@@ -35,5 +47,11 @@ func logic() {
 	QueryColumnMap([]User{}, "UserId")
 	QueryGroup([]User{}, "UserId", func(user []User) Department {
 		return Department{}
+	})
+	QueryLeftJoin([]Admin{}, []User{}, "AdminId = UserId", func(left Admin, right User) AdminUser {
+		return AdminUser{}
+	})
+	QueryJoin([]Admin{}, []User{}, "inner", "AdminId = UserId", func(left Admin, right User) AdminUser {
+		return AdminUser{}
 	})
 }

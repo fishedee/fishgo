@@ -158,7 +158,62 @@ func QuerySort(data interface{}, sortType string) interface{} {
 	}
 }
 
-func QueryJoin(leftData interface{}, rightData interface{}, joinPlace string, joinType string, joinFuctor interface{}) interface{} {
+//基础类函数QueryJoin
+func QueryJoinInternal(joinPlaceString string, leftDataLen int, rightDataLen int, rightCompareHandler func(i int, j int) int, rightSwapHandler func(i int, j int), leftCompareRightHandler func(i int, j int) int, joinHandler func(i int, j int)) {
+	QuerySortInternal(rightDataLen, rightCompareHandler, rightSwapHandler)
+	joinPlace := 0
+	if joinPlaceString == "left" {
+		joinPlace = 1
+	} else if joinPlaceString == "right" {
+		joinPlace = 2
+	} else if joinPlaceString == "inner" {
+		joinPlace = 3
+	} else if joinPlaceString == "outer" {
+		joinPlace = 4
+	} else {
+		panic("invalid joinPlace [" + joinPlaceString + "] ")
+	}
+	rightHaveJoin := make([]bool, rightDataLen, rightDataLen)
+	for i := 0; i != leftDataLen; i++ {
+		//二分查找右边对应的键
+		j := sort.Search(rightDataLen, func(j int) bool {
+			return leftCompareRightHandler(i, j) <= 0
+		})
+		//合并双边满足条件
+		haveFound := false
+		for ; j < rightDataLen; j++ {
+			if leftCompareRightHandler(i, j) != 0 {
+				break
+			}
+			joinHandler(i, j)
+			haveFound = true
+			rightHaveJoin[j] = true
+		}
+		//合并不满足的条件
+		if !haveFound && (joinPlace == 1 || joinPlace == 4) {
+			joinHandler(i, -1)
+		}
+	}
+
+	//处理剩余的右侧元素
+	if joinPlace == 2 || joinPlace == 4 {
+		for j := 0; j != rightDataLen; j++ {
+			if rightHaveJoin[j] {
+				continue
+			}
+			joinHandler(-1, j)
+		}
+	}
+}
+
+type QueryJoinMacroHandler func(leftData interface{}, rightData interface{}, joinPlace string, joinType string, joinFuctor interface{}) interface{}
+
+func QueryJoinMacroRegister(leftData interface{}, rightData interface{}, joinPlace string, joinType string, joinFuctor interface{}, handler QueryJoinMacroHandler) {
+	id := registerQueryTypeId([]string{reflect.TypeOf(leftData).String(), reflect.TypeOf(rightData).String(), joinPlace, joinType, reflect.TypeOf(joinFuctor).String()})
+	queryJoinMacroMapper[id] = handler
+}
+
+func QueryJoinReflect(leftData interface{}, rightData interface{}, joinPlace string, joinType string, joinFuctor interface{}) interface{} {
 	//解析配置
 	leftJoinType, rightJoinType := analyseJoin(joinType)
 
@@ -168,66 +223,66 @@ func QueryJoin(leftData interface{}, rightData interface{}, joinPlace string, jo
 	leftDataValueLen := leftDataValue.Len()
 	leftDataJoinType, leftDataJoinExtract := getQueryExtract(leftDataElemType, leftJoinType)
 
-	rightData = QuerySort(rightData, rightJoinType+" asc")
 	rightDataValue := reflect.ValueOf(rightData)
 	rightDataType := rightDataValue.Type()
 	rightDataElemType := rightDataType.Elem()
 	rightDataValueLen := rightDataValue.Len()
 	_, rightDataJoinExtract := getQueryExtract(rightDataElemType, rightJoinType)
+	newRightDataValue := reflect.MakeSlice(rightDataType, rightDataValueLen, rightDataValueLen)
+	newRightDataSwapper := reflect.Swapper(newRightDataValue.Interface())
+	reflect.Copy(newRightDataValue, rightDataValue)
 
 	joinFuctorValue := reflect.ValueOf(joinFuctor)
 	joinFuctorType := joinFuctorValue.Type()
 	joinCompare := getQueryCompare(leftDataJoinType)
 	resultValue := reflect.MakeSlice(reflect.SliceOf(joinFuctorType.Out(0)), 0, 0)
 
-	rightHaveJoin := make([]bool, rightDataValueLen, rightDataValueLen)
+	//执行join
+	emptyLeftValue := reflect.New(leftDataElemType).Elem()
+	emptyRightValue := reflect.New(rightDataElemType).Elem()
 	joinPlace = strings.Trim(strings.ToLower(joinPlace), " ")
-	if ArrayIn([]string{"left", "right", "inner", "outer"}, joinPlace) == -1 {
-		panic("invalid joinPlace [" + joinPlace + "] ")
-	}
-
-	//开始join
-	for i := 0; i != leftDataValueLen; i++ {
-		//二分查找右边对应的键
-		singleLeftData := leftDataValue.Index(i)
-		singleLeftDataJoin := leftDataJoinExtract(singleLeftData)
-		j := sort.Search(rightDataValueLen, func(j int) bool {
-			return joinCompare(rightDataJoinExtract(rightDataValue.Index(j)), singleLeftDataJoin) >= 0
-		})
-		//合并双边满足条件
-		haveFound := false
-		for ; j < rightDataValueLen; j++ {
-			singleRightData := rightDataValue.Index(j)
-			singleRightDataJoin := rightDataJoinExtract(singleRightData)
-			if joinCompare(singleLeftDataJoin, singleRightDataJoin) != 0 {
-				break
+	QueryJoinInternal(joinPlace,
+		leftDataValueLen,
+		rightDataValueLen,
+		func(i int, j int) int {
+			left := rightDataJoinExtract(newRightDataValue.Index(i))
+			right := rightDataJoinExtract(newRightDataValue.Index(j))
+			return joinCompare(left, right)
+		},
+		newRightDataSwapper,
+		func(i int, j int) int {
+			left := leftDataJoinExtract(leftDataValue.Index(i))
+			right := rightDataJoinExtract(newRightDataValue.Index(j))
+			return joinCompare(left, right)
+		},
+		func(i int, j int) {
+			left := reflect.Value{}
+			if i == -1 {
+				left = emptyLeftValue
+			} else {
+				left = leftDataValue.Index(i)
 			}
-			singleResult := joinFuctorValue.Call([]reflect.Value{singleLeftData, singleRightData})[0]
-			resultValue = reflect.Append(resultValue, singleResult)
-			haveFound = true
-			rightHaveJoin[j] = true
-		}
-		//合并不满足的条件
-		if !haveFound && (joinPlace == "left" || joinPlace == "outer") {
-			singleRightData := reflect.New(rightDataElemType).Elem()
-			singleResult := joinFuctorValue.Call([]reflect.Value{singleLeftData, singleRightData})[0]
-			resultValue = reflect.Append(resultValue, singleResult)
-		}
-	}
-	//处理剩余的右侧元素
-	if joinPlace == "right" || joinPlace == "outer" {
-		singleLeftData := reflect.New(leftDataElemType).Elem()
-		rightHaveJoinLen := len(rightHaveJoin)
-		for j := 0; j != rightHaveJoinLen; j++ {
-			if rightHaveJoin[j] {
-				continue
+			right := reflect.Value{}
+			if j == -1 {
+				right = emptyRightValue
+			} else {
+				right = newRightDataValue.Index(j)
 			}
-			singleRightData := rightDataValue.Index(j)
-			singleResult := joinFuctorValue.Call([]reflect.Value{singleLeftData, singleRightData})[0]
+			singleResult := joinFuctorValue.Call([]reflect.Value{left, right})[0]
 			resultValue = reflect.Append(resultValue, singleResult)
-		}
-	}
+		},
+	)
 	return resultValue.Interface()
+}
+
+func QueryJoin(leftData interface{}, rightData interface{}, joinPlace string, joinType string, joinFuctor interface{}) interface{} {
+	id := getQueryTypeId([]string{reflect.TypeOf(leftData).String(), reflect.TypeOf(rightData).String(), joinPlace, joinType, reflect.TypeOf(joinFuctor).String()})
+	handler, isExist := queryJoinMacroMapper[id]
+	if isExist {
+		return handler(leftData, rightData, joinPlace, joinType, joinFuctor)
+	} else {
+		return QueryJoinReflect(leftData, rightData, joinPlace, joinType, joinFuctor)
+	}
 }
 
 //基础类函数 QueryGroup
@@ -754,11 +809,12 @@ func getQueryTypeId(data []string) int64 {
 }
 
 var (
-	queryColumnMacroMapper    = map[int64]QueryColumnMacroHandler{}
 	querySelectMacroMapper    = map[int64]QuerySelectMacroHandler{}
 	queryWhereMacroMapper     = map[int64]QueryWhereMacroHandler{}
 	querySortMacroMapper      = map[int64]QuerySortMacroHandler{}
+	queryJoinMacroMapper      = map[int64]QueryJoinMacroHandler{}
 	queryGroupMacroMapper     = map[int64]QueryGroupMacroHandler{}
+	queryColumnMacroMapper    = map[int64]QueryColumnMacroHandler{}
 	queryColumnMapMacroMapper = map[int64]QueryColumnMapMacroHandler{}
 	queryTypeIdMapper         = map[string]int64{}
 )

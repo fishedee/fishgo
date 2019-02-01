@@ -34,7 +34,7 @@ func QueryGroupGen(request queryGenRequest) *queryGenResponse {
 		Throw(1, "%v:should be one return", line)
 	}
 	if thirdArgFuncArgument[0].String() != firstArgSlice.String() {
-		Throw(1, "%v:groupFunctor argument should be equal with first argument %v!=%v", thirdArgFuncArgument[0], firstArgSliceNamed)
+		Throw(1, "%v:groupFunctor argument should be equal with first argument %v!=%v", line, thirdArgFuncArgument[0], firstArgSliceNamed)
 	}
 
 	//生成函数

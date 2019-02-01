@@ -59,6 +59,108 @@ func queryGroup_37e53ff8d9e8cce0d72071f5eacc22898cd03373(data interface{}, group
 	return newData2
 }
 
+func queryJoin_18a90660a498dc8a2c84eae90b4a430815a5d594(leftData interface{}, rightData interface{}, joinPlace string, joinType string, joinFunctor interface{}) interface{} {
+	leftDataIn := leftData.([]Admin)
+	rightDataIn := rightData.([]User)
+	joinFunctorIn := joinFunctor.(func(Admin, User) AdminUser)
+	newRightData := make([]User, len(rightDataIn), len(rightDataIn))
+	copy(newRightData, rightDataIn)
+	newData2 := make([]AdminUser, 0, len(leftDataIn))
+
+	emptyLeftData := Admin{}
+	emptyRightData := User{}
+	language.QueryJoinInternal(
+		"inner",
+		len(leftDataIn),
+		len(rightDataIn),
+		func(i int, j int) int {
+			if newRightData[i].UserId < newRightData[j].UserId {
+				return -1
+			} else if newRightData[i].UserId > newRightData[j].UserId {
+				return 1
+			}
+
+			return 0
+		},
+		func(i int, j int) {
+			newRightData[j], newRightData[i] = newRightData[i], newRightData[j]
+		},
+		func(i int, j int) int {
+			if leftDataIn[i].AdminId < newRightData[j].UserId {
+				return -1
+			} else if leftDataIn[i].AdminId > newRightData[j].UserId {
+				return 1
+			}
+
+			return 0
+		},
+		func(i int, j int) {
+			left := emptyLeftData
+			if i != -1 {
+				left = leftDataIn[i]
+			}
+			right := emptyRightData
+			if j != -1 {
+				right = newRightData[j]
+			}
+			single := joinFunctorIn(left, right)
+			newData2 = append(newData2, single)
+		},
+	)
+	return newData2
+}
+
+func queryJoin_1ba84e33b88ae2e0926f0db2690423b5df5992fc(leftData interface{}, rightData interface{}, joinPlace string, joinType string, joinFunctor interface{}) interface{} {
+	leftDataIn := leftData.([]Admin)
+	rightDataIn := rightData.([]User)
+	joinFunctorIn := joinFunctor.(func(Admin, User) AdminUser)
+	newRightData := make([]User, len(rightDataIn), len(rightDataIn))
+	copy(newRightData, rightDataIn)
+	newData2 := make([]AdminUser, 0, len(leftDataIn))
+
+	emptyLeftData := Admin{}
+	emptyRightData := User{}
+	language.QueryJoinInternal(
+		"left",
+		len(leftDataIn),
+		len(rightDataIn),
+		func(i int, j int) int {
+			if newRightData[i].UserId < newRightData[j].UserId {
+				return -1
+			} else if newRightData[i].UserId > newRightData[j].UserId {
+				return 1
+			}
+
+			return 0
+		},
+		func(i int, j int) {
+			newRightData[j], newRightData[i] = newRightData[i], newRightData[j]
+		},
+		func(i int, j int) int {
+			if leftDataIn[i].AdminId < newRightData[j].UserId {
+				return -1
+			} else if leftDataIn[i].AdminId > newRightData[j].UserId {
+				return 1
+			}
+
+			return 0
+		},
+		func(i int, j int) {
+			left := emptyLeftData
+			if i != -1 {
+				left = leftDataIn[i]
+			}
+			right := emptyRightData
+			if j != -1 {
+				right = newRightData[j]
+			}
+			single := joinFunctorIn(left, right)
+			newData2 = append(newData2, single)
+		},
+	)
+	return newData2
+}
+
 func querySelect_330d97a8f08ab419926dd507be00ec1c6a1de660(data interface{}, selectFunctor interface{}) interface{} {
 	dataIn := data.([]User)
 	selectFunctorIn := selectFunctor.(func(User) Sex)
@@ -143,6 +245,10 @@ func init() {
 	language.QueryColumnMacroRegister([]subtest.Address{}, "City", queryColumn_b60cd8d06e3e435a78322ac375157c99ea3ee15e)
 
 	language.QueryGroupMacroRegister([]User{}, "UserId", (func([]User) Department)(nil), queryGroup_37e53ff8d9e8cce0d72071f5eacc22898cd03373)
+
+	language.QueryJoinMacroRegister([]Admin{}, []User{}, "inner", "AdminId = UserId", (func(Admin, User) AdminUser)(nil), queryJoin_18a90660a498dc8a2c84eae90b4a430815a5d594)
+
+	language.QueryJoinMacroRegister([]Admin{}, []User{}, "left", "AdminId = UserId", (func(Admin, User) AdminUser)(nil), queryJoin_1ba84e33b88ae2e0926f0db2690423b5df5992fc)
 
 	language.QuerySelectMacroRegister([]User{}, (func(User) Sex)(nil), querySelect_330d97a8f08ab419926dd507be00ec1c6a1de660)
 

@@ -281,7 +281,7 @@ func analyseSortType(sortType string) (result1 []string, result2 []bool) {
 	return result1, result2
 }
 
-func getLessCompareCode(line string, name1 string, name2 string, sortFieldName string, sortFieldIsAsc bool, sortFieldType types.Type) string {
+func getLessCompareCode(line string, name1 string, sortFieldName1 string, name2 string, sortFieldName2 string, sortFieldIsAsc bool, sortFieldType types.Type) string {
 	lessTrueCode := ""
 	lessFalseCode := ""
 	if sortFieldIsAsc {
@@ -293,17 +293,17 @@ func getLessCompareCode(line string, name1 string, name2 string, sortFieldName s
 	}
 	_, isBasic := sortFieldType.(*types.Basic)
 	if isBasic {
-		return "if " + name1 + "." + sortFieldName + "<" + name2 + "." + sortFieldName + "{\n" +
+		return "if " + name1 + "." + sortFieldName1 + "<" + name2 + "." + sortFieldName2 + "{\n" +
 			"return " + lessTrueCode + "\n" +
-			"} else if " + name1 + "." + sortFieldName + ">" + name2 + "." + sortFieldName + "{\n" +
+			"} else if " + name1 + "." + sortFieldName1 + ">" + name2 + "." + sortFieldName2 + "{\n" +
 			"return " + lessFalseCode + "\n" +
 			"}\n"
 	} else {
 		tNamed, isNamed := sortFieldType.(*types.Named)
 		if isNamed && tNamed.String() == "time.Time" {
-			return "if " + name1 + "." + sortFieldName + ".Before(" + name2 + "." + sortFieldName + "){\n" +
+			return "if " + name1 + "." + sortFieldName1 + ".Before(" + name2 + "." + sortFieldName2 + "){\n" +
 				"return " + lessTrueCode + "\n" +
-				"} else if " + name1 + "." + sortFieldName + ".After(" + name2 + "." + sortFieldName + "){\n" +
+				"} else if " + name1 + "." + sortFieldName1 + ".After(" + name2 + "." + sortFieldName2 + "){\n" +
 				"return " + lessFalseCode + "\n" +
 				"}\n"
 		} else {
@@ -316,7 +316,7 @@ func getLessCompareCode(line string, name1 string, name2 string, sortFieldName s
 func getCombineLessCompareCode(line string, name1 string, name2 string, sortFieldNames []string, sortFieldIsAscs []bool, sortFieldTypes []types.Type) string {
 	code := []string{}
 	for i := range sortFieldNames {
-		singleCode := getLessCompareCode(line, name1, name2, sortFieldNames[i], sortFieldIsAscs[i], sortFieldTypes[i])
+		singleCode := getLessCompareCode(line, name1, sortFieldNames[i], name2, sortFieldNames[i], sortFieldIsAscs[i], sortFieldTypes[i])
 		code = append(code, singleCode)
 	}
 	return Implode(code, "\n")
