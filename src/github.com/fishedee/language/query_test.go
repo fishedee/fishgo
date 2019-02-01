@@ -1077,8 +1077,8 @@ func TestQueryGroup(t *testing.T) {
 				}
 			},
 			[]contentType{
-				contentType{"", 2, false, 0, 0, zeroTime},
 				contentType{"a", 2, false, 0, 0, zeroTime},
+				contentType{"", 2, false, 0, 0, zeroTime},
 				contentType{"z", 1, false, 0, 0, zeroTime},
 			},
 		},
@@ -1097,8 +1097,8 @@ func TestQueryGroup(t *testing.T) {
 				return []contentType{list[0]}
 			},
 			[]contentType{
-				contentType{"", 10, true, -2.2, -1.2, oldTime},
 				contentType{"a", 3, true, 1.1, 0, nowTime},
+				contentType{"", 10, true, -2.2, -1.2, oldTime},
 				contentType{"z", 3, true, 0, 0, nowTime},
 			},
 		},
@@ -1114,7 +1114,7 @@ func TestQueryGroup(t *testing.T) {
 			func(list []contentType) float32 {
 				return QuerySum(QueryColumn(list, "  Money  ")).(float32)
 			},
-			[]float32{-2.2, 1.1, 0},
+			[]float32{1.1, -2.2, 0},
 		},
 		{
 			[]contentType{
@@ -1131,8 +1131,8 @@ func TestQueryGroup(t *testing.T) {
 				return []contentType{list[0]}
 			},
 			[]contentType{
-				contentType{"a", -1, false, 1.1, 1.1, zeroTime},
 				contentType{"a", 3, true, 0, -1.2, nowTime},
+				contentType{"a", -1, false, 1.1, 1.1, zeroTime},
 			},
 		},
 		{
@@ -1150,9 +1150,9 @@ func TestQueryGroup(t *testing.T) {
 				return []contentType{list[0]}
 			},
 			[]contentType{
+				contentType{"s", 1, true, 0, 0, nowTime},
 				contentType{"a", -1, false, 1.1, 1.1, zeroTime},
 				contentType{"", 0, true, -1.1, -1.1, oldTime},
-				contentType{"s", 1, true, 0, 0, nowTime},
 			},
 		},
 		{
@@ -1168,7 +1168,7 @@ func TestQueryGroup(t *testing.T) {
 				return QuerySum(QueryColumn(list, "  CardMoney  ")).(float64)
 
 			},
-			[]float64{1.1, -1.1, 0},
+			[]float64{0, 1.1, -1.1},
 		},
 		{
 			[]contentType{
@@ -1184,7 +1184,7 @@ func TestQueryGroup(t *testing.T) {
 				return []float64{sum.(float64)}
 
 			},
-			[]float64{1.1, -1.1, 0},
+			[]float64{0, 1.1, -1.1},
 		},
 		{
 			[]contentType{
@@ -1200,7 +1200,7 @@ func TestQueryGroup(t *testing.T) {
 				return sum.(int)
 
 			},
-			[]int{-2, 0, 2},
+			[]int{2, -2, 0},
 		},
 		{
 			[]contentType{
@@ -1217,11 +1217,12 @@ func TestQueryGroup(t *testing.T) {
 				return []contentType{list[0]}
 			},
 			[]contentType{
+				contentType{"s", 2, true, 0, 0, nowTime},
 				contentType{"a", -2, false, 1.1, 1.1, zeroTime},
 				contentType{"", 0, true, -1.1, -1.1, oldTime},
-				contentType{"s", 2, true, 0, 0, nowTime},
 			},
 		},
+		/*DO NOT SUPPORT MULTIPLE COLUMN GROUP
 		{
 			[]contentType{
 				contentType{"s", 1, true, 0, 0, nowTime},
@@ -1243,6 +1244,7 @@ func TestQueryGroup(t *testing.T) {
 				contentType{"s", 2, true, 0, 0, nowTime},
 			},
 		},
+		*/
 		{
 			[]QueryInnerStruct2{
 				QueryInnerStruct2{QueryInnerStruct{3}, 4, 4.1},
@@ -1257,9 +1259,9 @@ func TestQueryGroup(t *testing.T) {
 				return []QueryInnerStruct2{list[0]}
 			},
 			[]QueryInnerStruct2{
-				QueryInnerStruct2{QueryInnerStruct{1}, 6, 6.1},
-				QueryInnerStruct2{QueryInnerStruct{2}, 11, 5.1},
 				QueryInnerStruct2{QueryInnerStruct{3}, 4, 4.1},
+				QueryInnerStruct2{QueryInnerStruct{2}, 11, 5.1},
+				QueryInnerStruct2{QueryInnerStruct{1}, 6, 6.1},
 			},
 		},
 	}

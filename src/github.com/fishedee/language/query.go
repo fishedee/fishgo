@@ -292,16 +292,34 @@ func QueryJoin(leftData interface{}, rightData interface{}, joinPlace string, jo
 }
 
 //基础类函数 QueryGroup
-func QueryGroupInternal(length int, lessHandler func(i int, j int) int, swapHandler func(i int, j int), groupHandler func(i int, j int)) {
-	QuerySortInternal(length, lessHandler, swapHandler)
-	for i := 0; i != length; {
-		j := i
-		for i++; i != length; i++ {
-			if lessHandler(j, i) != 0 {
-				break
-			}
+func QueryGroupInternal(length int, findMapGet func(i int) (int, bool), findMapSet func(i int, index int), bufferSet func(k int, i int), bufferGroup func(i int, j int)) {
+	nextData := make([]int, length, length)
+	for i := 0; i != length; i++ {
+		lastIndex, isExist := findMapGet(i)
+		if isExist == true {
+			nextData[lastIndex] = i
 		}
-		groupHandler(j, i)
+		nextData[i] = -1
+		findMapSet(i, i)
+	}
+	k := 0
+	for i := 0; i != length; i++ {
+		j := i
+		if nextData[j] == 0 {
+			continue
+		}
+		kbegin := k
+		for nextData[j] != -1 {
+			nextJ := nextData[j]
+			bufferSet(k, j)
+			nextData[j] = 0
+			j = nextJ
+			k++
+		}
+		bufferSet(k, j)
+		k++
+		nextData[j] = 0
+		bufferGroup(kbegin, k)
 	}
 
 }
@@ -314,15 +332,11 @@ func QueryGroupMacroRegister(data interface{}, groupType string, groupFunctor in
 }
 
 func QueryGroupReflect(data interface{}, groupType string, groupFunctor interface{}) interface{} {
-	//拷贝一份
+	//解析输入数据
 	dataValue := reflect.ValueOf(data)
 	dataType := dataValue.Type()
 	dataElemType := dataType.Elem()
 	dataValueLen := dataValue.Len()
-
-	dataResult := reflect.MakeSlice(dataType, dataValueLen, dataValueLen)
-	reflect.Copy(dataResult, dataValue)
-
 	groupFuctorValue := reflect.ValueOf(groupFunctor)
 	groupFuctorType := groupFuctorValue.Type()
 
@@ -330,28 +344,42 @@ func QueryGroupReflect(data interface{}, groupType string, groupFunctor interfac
 	var resultValue reflect.Value
 	resultType := groupFuctorType.Out(0)
 	if resultType.Kind() == reflect.Slice {
-		resultValue = reflect.MakeSlice(resultType, 0, 0)
+		resultValue = reflect.MakeSlice(resultType, 0, dataValueLen)
 	} else {
-		resultValue = reflect.MakeSlice(reflect.SliceOf(resultType), 0, 0)
+		resultValue = reflect.MakeSlice(reflect.SliceOf(resultType), 0, dataValueLen)
 	}
 
 	//分组操作
-	targetCompares := getQueryExtractAndCompares(dataElemType, groupType)
-	targetCompare := combineQueryCompare(targetCompares)
-	result := dataResult.Interface()
-	swapper := reflect.Swapper(result)
-	QueryGroupInternal(dataValueLen, func(i int, j int) int {
-		left := dataResult.Index(i)
-		right := dataResult.Index(j)
-		return targetCompare(left, right)
-	}, swapper, func(i int, j int) {
-		singleResult := groupFuctorValue.Call([]reflect.Value{dataResult.Slice(i, j)})[0]
-		if singleResult.Kind() == reflect.Slice {
-			resultValue = reflect.AppendSlice(resultValue, singleResult)
-		} else {
-			resultValue = reflect.Append(resultValue, singleResult)
-		}
-	})
+	groupType = strings.Trim(groupType, " ")
+	dataFieldType, dataFieldExtract := getQueryExtract(dataElemType, groupType)
+	findMap := reflect.MakeMapWithSize(reflect.MapOf(dataFieldType, reflect.TypeOf(1)), dataValueLen)
+	bufferData := reflect.MakeSlice(dataType, dataValueLen, dataValueLen)
+	tempValueInt := reflect.New(reflect.TypeOf(1)).Elem()
+
+	QueryGroupInternal(dataValueLen,
+		func(i int) (int, bool) {
+			fieldValue := dataFieldExtract(dataValue.Index(i))
+			lastIndex := findMap.MapIndex(fieldValue)
+			if lastIndex.IsValid() == false {
+				return 0, false
+			} else {
+				return int(lastIndex.Int()), true
+			}
+		}, func(i int, index int) {
+			tempValueInt.SetInt(int64(index))
+			fieldValue := dataFieldExtract(dataValue.Index(i))
+			findMap.SetMapIndex(fieldValue, tempValueInt)
+		}, func(k int, i int) {
+			bufferData.Index(k).Set(dataValue.Index(i))
+		}, func(i int, j int) {
+			singleResult := groupFuctorValue.Call([]reflect.Value{bufferData.Slice(i, j)})[0]
+			if singleResult.Kind() == reflect.Slice {
+				resultValue = reflect.AppendSlice(resultValue, singleResult)
+			} else {
+				resultValue = reflect.Append(resultValue, singleResult)
+			}
+		},
+	)
 	return resultValue.Interface()
 }
 

@@ -55,7 +55,10 @@ func logic() {
 	QueryGroup([]User{}, "UserId", func(user []User) Department {
 		return Department{}
 	})
-	QueryGroup([]int{}, ". desc", func(ids []int) Department {
+	QueryGroup([]User{}, "CreateTime", func(user []User) Department {
+		return Department{}
+	})
+	QueryGroup([]int{}, ".", func(ids []int) Department {
 		users := QuerySelect(ids, func(id int) User {
 			return User{UserId: id}
 		}).([]User)

@@ -3,6 +3,7 @@ package testdata
 import (
 	"github.com/fishedee/language"
 	"github.com/fishedee/language/querygen/testdata/subtest"
+	"time"
 )
 
 func queryColumnMap_4cb77d7ba8d1eeb02c714a053eefbaa439c736f0(data interface{}, column string) interface{} {
@@ -89,52 +90,73 @@ func queryCombine_d4934c4702a916f609947de20b2197cb0f02712e(leftData interface{},
 	return newData
 }
 
+func queryGroup_0b68844c3917648685a142b599f750918372f47c(data interface{}, groupType string, groupFunctor interface{}) interface{} {
+	dataIn := data.([]int)
+	groupFunctorIn := groupFunctor.(func([]int) Department)
+	bufferData := make([]int, len(dataIn), len(dataIn))
+	mapData := make(map[int]int, len(dataIn))
+	result := make([]Department, 0, len(dataIn))
+
+	language.QueryGroupInternal(len(dataIn),
+		func(i int) (int, bool) {
+			lastIndex, isExist := mapData[dataIn[i]]
+			return lastIndex, isExist
+		}, func(i int, index int) {
+			mapData[dataIn[i]] = index
+		}, func(k int, i int) {
+			bufferData[k] = dataIn[i]
+		}, func(i int, j int) {
+			single := groupFunctorIn(bufferData[i:j])
+			result = append(result, single)
+		},
+	)
+	return result
+}
+
+func queryGroup_2a871c94537a18ef0ccfd971807ac9a23c6f1b77(data interface{}, groupType string, groupFunctor interface{}) interface{} {
+	dataIn := data.([]User)
+	groupFunctorIn := groupFunctor.(func([]User) Department)
+	bufferData := make([]User, len(dataIn), len(dataIn))
+	mapData := make(map[time.Time]int, len(dataIn))
+	result := make([]Department, 0, len(dataIn))
+
+	language.QueryGroupInternal(len(dataIn),
+		func(i int) (int, bool) {
+			lastIndex, isExist := mapData[dataIn[i].CreateTime]
+			return lastIndex, isExist
+		}, func(i int, index int) {
+			mapData[dataIn[i].CreateTime] = index
+		}, func(k int, i int) {
+			bufferData[k] = dataIn[i]
+		}, func(i int, j int) {
+			single := groupFunctorIn(bufferData[i:j])
+			result = append(result, single)
+		},
+	)
+	return result
+}
+
 func queryGroup_37e53ff8d9e8cce0d72071f5eacc22898cd03373(data interface{}, groupType string, groupFunctor interface{}) interface{} {
 	dataIn := data.([]User)
 	groupFunctorIn := groupFunctor.(func([]User) Department)
-	newData := make([]User, len(dataIn), len(dataIn))
-	copy(newData, dataIn)
-	newData2 := make([]Department, 0, len(dataIn))
+	bufferData := make([]User, len(dataIn), len(dataIn))
+	mapData := make(map[int]int, len(dataIn))
+	result := make([]Department, 0, len(dataIn))
 
-	language.QueryGroupInternal(len(newData), func(i int, j int) int {
-		if newData[i].UserId < newData[j].UserId {
-			return -1
-		} else if newData[i].UserId > newData[j].UserId {
-			return 1
-		}
-
-		return 0
-	}, func(i int, j int) {
-		newData[j], newData[i] = newData[i], newData[j]
-	}, func(i int, j int) {
-		single := groupFunctorIn(newData[i:j])
-		newData2 = append(newData2, single)
-	})
-	return newData2
-}
-
-func queryGroup_fb849f1d17446f43100e8ff287c3f03bcf3e295c(data interface{}, groupType string, groupFunctor interface{}) interface{} {
-	dataIn := data.([]int)
-	groupFunctorIn := groupFunctor.(func([]int) Department)
-	newData := make([]int, len(dataIn), len(dataIn))
-	copy(newData, dataIn)
-	newData2 := make([]Department, 0, len(dataIn))
-
-	language.QueryGroupInternal(len(newData), func(i int, j int) int {
-		if newData[i] < newData[j] {
-			return 1
-		} else if newData[i] > newData[j] {
-			return -1
-		}
-
-		return 0
-	}, func(i int, j int) {
-		newData[j], newData[i] = newData[i], newData[j]
-	}, func(i int, j int) {
-		single := groupFunctorIn(newData[i:j])
-		newData2 = append(newData2, single)
-	})
-	return newData2
+	language.QueryGroupInternal(len(dataIn),
+		func(i int) (int, bool) {
+			lastIndex, isExist := mapData[dataIn[i].UserId]
+			return lastIndex, isExist
+		}, func(i int, index int) {
+			mapData[dataIn[i].UserId] = index
+		}, func(k int, i int) {
+			bufferData[k] = dataIn[i]
+		}, func(i int, j int) {
+			single := groupFunctorIn(bufferData[i:j])
+			result = append(result, single)
+		},
+	)
+	return result
 }
 
 func queryJoin_1254d5ef2a65146cc4abcae6587de7f6467f607e(leftData interface{}, rightData interface{}, joinPlace string, joinType string, joinFunctor interface{}) interface{} {
@@ -427,9 +449,11 @@ func init() {
 
 	language.QueryCombineMacroRegister([]Admin{}, []User{}, (func(Admin, User) AdminUser)(nil), queryCombine_d4934c4702a916f609947de20b2197cb0f02712e)
 
-	language.QueryGroupMacroRegister([]User{}, "UserId", (func([]User) Department)(nil), queryGroup_37e53ff8d9e8cce0d72071f5eacc22898cd03373)
+	language.QueryGroupMacroRegister([]int{}, ".", (func([]int) Department)(nil), queryGroup_0b68844c3917648685a142b599f750918372f47c)
 
-	language.QueryGroupMacroRegister([]int{}, ". desc", (func([]int) Department)(nil), queryGroup_fb849f1d17446f43100e8ff287c3f03bcf3e295c)
+	language.QueryGroupMacroRegister([]User{}, "CreateTime", (func([]User) Department)(nil), queryGroup_2a871c94537a18ef0ccfd971807ac9a23c6f1b77)
+
+	language.QueryGroupMacroRegister([]User{}, "UserId", (func([]User) Department)(nil), queryGroup_37e53ff8d9e8cce0d72071f5eacc22898cd03373)
 
 	language.QueryJoinMacroRegister([]int{}, []User{}, "left", ". = UserId", (func(int, User) User)(nil), queryJoin_1254d5ef2a65146cc4abcae6587de7f6467f607e)
 

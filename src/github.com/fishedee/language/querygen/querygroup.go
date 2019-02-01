@@ -2,8 +2,8 @@ package main
 
 import (
 	. "github.com/fishedee/language"
-	"go/types"
 	"html/template"
+	"strings"
 )
 
 func QueryGroupGen(request queryGenRequest) *queryGenResponse {
@@ -16,12 +16,8 @@ func QueryGroupGen(request queryGenRequest) *queryGenResponse {
 
 	//解析第二个参数
 	secondArgGroupType := getContantStringValue(line, args[1].Value)
-	sortFieldNames, sortFieldIsAscs := analyseSortType(secondArgGroupType)
-	sortFieldTypes := make([]types.Type, len(sortFieldNames), len(sortFieldNames))
-	sortFieldExtracts := make([]string, len(sortFieldNames), len(sortFieldNames))
-	for i, sortFieldName := range sortFieldNames {
-		sortFieldExtracts[i], sortFieldTypes[i] = getExtendFieldType(line, firstArgSliceElem, sortFieldName)
-	}
+	groupType := strings.Trim(secondArgGroupType, " ")
+	groupFieldExtract, groupFieldType := getExtendFieldType(line, firstArgSliceElem, groupType)
 
 	//解析第三个参数
 	thirdArgFunc := getFunctionType(line, args[2].Type)
@@ -46,13 +42,15 @@ func QueryGroupGen(request queryGenRequest) *queryGenResponse {
 	importPackage := map[string]bool{}
 	setImportPackage(line, firstArgSliceElem, importPackage)
 	setImportPackage(line, thirdArgFuncReturn[0], importPackage)
+	setImportPackage(line, groupFieldType, importPackage)
 	argumentDefine := getFunctionArgumentCode(line, args, []bool{false, true, false})
 	funcBody := excuteTemplate(queryGroupFuncTmpl, map[string]string{
 		"signature":          signature,
 		"firstArgElemType":   getTypeDeclareCode(line, firstArgSliceElem),
 		"thirdArgType":       getTypeDeclareCode(line, thirdArgFunc),
 		"thirdArgReturnType": getTypeDeclareCode(line, thirdArgFuncReturn[0]),
-		"sortCode":           getCombineLessCompareCode(line, "newData[i]", "newData[j]", sortFieldExtracts, sortFieldIsAscs, sortFieldTypes),
+		"columnType":         getTypeDeclareCode(line, groupFieldType),
+		"columnExtract":      groupFieldExtract,
 	})
 	initBody := excuteTemplate(queryGroupInitTmpl, map[string]string{
 		"signature":      signature,
@@ -78,20 +76,24 @@ func init() {
 	func queryGroup_{{ .signature }}(data interface{},groupType string,groupFunctor interface{})interface{}{
 		dataIn := data.([]{{ .firstArgElemType }})
 		groupFunctorIn := groupFunctor.({{ .thirdArgType }})
-		newData := make([]{{ .firstArgElemType }},len(dataIn),len(dataIn))
-		copy(newData,dataIn)
-		newData2 := make([]{{ .thirdArgReturnType}},0,len(dataIn))
+		bufferData := make([]{{ .firstArgElemType }},len(dataIn),len(dataIn))
+		mapData := make(map[{{ .columnType }}]int,len(dataIn))
+		result := make([]{{ .thirdArgReturnType}},0,len(dataIn))
 
-		language.QueryGroupInternal(len(newData),func(i int, j int)int{
-			{{ .sortCode }}
-			return 0
-		},func(i int,j int){
-			newData[j] , newData[i] = newData[i],newData[j]
-		},func(i int,j int){
-			single := groupFunctorIn(newData[i:j])
-			newData2 = append(newData2,single)
-		})
-		return newData2
+		language.QueryGroupInternal(len(dataIn),
+			func(i int) (int, bool) {
+				lastIndex,isExist := mapData[dataIn[i]{{ .columnExtract }}]
+				return lastIndex,isExist
+			}, func(i int, index int) {
+				mapData[dataIn[i]{{ .columnExtract }}] = index
+			}, func(k int, i int) {
+				bufferData[k] = dataIn[i]
+			}, func(i int, j int) {
+				single := groupFunctorIn(bufferData[i:j])
+				result = append(result,single)
+			},
+		)
+		return result
 	}
 	`)
 	if err != nil {
