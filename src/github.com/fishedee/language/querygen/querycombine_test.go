@@ -38,6 +38,19 @@ func TestQueryCombine(t *testing.T) {
 		AdminUser{AdminId: 3, Level: 30, Name: "a"},
 		AdminUser{AdminId: 4, Level: 7, Name: "j"},
 	})
+	AssertEqual(t, QueryCombine([]int{1, 2, 3, 4, 5}, user, func(admin int, user User) User {
+		return User{
+			UserId:     admin,
+			Name:       user.Name,
+			CreateTime: user.CreateTime,
+		}
+	}), []User{
+		User{UserId: 1, Name: "c", CreateTime: time.Unix(29, 0)},
+		User{UserId: 2, Name: "g", CreateTime: time.Unix(1, 0)},
+		User{UserId: 3, Name: "h", CreateTime: time.Unix(33, 0)},
+		User{UserId: 4, Name: "a"},
+		User{UserId: 5, Name: "j"},
+	})
 }
 
 func initQueryCombineData() ([]User, []Admin) {

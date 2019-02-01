@@ -11,7 +11,7 @@ func QuerySelectGen(request queryGenRequest) *queryGenResponse {
 
 	//解析第一个参数
 	firstArgSlice := getSliceType(line, args[0].Type)
-	firstArgSliceNamed := getNamedType(line, firstArgSlice.Elem())
+	firstArgElem := firstArgSlice.Elem()
 
 	//解析第二个参数
 	secondArgFunc := getFunctionType(line, args[1].Type)
@@ -23,9 +23,9 @@ func QuerySelectGen(request queryGenRequest) *queryGenResponse {
 	if len(secondArgFuncResults) != 1 {
 		Throw(1, "%v:selector should be single return")
 	}
-	secondArgFuncArgument := getNamedType(line, secondArgFuncArguments[0])
-	secondArgFuncResult := getNamedType(line, secondArgFuncResults[0])
-	if firstArgSliceNamed.String() != secondArgFuncArgument.String() {
+	secondArgFuncArgument := secondArgFuncArguments[0]
+	secondArgFuncResult := secondArgFuncResults[0]
+	if firstArgElem.String() != secondArgFuncArgument.String() {
 		Throw(1, "%v:second selector argument should be equal with first argument")
 	}
 
@@ -41,7 +41,7 @@ func QuerySelectGen(request queryGenRequest) *queryGenResponse {
 	argumentDefine := getFunctionArgumentCode(line, args, []bool{false, false})
 	funcBody := excuteTemplate(querySelectFuncTmpl, map[string]string{
 		"signature":           signature,
-		"firstArgElemType":    getTypeDeclareCode(line, firstArgSliceNamed),
+		"firstArgElemType":    getTypeDeclareCode(line, firstArgElem),
 		"secondArgType":       getTypeDeclareCode(line, secondArgFunc),
 		"secondArgReturnType": getTypeDeclareCode(line, secondArgFuncResult),
 	})

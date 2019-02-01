@@ -105,6 +105,30 @@ func getFieldType(line string, tStruct *types.Struct, column string) types.Type 
 	return nil
 }
 
+func getExtendFieldType(line string, t types.Type, column string) (string, types.Type) {
+	column = strings.Trim(column, " ")
+	if column == "." {
+		return "", t
+	} else {
+		tNamed, isNamed := t.(*types.Named)
+		if isNamed == false {
+			Throw(1, "%v:should be named type!because column is not comma :%v,%v", line, t, column)
+		}
+		tStruct, isStruct := tNamed.Underlying().(*types.Struct)
+		if isStruct == false {
+			Throw(1, "%v:should be struct type!because column is not comma :%v,%v", line, t, column)
+		}
+		for i := 0; i != tStruct.NumFields(); i++ {
+			field := tStruct.Field(i)
+			if field.Name() == column {
+				return "." + column, field.Type()
+			}
+		}
+		Throw(1, "%v:%v has not found column %v", line, tStruct, column)
+		return "", nil
+	}
+}
+
 func getTypeDeclareCode(line string, t types.Type) string {
 	if tBasic, ok := t.(*types.Basic); ok {
 		switch tBasic.Kind() {
@@ -224,11 +248,6 @@ func setImportPackage(line string, t types.Type, importPkg map[string]bool) {
 	}
 }
 
-func getCompareCode(line string, name1 string, name1Type types.Type, name2 string, name2Type types.Type) string {
-	//FIXME
-	return ""
-}
-
 func getFunctionArgumentCode(line string, arguments []types.TypeAndValue, isConstant []bool) string {
 	argvs := []string{}
 	for i, argument := range arguments {
@@ -281,7 +300,7 @@ func analyseSortType(sortType string) (result1 []string, result2 []bool) {
 	return result1, result2
 }
 
-func getLessCompareCode(line string, name1 string, sortFieldName1 string, name2 string, sortFieldName2 string, sortFieldIsAsc bool, sortFieldType types.Type) string {
+func getLessCompareCode(line string, name1 string, extractFieldName1 string, name2 string, extractFieldName2 string, sortFieldIsAsc bool, sortFieldType types.Type) string {
 	lessTrueCode := ""
 	lessFalseCode := ""
 	if sortFieldIsAsc {
@@ -293,17 +312,17 @@ func getLessCompareCode(line string, name1 string, sortFieldName1 string, name2 
 	}
 	_, isBasic := sortFieldType.(*types.Basic)
 	if isBasic {
-		return "if " + name1 + "." + sortFieldName1 + "<" + name2 + "." + sortFieldName2 + "{\n" +
+		return "if " + name1 + extractFieldName1 + "<" + name2 + extractFieldName2 + "{\n" +
 			"return " + lessTrueCode + "\n" +
-			"} else if " + name1 + "." + sortFieldName1 + ">" + name2 + "." + sortFieldName2 + "{\n" +
+			"} else if " + name1 + extractFieldName1 + ">" + name2 + extractFieldName2 + "{\n" +
 			"return " + lessFalseCode + "\n" +
 			"}\n"
 	} else {
 		tNamed, isNamed := sortFieldType.(*types.Named)
 		if isNamed && tNamed.String() == "time.Time" {
-			return "if " + name1 + "." + sortFieldName1 + ".Before(" + name2 + "." + sortFieldName2 + "){\n" +
+			return "if " + name1 + extractFieldName1 + ".Before(" + name2 + extractFieldName2 + "){\n" +
 				"return " + lessTrueCode + "\n" +
-				"} else if " + name1 + "." + sortFieldName1 + ".After(" + name2 + "." + sortFieldName2 + "){\n" +
+				"} else if " + name1 + extractFieldName1 + ".After(" + name2 + extractFieldName2 + "){\n" +
 				"return " + lessFalseCode + "\n" +
 				"}\n"
 		} else {
@@ -313,10 +332,10 @@ func getLessCompareCode(line string, name1 string, sortFieldName1 string, name2 
 	}
 }
 
-func getCombineLessCompareCode(line string, name1 string, name2 string, sortFieldNames []string, sortFieldIsAscs []bool, sortFieldTypes []types.Type) string {
+func getCombineLessCompareCode(line string, name1 string, name2 string, sortFieldExtracts []string, sortFieldIsAscs []bool, sortFieldTypes []types.Type) string {
 	code := []string{}
-	for i := range sortFieldNames {
-		singleCode := getLessCompareCode(line, name1, sortFieldNames[i], name2, sortFieldNames[i], sortFieldIsAscs[i], sortFieldTypes[i])
+	for i := range sortFieldExtracts {
+		singleCode := getLessCompareCode(line, name1, sortFieldExtracts[i], name2, sortFieldExtracts[i], sortFieldIsAscs[i], sortFieldTypes[i])
 		code = append(code, singleCode)
 	}
 	return Implode(code, "\n")

@@ -43,6 +43,22 @@ func TestQueryJoin(t *testing.T) {
 		AdminUser{AdminId: 3, Level: 30, Name: "c"},
 		AdminUser{AdminId: 4, Level: 7},
 	})
+	AssertEqual(t, QueryLeftJoin([]int{23, 3, 4}, user, ". = UserId", func(left int, right User) User {
+		return User{
+			UserId:     left,
+			Name:       right.Name,
+			CreateTime: right.CreateTime,
+		}
+	}), []User{
+		User{UserId: 23, Name: "d"},
+		User{UserId: 23, Name: "c", CreateTime: time.Unix(29, 0)},
+		User{UserId: 23, Name: "g", CreateTime: time.Unix(1, 0)},
+		User{UserId: 23, Name: "h", CreateTime: time.Unix(33, 0)},
+		User{UserId: 23, Name: "a"},
+		User{UserId: 3, Name: "a"},
+		User{UserId: 3, Name: "c"},
+		User{UserId: 4},
+	})
 }
 
 func initQueryJoinData() ([]User, []Admin) {

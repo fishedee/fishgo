@@ -12,15 +12,15 @@ func QueryGroupGen(request queryGenRequest) *queryGenResponse {
 
 	//解析第一个参数
 	firstArgSlice := getSliceType(line, args[0].Type)
-	firstArgSliceNamed := getNamedType(line, firstArgSlice.Elem())
-	firstArgSliceStruct := getStructType(line, firstArgSliceNamed.Underlying())
+	firstArgSliceElem := firstArgSlice.Elem()
 
 	//解析第二个参数
 	secondArgGroupType := getContantStringValue(line, args[1].Value)
 	sortFieldNames, sortFieldIsAscs := analyseSortType(secondArgGroupType)
 	sortFieldTypes := make([]types.Type, len(sortFieldNames), len(sortFieldNames))
+	sortFieldExtracts := make([]string, len(sortFieldNames), len(sortFieldNames))
 	for i, sortFieldName := range sortFieldNames {
-		sortFieldTypes[i] = getFieldType(line, firstArgSliceStruct, sortFieldName)
+		sortFieldExtracts[i], sortFieldTypes[i] = getExtendFieldType(line, firstArgSliceElem, sortFieldName)
 	}
 
 	//解析第三个参数
@@ -34,7 +34,7 @@ func QueryGroupGen(request queryGenRequest) *queryGenResponse {
 		Throw(1, "%v:should be one return", line)
 	}
 	if thirdArgFuncArgument[0].String() != firstArgSlice.String() {
-		Throw(1, "%v:groupFunctor argument should be equal with first argument %v!=%v", line, thirdArgFuncArgument[0], firstArgSliceNamed)
+		Throw(1, "%v:groupFunctor argument should be equal with first argument %v!=%v", line, thirdArgFuncArgument[0], firstArgSliceElem)
 	}
 
 	//生成函数
@@ -44,15 +44,15 @@ func QueryGroupGen(request queryGenRequest) *queryGenResponse {
 	}
 	hasQueryGroupGenerate[signature] = true
 	importPackage := map[string]bool{}
-	setImportPackage(line, firstArgSliceNamed, importPackage)
+	setImportPackage(line, firstArgSliceElem, importPackage)
 	setImportPackage(line, thirdArgFuncReturn[0], importPackage)
 	argumentDefine := getFunctionArgumentCode(line, args, []bool{false, true, false})
 	funcBody := excuteTemplate(queryGroupFuncTmpl, map[string]string{
 		"signature":          signature,
-		"firstArgElemType":   getTypeDeclareCode(line, firstArgSliceNamed),
+		"firstArgElemType":   getTypeDeclareCode(line, firstArgSliceElem),
 		"thirdArgType":       getTypeDeclareCode(line, thirdArgFunc),
 		"thirdArgReturnType": getTypeDeclareCode(line, thirdArgFuncReturn[0]),
-		"sortCode":           getCombineLessCompareCode(line, "newData[i]", "newData[j]", sortFieldNames, sortFieldIsAscs, sortFieldTypes),
+		"sortCode":           getCombineLessCompareCode(line, "newData[i]", "newData[j]", sortFieldExtracts, sortFieldIsAscs, sortFieldTypes),
 	})
 	initBody := excuteTemplate(queryGroupInitTmpl, map[string]string{
 		"signature":      signature,

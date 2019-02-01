@@ -11,15 +11,15 @@ func QuerySortGen(request queryGenRequest) *queryGenResponse {
 
 	//解析第一个参数
 	firstArgSlice := getSliceType(line, args[0].Type)
-	firstArgSliceNamed := getNamedType(line, firstArgSlice.Elem())
-	firstArgSliceStruct := getStructType(line, firstArgSliceNamed.Underlying())
+	firstArgSliceElem := firstArgSlice.Elem()
 
 	//解析第二个参数
 	secondArgSortType := getContantStringValue(line, args[1].Value)
 	sortFieldNames, sortFieldIsAscs := analyseSortType(secondArgSortType)
 	sortFieldTypes := make([]types.Type, len(sortFieldNames), len(sortFieldNames))
+	sortFieldExtracts := make([]string, len(sortFieldNames), len(sortFieldNames))
 	for i, sortFieldName := range sortFieldNames {
-		sortFieldTypes[i] = getFieldType(line, firstArgSliceStruct, sortFieldName)
+		sortFieldExtracts[i], sortFieldTypes[i] = getExtendFieldType(line, firstArgSliceElem, sortFieldName)
 	}
 
 	//生成函数
@@ -29,12 +29,12 @@ func QuerySortGen(request queryGenRequest) *queryGenResponse {
 	}
 	hasQuerySortGenerate[signature] = true
 	importPackage := map[string]bool{}
-	setImportPackage(line, firstArgSliceNamed, importPackage)
+	setImportPackage(line, firstArgSliceElem, importPackage)
 	argumentDefine := getFunctionArgumentCode(line, args, []bool{false, true})
 	funcBody := excuteTemplate(querySortFuncTmpl, map[string]string{
 		"signature":        signature,
-		"firstArgElemType": getTypeDeclareCode(line, firstArgSliceNamed),
-		"sortCode":         getCombineLessCompareCode(line, "newData[i]", "newData[j]", sortFieldNames, sortFieldIsAscs, sortFieldTypes),
+		"firstArgElemType": getTypeDeclareCode(line, firstArgSliceElem),
+		"sortCode":         getCombineLessCompareCode(line, "newData[i]", "newData[j]", sortFieldExtracts, sortFieldIsAscs, sortFieldTypes),
 	})
 	initBody := excuteTemplate(querySortInitTmpl, map[string]string{
 		"signature":      signature,

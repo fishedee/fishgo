@@ -15,9 +15,8 @@ func QueryColumnGen(request queryGenRequest) *queryGenResponse {
 
 	//解析第一个参数
 	firstArgSlice := getSliceType(line, args[0].Type)
-	firstArgSliceNamed := getNamedType(line, firstArgSlice.Elem())
-	firstArgSliceStruct := getStructType(line, firstArgSliceNamed.Underlying())
-	columnArgType := getFieldType(line, firstArgSliceStruct, column)
+	firstArgElem := firstArgSlice.Elem()
+	columnArgExtract, columnArgType := getExtendFieldType(line, firstArgElem, column)
 
 	//生成函数
 	signature := getFunctionSignature(line, args, []bool{false, true})
@@ -26,14 +25,14 @@ func QueryColumnGen(request queryGenRequest) *queryGenResponse {
 	}
 	hasQueryColumnGenerate[signature] = true
 	importPackage := map[string]bool{}
-	setImportPackage(line, firstArgSliceNamed, importPackage)
+	setImportPackage(line, firstArgElem, importPackage)
 	setImportPackage(line, columnArgType, importPackage)
 	argumentDefine := getFunctionArgumentCode(line, args, []bool{false, true})
 	funcBody := excuteTemplate(queryColumnFuncTmpl, map[string]string{
-		"signature":              signature,
-		"firstArgElemType":       getTypeDeclareCode(line, firstArgSliceNamed),
-		"firstArgElemColumnType": getTypeDeclareCode(line, columnArgType),
-		"column":                 column,
+		"signature":                 signature,
+		"firstArgElemType":          getTypeDeclareCode(line, firstArgElem),
+		"firstArgElemColumnType":    getTypeDeclareCode(line, columnArgType),
+		"firstArgElemColumnExtract": columnArgExtract,
 	})
 	initBody := excuteTemplate(queryColumnInitTmpl, map[string]string{
 		"signature":      signature,
@@ -61,7 +60,7 @@ func init() {
 		result := make([]{{ .firstArgElemColumnType }},len(dataIn),len(dataIn))
 
 		for i,single := range dataIn{
-			result[i] = single.{{ .column }}
+			result[i] = single{{ .firstArgElemColumnExtract }}
 		}
 		return result
 	}

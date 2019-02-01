@@ -24,13 +24,11 @@ func QueryJoinGen(request queryGenRequest) *queryGenResponse {
 
 	//解析第一个参数
 	firstArgSlice := getSliceType(line, args[0].Type)
-	firstArgSliceNamed := getNamedType(line, firstArgSlice.Elem())
-	firstArgSliceStruct := getStructType(line, firstArgSliceNamed.Underlying())
+	firstArgElem := firstArgSlice.Elem()
 
 	//解析第二个参数
 	secondArgSlice := getSliceType(line, args[1].Type)
-	secondArgSliceNamed := getNamedType(line, secondArgSlice.Elem())
-	secondArgSliceStruct := getStructType(line, secondArgSliceNamed.Underlying())
+	secondArgElem := secondArgSlice.Elem()
 
 	//解析第三个参数
 	thirdArgJoinPlace := getContantStringValue(line, args[2].Value)
@@ -43,8 +41,8 @@ func QueryJoinGen(request queryGenRequest) *queryGenResponse {
 	//解析第四个参数
 	forthArgJoinType := getContantStringValue(line, args[3].Value)
 	leftJoinColumn, rightJoinColumn := analyseJoin(line, forthArgJoinType)
-	leftFieldType := getFieldType(line, firstArgSliceStruct, leftJoinColumn)
-	rightFieldType := getFieldType(line, secondArgSliceStruct, rightJoinColumn)
+	leftFieldExtract, leftFieldType := getExtendFieldType(line, firstArgElem, leftJoinColumn)
+	rightFieldExtract, rightFieldType := getExtendFieldType(line, secondArgElem, rightJoinColumn)
 	if leftFieldType.String() != rightFieldType.String() {
 		Throw(1, "%v:left join type should be equal to right join type %v!=%v", line, leftFieldType.String(), rightFieldType.String())
 	}
@@ -59,11 +57,11 @@ func QueryJoinGen(request queryGenRequest) *queryGenResponse {
 	if len(fifthArgFuncReturn) != 1 {
 		Throw(1, "%v:should be one return", line)
 	}
-	if fifthArgFuncArgument[0].String() != firstArgSliceNamed.String() {
-		Throw(1, "%v:joinFuctor first argument should be equal with first argument %v!=%v", line, fifthArgFuncArgument[0], firstArgSliceNamed)
+	if fifthArgFuncArgument[0].String() != firstArgElem.String() {
+		Throw(1, "%v:joinFuctor first argument should be equal with first argument %v!=%v", line, fifthArgFuncArgument[0], firstArgElem)
 	}
-	if fifthArgFuncArgument[1].String() != secondArgSliceNamed.String() {
-		Throw(1, "%v:joinFuctor second argument should be equal with second argument %v!=%v", line, fifthArgFuncArgument[1], secondArgSliceNamed)
+	if fifthArgFuncArgument[1].String() != secondArgElem.String() {
+		Throw(1, "%v:joinFuctor second argument should be equal with second argument %v!=%v", line, fifthArgFuncArgument[1], secondArgElem)
 	}
 
 	//生成函数
@@ -73,21 +71,21 @@ func QueryJoinGen(request queryGenRequest) *queryGenResponse {
 	}
 	hasQueryJoinGenerate[signature] = true
 	importPackage := map[string]bool{}
-	setImportPackage(line, firstArgSliceNamed, importPackage)
-	setImportPackage(line, secondArgSliceNamed, importPackage)
+	setImportPackage(line, firstArgElem, importPackage)
+	setImportPackage(line, secondArgElem, importPackage)
 	setImportPackage(line, fifthArgFuncReturn[0], importPackage)
 	argumentDefine := getFunctionArgumentCode(line, args, []bool{false, false, true, true, false})
 	funcBody := excuteTemplate(queryJoinFuncTmpl, map[string]string{
 		"signature":               signature,
-		"firstArgElemType":        getTypeDeclareCode(line, firstArgSliceNamed),
-		"secondArgElemType":       getTypeDeclareCode(line, secondArgSliceNamed),
+		"firstArgElemType":        getTypeDeclareCode(line, firstArgElem),
+		"secondArgElemType":       getTypeDeclareCode(line, secondArgElem),
 		"fifthArgType":            getTypeDeclareCode(line, fifthArgFunc),
 		"fifthArgReturnType":      getTypeDeclareCode(line, fifthArgFuncReturn[0]),
-		"firstArgElemTypeDefine":  getTypeDefineCode(line, firstArgSliceNamed),
-		"secondArgElemTypeDefine": getTypeDefineCode(line, secondArgSliceNamed),
+		"firstArgElemTypeDefine":  getTypeDefineCode(line, firstArgElem),
+		"secondArgElemTypeDefine": getTypeDefineCode(line, secondArgElem),
 		"joinPlace":               joinPlace,
-		"secondArgSortCode":       getLessCompareCode(line, "newRightData[i]", rightJoinColumn, "newRightData[j]", rightJoinColumn, true, rightFieldType),
-		"fifthArgSortCode":        getLessCompareCode(line, "leftDataIn[i]", leftJoinColumn, "newRightData[j]", rightJoinColumn, true, rightFieldType),
+		"secondArgSortCode":       getLessCompareCode(line, "newRightData[i]", rightFieldExtract, "newRightData[j]", rightFieldExtract, true, rightFieldType),
+		"fifthArgSortCode":        getLessCompareCode(line, "leftDataIn[i]", leftFieldExtract, "newRightData[j]", rightFieldExtract, true, rightFieldType),
 	})
 	initBody := excuteTemplate(queryJoinInitTmpl, map[string]string{
 		"signature":      signature,

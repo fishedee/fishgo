@@ -24,6 +24,9 @@ func TestQueryWhere(t *testing.T) {
 		User{Name: "Man_a"},
 		User{Name: "Man_c"},
 	})
+	AssertEqual(t, QueryWhere([]int{3, 2, 3, 5, 9, 4}, func(c int) bool {
+		return c%2 == 0
+	}), []int{2, 4})
 }
 
 func BenchmarkQueryWhereHand(b *testing.B) {

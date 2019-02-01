@@ -1,9 +1,11 @@
 package main
 
 import (
+	"fmt"
 	. "github.com/fishedee/assert"
 	. "github.com/fishedee/language"
 	. "github.com/fishedee/language/querygen/testdata"
+	"os"
 	"testing"
 )
 
@@ -14,6 +16,8 @@ func TestQueryColumn(t *testing.T) {
 		User{UserId: 3},
 	}
 	AssertEqual(t, QueryColumn(data, "UserId"), []int{1, -2, 3})
+	AssertEqual(t, QueryColumn(data, "."), data)
+	AssertEqual(t, QueryColumn([]int{1, -2, 3}, "."), []int{1, -2, 3})
 }
 
 func BenchmarkQueryColumnHand(b *testing.B) {
@@ -44,4 +48,17 @@ func BenchmarkQueryColumnReflect(b *testing.B) {
 	for i := 0; i != b.N; i++ {
 		QueryColumn(data, "Age")
 	}
+}
+
+func init() {
+	args := os.Args
+	isWarning := true
+	for _, arg := range args {
+		if arg == "-test.benchmem=true" {
+			isWarning = false
+			break
+		}
+	}
+	fmt.Println("QueryReflectWarning:", isWarning)
+	QueryReflectWarning(isWarning)
 }

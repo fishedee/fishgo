@@ -36,25 +36,44 @@ type Sex struct {
 
 func logic() {
 	QueryColumn([]User{}, "UserId")
+	QueryColumn([]User{}, ".")
+	QueryColumn([]int{}, ".")
 	QuerySelect([]User{}, func(d User) Sex {
 		return Sex{}
+	})
+	QueryWhere([]int{}, func(c int) bool {
+		return c%2 == 0
 	})
 	QueryWhere([]User{}, func(c User) bool {
 		return true
 	})
 	QuerySort([]User{}, "UserId desc,Name asc,CreateTime asc")
 	QuerySort([]User{}, "UserId asc")
+	QuerySort([]int{}, ". desc")
 	QueryColumnMap([]User{}, "UserId")
+	QueryColumnMap([]int{}, ".")
 	QueryGroup([]User{}, "UserId", func(user []User) Department {
 		return Department{}
 	})
+	QueryGroup([]int{}, ". desc", func(ids []int) Department {
+		users := QuerySelect(ids, func(id int) User {
+			return User{UserId: id}
+		}).([]User)
+		return Department{Employees: users}
+	})
 	QueryLeftJoin([]Admin{}, []User{}, "AdminId = UserId", func(left Admin, right User) AdminUser {
 		return AdminUser{}
+	})
+	QueryLeftJoin([]int{}, []User{}, ". = UserId", func(left int, right User) User {
+		return User{}
 	})
 	QueryJoin([]Admin{}, []User{}, "inner", "AdminId = UserId", func(left Admin, right User) AdminUser {
 		return AdminUser{}
 	})
 	QueryCombine([]Admin{}, []User{}, func(left Admin, right User) AdminUser {
 		return AdminUser{}
+	})
+	QueryCombine([]int{}, []User{}, func(left int, right User) User {
+		return User{}
 	})
 }

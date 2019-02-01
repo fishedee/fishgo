@@ -43,6 +43,31 @@ func TestQueryGroup(t *testing.T) {
 			User{UserId: 23, Name: "a"},
 		}},
 	})
+	AssertEqual(t, QueryGroup([]int{2, 3, 4, 6, 2, 2, 9, 6}, ". desc", func(ids []int) Department {
+		users := QuerySelect(ids, func(id int) User {
+			return User{UserId: id}
+		}).([]User)
+		return Department{Employees: users}
+	}), []Department{
+		Department{Employees: []User{
+			User{UserId: 9},
+		}},
+		Department{Employees: []User{
+			User{UserId: 6},
+			User{UserId: 6},
+		}},
+		Department{Employees: []User{
+			User{UserId: 4},
+		}},
+		Department{Employees: []User{
+			User{UserId: 3},
+		}},
+		Department{Employees: []User{
+			User{UserId: 2},
+			User{UserId: 2},
+			User{UserId: 2},
+		}},
+	})
 }
 
 func initQueryGroupData() []User {

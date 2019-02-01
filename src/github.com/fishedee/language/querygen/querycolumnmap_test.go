@@ -19,6 +19,12 @@ func TestQueryColumnMap(t *testing.T) {
 		-2: User{UserId: -2},
 		3:  User{UserId: 3},
 	})
+	AssertEqual(t, QueryColumnMap([]int{5, 6, 8, 8, 0, 6}, "."), map[int]int{
+		5: 5,
+		6: 6,
+		8: 8,
+		0: 0,
+	})
 }
 
 func initQueryColumnMapData() []User {

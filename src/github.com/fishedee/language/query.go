@@ -2,8 +2,10 @@ package language
 
 import (
 	"fmt"
+	"log"
 	"math"
 	"reflect"
+	"runtime"
 	"sort"
 	"strings"
 	"time"
@@ -43,6 +45,7 @@ func QuerySelect(data interface{}, selectFunctor interface{}) interface{} {
 	if isExist {
 		return handler(data, selectFunctor)
 	} else {
+		queryReflectWarn("QuerySelect")
 		return QuerySelectReflect(data, selectFunctor)
 	}
 }
@@ -80,6 +83,7 @@ func QueryWhere(data interface{}, whereFuctor interface{}) interface{} {
 	if isExist {
 		return handler(data, whereFuctor)
 	} else {
+		queryReflectWarn("QueryWhere")
 		return QueryWhereReflect(data, whereFuctor)
 	}
 }
@@ -154,6 +158,7 @@ func QuerySort(data interface{}, sortType string) interface{} {
 	if isExist {
 		return handler(data, sortType)
 	} else {
+		queryReflectWarn("QuerySort")
 		return QuerySortReflect(data, sortType)
 	}
 }
@@ -281,6 +286,7 @@ func QueryJoin(leftData interface{}, rightData interface{}, joinPlace string, jo
 	if isExist {
 		return handler(leftData, rightData, joinPlace, joinType, joinFuctor)
 	} else {
+		queryReflectWarn("QueryJoin")
 		return QueryJoinReflect(leftData, rightData, joinPlace, joinType, joinFuctor)
 	}
 }
@@ -355,6 +361,7 @@ func QueryGroup(data interface{}, groupType string, groupFunctor interface{}) in
 	if isExist {
 		return handler(data, groupType, groupFunctor)
 	} else {
+		queryReflectWarn("QueryGroup")
 		return QueryGroupReflect(data, groupType, groupFunctor)
 	}
 }
@@ -565,6 +572,7 @@ func QueryColumn(data interface{}, column string) interface{} {
 	if isExist {
 		return handler(data, column)
 	} else {
+		queryReflectWarn("QueryColumn")
 		return QueryColumnReflect(data, column)
 	}
 }
@@ -599,6 +607,7 @@ func QueryColumnMap(data interface{}, column string) interface{} {
 	if isExist {
 		return handler(data, column)
 	} else {
+		queryReflectWarn("QueryColumnMap")
 		return QueryColumnMapReflect(data, column)
 	}
 }
@@ -651,6 +660,7 @@ func QueryCombine(leftData interface{}, rightData interface{}, combineFuctor int
 	if isExist {
 		return handler(leftData, rightData, combineFuctor)
 	} else {
+		queryReflectWarn("QueryCombine")
 		return QueryCombineReflect(leftData, rightData, combineFuctor)
 	}
 }
@@ -826,6 +836,17 @@ func getQueryTypeId(data []string) int64 {
 	return result
 }
 
+func queryReflectWarn(funcName string) {
+	if queryReflectWarning {
+		_, file, line, _ := runtime.Caller(2)
+		log.Printf("%s:%d use %v reflect version,you should use querygen to avoid this warning", file, line, funcName)
+	}
+
+}
+func QueryReflectWarning(isWarning bool) {
+	queryReflectWarning = isWarning
+}
+
 var (
 	querySelectMacroMapper    = map[int64]QuerySelectMacroHandler{}
 	queryWhereMacroMapper     = map[int64]QueryWhereMacroHandler{}
@@ -836,4 +857,5 @@ var (
 	queryColumnMapMacroMapper = map[int64]QueryColumnMapMacroHandler{}
 	queryCombineMacroMapper   = map[int64]QueryCombineMacroHandler{}
 	queryTypeIdMapper         = map[string]int64{}
+	queryReflectWarning       = false
 )

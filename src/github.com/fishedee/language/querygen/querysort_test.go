@@ -33,6 +33,7 @@ func TestQuerySort(t *testing.T) {
 		User{UserId: 1},
 		User{UserId: 1},
 	})
+	AssertEqual(t, QuerySort([]int{3, 2, 1, 7, -8}, ". desc"), []int{7, 3, 2, 1, -8})
 }
 
 func initQuerySortData() []User {
