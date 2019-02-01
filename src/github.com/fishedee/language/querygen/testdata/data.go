@@ -54,4 +54,7 @@ func logic() {
 	QueryJoin([]Admin{}, []User{}, "inner", "AdminId = UserId", func(left Admin, right User) AdminUser {
 		return AdminUser{}
 	})
+	QueryCombine([]Admin{}, []User{}, func(left Admin, right User) AdminUser {
+		return AdminUser{}
+	})
 }

@@ -603,7 +603,7 @@ func QueryColumnMap(data interface{}, column string) interface{} {
 	}
 }
 
-//扩展类函数
+//扩展类函数 QueryLeftJoin,QueryRightJoin,QueryInnerJoin,QueryOuterJoin
 func QueryLeftJoin(leftData interface{}, rightData interface{}, joinType string, joinFuctor interface{}) interface{} {
 	return QueryJoin(leftData, rightData, "left", joinType, joinFuctor)
 }
@@ -618,6 +618,41 @@ func QueryInnerJoin(leftData interface{}, rightData interface{}, joinType string
 
 func QueryOuterJoin(leftData interface{}, rightData interface{}, joinType string, joinFuctor interface{}) interface{} {
 	return QueryJoin(leftData, rightData, "outer", joinType, joinFuctor)
+}
+
+//扩展累函数 QueryCombine
+type QueryCombineMacroHandler func(leftData interface{}, rightData interface{}, combineFuctor interface{}) interface{}
+
+func QueryCombineMacroRegister(leftData interface{}, rightData interface{}, combineFuctor interface{}, handler QueryCombineMacroHandler) {
+	id := registerQueryTypeId([]string{reflect.TypeOf(leftData).String(), reflect.TypeOf(rightData).String(), reflect.TypeOf(combineFuctor).String()})
+	queryCombineMacroMapper[id] = handler
+}
+
+func QueryCombineReflect(leftData interface{}, rightData interface{}, combineFuctor interface{}) interface{} {
+	leftValue := reflect.ValueOf(leftData)
+	rightValue := reflect.ValueOf(rightData)
+	if leftValue.Len() != rightValue.Len() {
+		panic(fmt.Sprintf("len dos not equal %v != %v", leftValue.Len(), rightValue.Len()))
+	}
+	dataLen := leftValue.Len()
+	combineFuctorValue := reflect.ValueOf(combineFuctor)
+	resultType := combineFuctorValue.Type().Out(0)
+	result := reflect.MakeSlice(reflect.SliceOf(resultType), dataLen, dataLen)
+	for i := 0; i != dataLen; i++ {
+		singleResultValue := combineFuctorValue.Call([]reflect.Value{leftValue.Index(i), rightValue.Index(i)})
+		result.Index(i).Set(singleResultValue[0])
+	}
+	return result.Interface()
+}
+
+func QueryCombine(leftData interface{}, rightData interface{}, combineFuctor interface{}) interface{} {
+	id := getQueryTypeId([]string{reflect.TypeOf(leftData).String(), reflect.TypeOf(rightData).String(), reflect.TypeOf(combineFuctor).String()})
+	handler, isExist := queryCombineMacroMapper[id]
+	if isExist {
+		return handler(leftData, rightData, combineFuctor)
+	} else {
+		return QueryCombineReflect(leftData, rightData, combineFuctor)
+	}
 }
 
 func QueryReduce(data interface{}, reduceFuctor interface{}, resultReduce interface{}) interface{} {
@@ -733,23 +768,6 @@ func QueryReverse(data interface{}) interface{} {
 	return result.Interface()
 }
 
-func QueryCombine(leftData interface{}, rightData interface{}, combineFuctor interface{}) interface{} {
-	leftValue := reflect.ValueOf(leftData)
-	rightValue := reflect.ValueOf(rightData)
-	if leftValue.Len() != rightValue.Len() {
-		panic(fmt.Sprintf("len dos not equal %v != %v", leftValue.Len(), rightValue.Len()))
-	}
-	dataLen := leftValue.Len()
-	combineFuctorValue := reflect.ValueOf(combineFuctor)
-	resultType := combineFuctorValue.Type().Out(0)
-	result := reflect.MakeSlice(reflect.SliceOf(resultType), dataLen, dataLen)
-	for i := 0; i != dataLen; i++ {
-		singleResultValue := combineFuctorValue.Call([]reflect.Value{leftValue.Index(i), rightValue.Index(i)})
-		result.Index(i).Set(singleResultValue[0])
-	}
-	return result.Interface()
-}
-
 func QueryDistinct(data interface{}, columnNames string) interface{} {
 	//提取信息
 	name := Explode(columnNames, ",")
@@ -816,5 +834,6 @@ var (
 	queryGroupMacroMapper     = map[int64]QueryGroupMacroHandler{}
 	queryColumnMacroMapper    = map[int64]QueryColumnMacroHandler{}
 	queryColumnMapMacroMapper = map[int64]QueryColumnMapMacroHandler{}
+	queryCombineMacroMapper   = map[int64]QueryCombineMacroHandler{}
 	queryTypeIdMapper         = map[string]int64{}
 )

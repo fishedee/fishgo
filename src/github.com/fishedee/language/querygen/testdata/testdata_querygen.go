@@ -35,6 +35,18 @@ func queryColumn_b60cd8d06e3e435a78322ac375157c99ea3ee15e(data interface{}, colu
 	return result
 }
 
+func queryCombine_d4934c4702a916f609947de20b2197cb0f02712e(leftData interface{}, rightData interface{}, combineFunctor interface{}) interface{} {
+	leftDataIn := leftData.([]Admin)
+	rightDataIn := rightData.([]User)
+	combineFunctorIn := combineFunctor.(func(Admin, User) AdminUser)
+	newData := make([]AdminUser, len(leftDataIn), len(leftDataIn))
+
+	for i := 0; i != len(leftDataIn); i++ {
+		newData[i] = combineFunctorIn(leftDataIn[i], rightDataIn[i])
+	}
+	return newData
+}
+
 func queryGroup_37e53ff8d9e8cce0d72071f5eacc22898cd03373(data interface{}, groupType string, groupFunctor interface{}) interface{} {
 	dataIn := data.([]User)
 	groupFunctorIn := groupFunctor.(func([]User) Department)
@@ -243,6 +255,8 @@ func init() {
 	language.QueryColumnMacroRegister([]User{}, "UserId", queryColumn_4cb77d7ba8d1eeb02c714a053eefbaa439c736f0)
 
 	language.QueryColumnMacroRegister([]subtest.Address{}, "City", queryColumn_b60cd8d06e3e435a78322ac375157c99ea3ee15e)
+
+	language.QueryCombineMacroRegister([]Admin{}, []User{}, (func(Admin, User) AdminUser)(nil), queryCombine_d4934c4702a916f609947de20b2197cb0f02712e)
 
 	language.QueryGroupMacroRegister([]User{}, "UserId", (func([]User) Department)(nil), queryGroup_37e53ff8d9e8cce0d72071f5eacc22898cd03373)
 
