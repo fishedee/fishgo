@@ -67,7 +67,7 @@ func logic() {
 	QueryLeftJoin([]Admin{}, []User{}, "AdminId = UserId", func(left Admin, right User) AdminUser {
 		return AdminUser{}
 	})
-	QueryLeftJoin([]int{}, []User{}, ". = UserId", func(left int, right User) User {
+	QueryRightJoin([]User{}, []int{}, "UserId = .", func(left User, right int) User {
 		return User{}
 	})
 	QueryJoin([]Admin{}, []User{}, "inner", "AdminId = UserId", func(left Admin, right User) AdminUser {

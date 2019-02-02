@@ -547,7 +547,7 @@ func TestQueryJoin(t *testing.T) {
 		Name      string
 		Age       int
 		Ok        bool
-		Money     float32
+		Money     float64
 		CardMoney float64
 		Register  time.Time
 	}
@@ -571,7 +571,7 @@ func TestQueryJoin(t *testing.T) {
 		UserName  string
 		Age       int
 		Ok        bool
-		Money     float32
+		Money     float64
 		CardMoney float64
 		Register  time.Time
 		Title     string
@@ -746,8 +746,8 @@ func TestQueryJoin(t *testing.T) {
 			},
 			[]resultType{
 				resultType{"edward", 0, false, 1.1, 0, nowTime, "威风蛋糕", "威风蛋糕好好吃野！"},
-				resultType{"", 0, false, 0, 0, zeroTime, "马卡龙", "好吃好玩"},
 				resultType{"", 0, false, 0, 0, zeroTime, "曲奇制作", "制作方法非常简单"},
+				resultType{"", 0, false, 0, 0, zeroTime, "马卡龙", "好吃好玩"},
 			},
 		},
 		{
@@ -938,6 +938,7 @@ func TestQueryJoin(t *testing.T) {
 				userType{"", -1, false, 0, 1.1, nowTime},
 			},
 		},
+
 		{
 			[]userType{
 				userType{"s", 0, false, 1.1, 0, oldTime},
@@ -963,7 +964,7 @@ func TestQueryJoin(t *testing.T) {
 			[]userType{
 				userType{"s", -1, false, 0, 0, nowTime},
 				userType{"a", 0, true, 0, -1.1, zeroTime},
-				userType{"", 0, false, 0, 1.1, zeroTime},
+				userType{"", 0, false, 1.1, 1.1, zeroTime},
 			},
 		},
 		{

@@ -80,19 +80,38 @@ func init() {
 		mapData := make(map[{{ .columnType }}]int,len(dataIn))
 		result := make([]{{ .thirdArgReturnType}},0,len(dataIn))
 
-		language.QueryGroupInternal(len(dataIn),
-			func(i int) (int, bool) {
-				lastIndex,isExist := mapData[dataIn[i]{{ .columnExtract }}]
-				return lastIndex,isExist
-			}, func(i int, index int) {
-				mapData[dataIn[i]{{ .columnExtract }}] = index
-			}, func(k int, i int) {
-				bufferData[k] = dataIn[i]
-			}, func(i int, j int) {
-				single := groupFunctorIn(bufferData[i:j])
-				result = append(result,single)
-			},
-		)
+		length := len(dataIn)
+		nextData := make([]int, length, length)
+		for i := 0; i != length; i++ {
+			single := dataIn[i]{{ .columnExtract }}
+			lastIndex,isExist := mapData[single]
+			if isExist == true {
+				nextData[lastIndex] = i
+			}
+			nextData[i] = -1
+			mapData[single] = i
+		}
+		k := 0
+		for i := 0; i != length; i++ {
+			j := i
+			if nextData[j] == 0 {
+				continue
+			}
+			kbegin := k
+			for nextData[j] != -1 {
+				nextJ := nextData[j]
+				bufferData[k] = dataIn[j]
+				nextData[j] = 0
+				j = nextJ
+				k++
+			}
+			bufferData[k] = dataIn[j]
+			k++
+			nextData[j] = 0
+			single := groupFunctorIn(bufferData[kbegin:k])
+			result = append(result,single)
+		}
+
 		return result
 	}
 	`)

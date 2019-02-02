@@ -43,21 +43,23 @@ func TestQueryJoin(t *testing.T) {
 		AdminUser{AdminId: 3, Level: 30, Name: "c"},
 		AdminUser{AdminId: 4, Level: 7},
 	})
-	AssertEqual(t, QueryLeftJoin([]int{23, 3, 4}, user, ". = UserId", func(left int, right User) User {
+	AssertEqual(t, QueryRightJoin(user, []int{23, 3, 4, 6, 7}, "UserId = .", func(left User, right int) User {
 		return User{
-			UserId:     left,
-			Name:       right.Name,
-			CreateTime: right.CreateTime,
+			UserId:     right,
+			Name:       left.Name,
+			CreateTime: left.CreateTime,
 		}
 	}), []User{
+		User{UserId: 3, Name: "a"},
+		User{UserId: 3, Name: "c"},
 		User{UserId: 23, Name: "d"},
 		User{UserId: 23, Name: "c", CreateTime: time.Unix(29, 0)},
 		User{UserId: 23, Name: "g", CreateTime: time.Unix(1, 0)},
 		User{UserId: 23, Name: "h", CreateTime: time.Unix(33, 0)},
 		User{UserId: 23, Name: "a"},
-		User{UserId: 3, Name: "a"},
-		User{UserId: 3, Name: "c"},
 		User{UserId: 4},
+		User{UserId: 6},
+		User{UserId: 7},
 	})
 }
 
@@ -77,20 +79,26 @@ func BenchmarkQueryJoinHand(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i != b.N; i++ {
-		//wrong sample,but can check performance
-		adminMap := map[int]Admin{}
+		adminMap := map[int][]Admin{}
 		for _, admin := range admins {
-			adminMap[admin.AdminId] = admin
+			findAdmins, isExist := adminMap[admin.AdminId]
+			if isExist == false {
+				findAdmins = []Admin{}
+			}
+			findAdmins = append(findAdmins, admin)
+			adminMap[admin.AdminId] = findAdmins
 		}
 		result := make([]AdminUser, 0, len(users))
 		for _, user := range users {
-			admin := adminMap[user.UserId]
-			result = append(result, AdminUser{
-				AdminId:    admin.AdminId,
-				Level:      admin.Level,
-				Name:       user.Name,
-				CreateTime: user.CreateTime,
-			})
+			admins := adminMap[user.UserId]
+			for _, admin := range admins {
+				result = append(result, AdminUser{
+					AdminId:    admin.AdminId,
+					Level:      admin.Level,
+					Name:       user.Name,
+					CreateTime: user.CreateTime,
+				})
+			}
 		}
 	}
 }

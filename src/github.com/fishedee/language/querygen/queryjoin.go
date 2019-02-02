@@ -84,8 +84,9 @@ func QueryJoinGen(request queryGenRequest) *queryGenResponse {
 		"firstArgElemTypeDefine":  getTypeDefineCode(line, firstArgElem),
 		"secondArgElemTypeDefine": getTypeDefineCode(line, secondArgElem),
 		"joinPlace":               joinPlace,
-		"secondArgSortCode":       getLessCompareCode(line, "newRightData[i]", rightFieldExtract, "newRightData[j]", rightFieldExtract, true, rightFieldType),
-		"fifthArgSortCode":        getLessCompareCode(line, "leftDataIn[i]", leftFieldExtract, "newRightData[j]", rightFieldExtract, true, rightFieldType),
+		"joinFieldType":           getTypeDeclareCode(line, leftFieldType),
+		"leftDataExtract":         leftFieldExtract,
+		"rightDataExtract":        rightFieldExtract,
 	})
 	initBody := excuteTemplate(queryJoinInitTmpl, map[string]string{
 		"signature":      signature,
@@ -112,41 +113,63 @@ func init() {
 		leftDataIn := leftData.([]{{ .firstArgElemType }})
 		rightDataIn := rightData.([]{{ .secondArgElemType }})
 		joinFunctorIn := joinFunctor.({{ .fifthArgType }})
-		newRightData := make([]{{ .secondArgElemType }},len(rightDataIn),len(rightDataIn))
-		copy(newRightData,rightDataIn)
-		newData2 := make([]{{ .fifthArgReturnType }},0,len(leftDataIn))
+		result := make([]{{ .fifthArgReturnType }},0,len(leftDataIn))
 
 		emptyLeftData := {{ .firstArgElemTypeDefine }}
 		emptyRightData := {{ .secondArgElemTypeDefine }}
-		language.QueryJoinInternal(
-			"{{ .joinPlace }}",
-			len(leftDataIn),
-			len(rightDataIn),
-			func(i int,j int)int{
-				{{ .secondArgSortCode }}
-				return 0
-			},
-			func(i int, j int){
-				newRightData[j],newRightData[i] = newRightData[i],newRightData[j]
-			},
-			func(i int,j int)int{
-				{{ .fifthArgSortCode }}
-				return 0
-			},
-			func(i int,j int){
-				left := emptyLeftData
-				if i != -1{
-					left = leftDataIn[i]
+		joinPlace = "{{ .joinPlace }}"
+
+		nextData := make([]int,len(rightDataIn),len(rightDataIn))
+		mapDataNext := make(map[{{ .joinFieldType }}]int,len(rightDataIn))
+		mapDataFirst := make(map[{{ .joinFieldType }}]int,len(rightDataIn))
+
+		for i := 0; i != len(rightDataIn); i++ {
+			fieldValue := rightDataIn[i]{{ .rightDataExtract }}
+			lastIndex,isExist := mapDataNext[fieldValue]
+			if isExist {
+				nextData[lastIndex] = i
+			} else {
+				mapDataFirst[fieldValue] = i
+			}
+			nextData[i] = -1
+			mapDataNext[fieldValue] = i
+		}
+
+		rightHaveJoin := make([]bool, len(rightDataIn), len(rightDataIn))
+		for i := 0; i != len(leftDataIn); i++ {
+			leftValue := leftDataIn[i]
+			fieldValue := leftValue{{ .leftDataExtract }}
+			rightIndex,isExist := mapDataFirst[fieldValue]
+			if isExist {
+				//找到右值
+				j := rightIndex
+				for nextData[j] != -1 {
+					singleResult := joinFunctorIn(leftValue,rightDataIn[j])
+					result = append(result,singleResult)
+					rightHaveJoin[j] = true
+					j = nextData[j]
 				}
-				right := emptyRightData
-				if j != -1{
-					right = newRightData[j]
+				singleResult := joinFunctorIn(leftValue,rightDataIn[j])
+				result = append(result,singleResult)
+				rightHaveJoin[j] = true
+			} else {
+				//找不到右值
+				if joinPlace == "left" || joinPlace == "outer" {
+					singleResult := joinFunctorIn(leftValue,emptyRightData)
+					result = append(result,singleResult)
 				}
-				single := joinFunctorIn(left,right)
-				newData2 = append(newData2,single)
-			},
-		)
-		return newData2
+			}
+		}
+		if joinPlace == "right" || joinPlace == "outer" {
+			for j := 0; j != len(rightDataIn); j++ {
+				if rightHaveJoin[j] {
+					continue
+				}
+				singleResult := joinFunctorIn(emptyLeftData,rightDataIn[j])
+				result = append(result,singleResult)
+			}
+		}
+		return result
 	}
 	`)
 	if err != nil {

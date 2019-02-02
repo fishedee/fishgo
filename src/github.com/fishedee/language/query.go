@@ -164,53 +164,6 @@ func QuerySort(data interface{}, sortType string) interface{} {
 }
 
 //基础类函数QueryJoin
-func QueryJoinInternal(joinPlaceString string, leftDataLen int, rightDataLen int, rightCompareHandler func(i int, j int) int, rightSwapHandler func(i int, j int), leftCompareRightHandler func(i int, j int) int, joinHandler func(i int, j int)) {
-	QuerySortInternal(rightDataLen, rightCompareHandler, rightSwapHandler)
-	joinPlace := 0
-	if joinPlaceString == "left" {
-		joinPlace = 1
-	} else if joinPlaceString == "right" {
-		joinPlace = 2
-	} else if joinPlaceString == "inner" {
-		joinPlace = 3
-	} else if joinPlaceString == "outer" {
-		joinPlace = 4
-	} else {
-		panic("invalid joinPlace [" + joinPlaceString + "] ")
-	}
-	rightHaveJoin := make([]bool, rightDataLen, rightDataLen)
-	for i := 0; i != leftDataLen; i++ {
-		//二分查找右边对应的键
-		j := sort.Search(rightDataLen, func(j int) bool {
-			return leftCompareRightHandler(i, j) <= 0
-		})
-		//合并双边满足条件
-		haveFound := false
-		for ; j < rightDataLen; j++ {
-			if leftCompareRightHandler(i, j) != 0 {
-				break
-			}
-			joinHandler(i, j)
-			haveFound = true
-			rightHaveJoin[j] = true
-		}
-		//合并不满足的条件
-		if !haveFound && (joinPlace == 1 || joinPlace == 4) {
-			joinHandler(i, -1)
-		}
-	}
-
-	//处理剩余的右侧元素
-	if joinPlace == 2 || joinPlace == 4 {
-		for j := 0; j != rightDataLen; j++ {
-			if rightHaveJoin[j] {
-				continue
-			}
-			joinHandler(-1, j)
-		}
-	}
-}
-
 type QueryJoinMacroHandler func(leftData interface{}, rightData interface{}, joinPlace string, joinType string, joinFuctor interface{}) interface{}
 
 func QueryJoinMacroRegister(leftData interface{}, rightData interface{}, joinPlace string, joinType string, joinFuctor interface{}, handler QueryJoinMacroHandler) {
@@ -233,50 +186,68 @@ func QueryJoinReflect(leftData interface{}, rightData interface{}, joinPlace str
 	rightDataElemType := rightDataType.Elem()
 	rightDataValueLen := rightDataValue.Len()
 	_, rightDataJoinExtract := getQueryExtract(rightDataElemType, rightJoinType)
-	newRightDataValue := reflect.MakeSlice(rightDataType, rightDataValueLen, rightDataValueLen)
-	newRightDataSwapper := reflect.Swapper(newRightDataValue.Interface())
-	reflect.Copy(newRightDataValue, rightDataValue)
 
 	joinFuctorValue := reflect.ValueOf(joinFuctor)
 	joinFuctorType := joinFuctorValue.Type()
-	joinCompare := getQueryCompare(leftDataJoinType)
+
 	resultValue := reflect.MakeSlice(reflect.SliceOf(joinFuctorType.Out(0)), 0, 0)
 
 	//执行join
 	emptyLeftValue := reflect.New(leftDataElemType).Elem()
 	emptyRightValue := reflect.New(rightDataElemType).Elem()
 	joinPlace = strings.Trim(strings.ToLower(joinPlace), " ")
-	QueryJoinInternal(joinPlace,
-		leftDataValueLen,
-		rightDataValueLen,
-		func(i int, j int) int {
-			left := rightDataJoinExtract(newRightDataValue.Index(i))
-			right := rightDataJoinExtract(newRightDataValue.Index(j))
-			return joinCompare(left, right)
-		},
-		newRightDataSwapper,
-		func(i int, j int) int {
-			left := leftDataJoinExtract(leftDataValue.Index(i))
-			right := rightDataJoinExtract(newRightDataValue.Index(j))
-			return joinCompare(left, right)
-		},
-		func(i int, j int) {
-			left := reflect.Value{}
-			if i == -1 {
-				left = emptyLeftValue
-			} else {
-				left = leftDataValue.Index(i)
+
+	nextData := make([]int, rightDataValueLen, rightDataValueLen)
+	mapDataNext := reflect.MakeMapWithSize(reflect.MapOf(leftDataJoinType, reflect.TypeOf(1)), rightDataValueLen)
+	mapDataFirst := reflect.MakeMapWithSize(reflect.MapOf(leftDataJoinType, reflect.TypeOf(1)), rightDataValueLen)
+	tempValueInt := reflect.New(reflect.TypeOf(1)).Elem()
+
+	for i := 0; i != rightDataValueLen; i++ {
+		tempValueInt.SetInt(int64(i))
+		fieldValue := rightDataJoinExtract(rightDataValue.Index(i))
+		lastNextIndex := mapDataNext.MapIndex(fieldValue)
+		if lastNextIndex.IsValid() {
+			nextData[int(lastNextIndex.Int())] = i
+		} else {
+			mapDataFirst.SetMapIndex(fieldValue, tempValueInt)
+		}
+		nextData[i] = -1
+		mapDataNext.SetMapIndex(fieldValue, tempValueInt)
+	}
+	rightHaveJoin := make([]bool, rightDataValueLen, rightDataValueLen)
+	for i := 0; i != leftDataValueLen; i++ {
+		leftValue := leftDataValue.Index(i)
+		fieldValue := leftDataJoinExtract(leftDataValue.Index(i))
+		rightIndex := mapDataFirst.MapIndex(fieldValue)
+		if rightIndex.IsValid() {
+			//找到右值
+			j := int(rightIndex.Int())
+			for nextData[j] != -1 {
+				singleResult := joinFuctorValue.Call([]reflect.Value{leftValue, rightDataValue.Index(j)})[0]
+				resultValue = reflect.Append(resultValue, singleResult)
+				rightHaveJoin[j] = true
+				j = nextData[j]
 			}
-			right := reflect.Value{}
-			if j == -1 {
-				right = emptyRightValue
-			} else {
-				right = newRightDataValue.Index(j)
-			}
-			singleResult := joinFuctorValue.Call([]reflect.Value{left, right})[0]
+			singleResult := joinFuctorValue.Call([]reflect.Value{leftValue, rightDataValue.Index(j)})[0]
 			resultValue = reflect.Append(resultValue, singleResult)
-		},
-	)
+			rightHaveJoin[j] = true
+		} else {
+			//找不到右值
+			if joinPlace == "left" || joinPlace == "outer" {
+				singleResult := joinFuctorValue.Call([]reflect.Value{leftValue, emptyRightValue})[0]
+				resultValue = reflect.Append(resultValue, singleResult)
+			}
+		}
+	}
+	if joinPlace == "right" || joinPlace == "outer" {
+		for j := 0; j != rightDataValueLen; j++ {
+			if rightHaveJoin[j] {
+				continue
+			}
+			singleResult := joinFuctorValue.Call([]reflect.Value{emptyLeftValue, rightDataValue.Index(j)})[0]
+			resultValue = reflect.Append(resultValue, singleResult)
+		}
+	}
 	return resultValue.Interface()
 }
 
@@ -292,38 +263,6 @@ func QueryJoin(leftData interface{}, rightData interface{}, joinPlace string, jo
 }
 
 //基础类函数 QueryGroup
-func QueryGroupInternal(length int, findMapGet func(i int) (int, bool), findMapSet func(i int, index int), bufferSet func(k int, i int), bufferGroup func(i int, j int)) {
-	nextData := make([]int, length, length)
-	for i := 0; i != length; i++ {
-		lastIndex, isExist := findMapGet(i)
-		if isExist == true {
-			nextData[lastIndex] = i
-		}
-		nextData[i] = -1
-		findMapSet(i, i)
-	}
-	k := 0
-	for i := 0; i != length; i++ {
-		j := i
-		if nextData[j] == 0 {
-			continue
-		}
-		kbegin := k
-		for nextData[j] != -1 {
-			nextJ := nextData[j]
-			bufferSet(k, j)
-			nextData[j] = 0
-			j = nextJ
-			k++
-		}
-		bufferSet(k, j)
-		k++
-		nextData[j] = 0
-		bufferGroup(kbegin, k)
-	}
-
-}
-
 type QueryGroupMacroHandler func(data interface{}, groupType string, groupFunctor interface{}) interface{}
 
 func QueryGroupMacroRegister(data interface{}, groupType string, groupFunctor interface{}, handler QueryGroupMacroHandler) {
@@ -356,30 +295,41 @@ func QueryGroupReflect(data interface{}, groupType string, groupFunctor interfac
 	bufferData := reflect.MakeSlice(dataType, dataValueLen, dataValueLen)
 	tempValueInt := reflect.New(reflect.TypeOf(1)).Elem()
 
-	QueryGroupInternal(dataValueLen,
-		func(i int) (int, bool) {
-			fieldValue := dataFieldExtract(dataValue.Index(i))
-			lastIndex := findMap.MapIndex(fieldValue)
-			if lastIndex.IsValid() == false {
-				return 0, false
-			} else {
-				return int(lastIndex.Int()), true
-			}
-		}, func(i int, index int) {
-			tempValueInt.SetInt(int64(index))
-			fieldValue := dataFieldExtract(dataValue.Index(i))
-			findMap.SetMapIndex(fieldValue, tempValueInt)
-		}, func(k int, i int) {
-			bufferData.Index(k).Set(dataValue.Index(i))
-		}, func(i int, j int) {
-			singleResult := groupFuctorValue.Call([]reflect.Value{bufferData.Slice(i, j)})[0]
-			if singleResult.Kind() == reflect.Slice {
-				resultValue = reflect.AppendSlice(resultValue, singleResult)
-			} else {
-				resultValue = reflect.Append(resultValue, singleResult)
-			}
-		},
-	)
+	nextData := make([]int, dataValueLen, dataValueLen)
+	for i := 0; i != dataValueLen; i++ {
+		fieldValue := dataFieldExtract(dataValue.Index(i))
+		lastIndex := findMap.MapIndex(fieldValue)
+		if lastIndex.IsValid() {
+			nextData[int(lastIndex.Int())] = i
+		}
+		nextData[i] = -1
+		tempValueInt.SetInt(int64(i))
+		findMap.SetMapIndex(fieldValue, tempValueInt)
+	}
+	k := 0
+	for i := 0; i != dataValueLen; i++ {
+		j := i
+		if nextData[j] == 0 {
+			continue
+		}
+		kbegin := k
+		for nextData[j] != -1 {
+			nextJ := nextData[j]
+			bufferData.Index(k).Set(dataValue.Index(j))
+			nextData[j] = 0
+			j = nextJ
+			k++
+		}
+		bufferData.Index(k).Set(dataValue.Index(j))
+		k++
+		nextData[j] = 0
+		singleResult := groupFuctorValue.Call([]reflect.Value{bufferData.Slice(kbegin, k)})[0]
+		if singleResult.Kind() == reflect.Slice {
+			resultValue = reflect.AppendSlice(resultValue, singleResult)
+		} else {
+			resultValue = reflect.Append(resultValue, singleResult)
+		}
+	}
 	return resultValue.Interface()
 }
 

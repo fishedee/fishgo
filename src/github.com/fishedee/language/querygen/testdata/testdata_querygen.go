@@ -97,19 +97,38 @@ func queryGroup_0b68844c3917648685a142b599f750918372f47c(data interface{}, group
 	mapData := make(map[int]int, len(dataIn))
 	result := make([]Department, 0, len(dataIn))
 
-	language.QueryGroupInternal(len(dataIn),
-		func(i int) (int, bool) {
-			lastIndex, isExist := mapData[dataIn[i]]
-			return lastIndex, isExist
-		}, func(i int, index int) {
-			mapData[dataIn[i]] = index
-		}, func(k int, i int) {
-			bufferData[k] = dataIn[i]
-		}, func(i int, j int) {
-			single := groupFunctorIn(bufferData[i:j])
-			result = append(result, single)
-		},
-	)
+	length := len(dataIn)
+	nextData := make([]int, length, length)
+	for i := 0; i != length; i++ {
+		single := dataIn[i]
+		lastIndex, isExist := mapData[single]
+		if isExist == true {
+			nextData[lastIndex] = i
+		}
+		nextData[i] = -1
+		mapData[single] = i
+	}
+	k := 0
+	for i := 0; i != length; i++ {
+		j := i
+		if nextData[j] == 0 {
+			continue
+		}
+		kbegin := k
+		for nextData[j] != -1 {
+			nextJ := nextData[j]
+			bufferData[k] = dataIn[j]
+			nextData[j] = 0
+			j = nextJ
+			k++
+		}
+		bufferData[k] = dataIn[j]
+		k++
+		nextData[j] = 0
+		single := groupFunctorIn(bufferData[kbegin:k])
+		result = append(result, single)
+	}
+
 	return result
 }
 
@@ -120,19 +139,38 @@ func queryGroup_2a871c94537a18ef0ccfd971807ac9a23c6f1b77(data interface{}, group
 	mapData := make(map[time.Time]int, len(dataIn))
 	result := make([]Department, 0, len(dataIn))
 
-	language.QueryGroupInternal(len(dataIn),
-		func(i int) (int, bool) {
-			lastIndex, isExist := mapData[dataIn[i].CreateTime]
-			return lastIndex, isExist
-		}, func(i int, index int) {
-			mapData[dataIn[i].CreateTime] = index
-		}, func(k int, i int) {
-			bufferData[k] = dataIn[i]
-		}, func(i int, j int) {
-			single := groupFunctorIn(bufferData[i:j])
-			result = append(result, single)
-		},
-	)
+	length := len(dataIn)
+	nextData := make([]int, length, length)
+	for i := 0; i != length; i++ {
+		single := dataIn[i].CreateTime
+		lastIndex, isExist := mapData[single]
+		if isExist == true {
+			nextData[lastIndex] = i
+		}
+		nextData[i] = -1
+		mapData[single] = i
+	}
+	k := 0
+	for i := 0; i != length; i++ {
+		j := i
+		if nextData[j] == 0 {
+			continue
+		}
+		kbegin := k
+		for nextData[j] != -1 {
+			nextJ := nextData[j]
+			bufferData[k] = dataIn[j]
+			nextData[j] = 0
+			j = nextJ
+			k++
+		}
+		bufferData[k] = dataIn[j]
+		k++
+		nextData[j] = 0
+		single := groupFunctorIn(bufferData[kbegin:k])
+		result = append(result, single)
+	}
+
 	return result
 }
 
@@ -143,173 +181,228 @@ func queryGroup_37e53ff8d9e8cce0d72071f5eacc22898cd03373(data interface{}, group
 	mapData := make(map[int]int, len(dataIn))
 	result := make([]Department, 0, len(dataIn))
 
-	language.QueryGroupInternal(len(dataIn),
-		func(i int) (int, bool) {
-			lastIndex, isExist := mapData[dataIn[i].UserId]
-			return lastIndex, isExist
-		}, func(i int, index int) {
-			mapData[dataIn[i].UserId] = index
-		}, func(k int, i int) {
-			bufferData[k] = dataIn[i]
-		}, func(i int, j int) {
-			single := groupFunctorIn(bufferData[i:j])
-			result = append(result, single)
-		},
-	)
+	length := len(dataIn)
+	nextData := make([]int, length, length)
+	for i := 0; i != length; i++ {
+		single := dataIn[i].UserId
+		lastIndex, isExist := mapData[single]
+		if isExist == true {
+			nextData[lastIndex] = i
+		}
+		nextData[i] = -1
+		mapData[single] = i
+	}
+	k := 0
+	for i := 0; i != length; i++ {
+		j := i
+		if nextData[j] == 0 {
+			continue
+		}
+		kbegin := k
+		for nextData[j] != -1 {
+			nextJ := nextData[j]
+			bufferData[k] = dataIn[j]
+			nextData[j] = 0
+			j = nextJ
+			k++
+		}
+		bufferData[k] = dataIn[j]
+		k++
+		nextData[j] = 0
+		single := groupFunctorIn(bufferData[kbegin:k])
+		result = append(result, single)
+	}
+
 	return result
-}
-
-func queryJoin_1254d5ef2a65146cc4abcae6587de7f6467f607e(leftData interface{}, rightData interface{}, joinPlace string, joinType string, joinFunctor interface{}) interface{} {
-	leftDataIn := leftData.([]int)
-	rightDataIn := rightData.([]User)
-	joinFunctorIn := joinFunctor.(func(int, User) User)
-	newRightData := make([]User, len(rightDataIn), len(rightDataIn))
-	copy(newRightData, rightDataIn)
-	newData2 := make([]User, 0, len(leftDataIn))
-
-	emptyLeftData := 0
-	emptyRightData := User{}
-	language.QueryJoinInternal(
-		"left",
-		len(leftDataIn),
-		len(rightDataIn),
-		func(i int, j int) int {
-			if newRightData[i].UserId < newRightData[j].UserId {
-				return -1
-			} else if newRightData[i].UserId > newRightData[j].UserId {
-				return 1
-			}
-
-			return 0
-		},
-		func(i int, j int) {
-			newRightData[j], newRightData[i] = newRightData[i], newRightData[j]
-		},
-		func(i int, j int) int {
-			if leftDataIn[i] < newRightData[j].UserId {
-				return -1
-			} else if leftDataIn[i] > newRightData[j].UserId {
-				return 1
-			}
-
-			return 0
-		},
-		func(i int, j int) {
-			left := emptyLeftData
-			if i != -1 {
-				left = leftDataIn[i]
-			}
-			right := emptyRightData
-			if j != -1 {
-				right = newRightData[j]
-			}
-			single := joinFunctorIn(left, right)
-			newData2 = append(newData2, single)
-		},
-	)
-	return newData2
 }
 
 func queryJoin_18a90660a498dc8a2c84eae90b4a430815a5d594(leftData interface{}, rightData interface{}, joinPlace string, joinType string, joinFunctor interface{}) interface{} {
 	leftDataIn := leftData.([]Admin)
 	rightDataIn := rightData.([]User)
 	joinFunctorIn := joinFunctor.(func(Admin, User) AdminUser)
-	newRightData := make([]User, len(rightDataIn), len(rightDataIn))
-	copy(newRightData, rightDataIn)
-	newData2 := make([]AdminUser, 0, len(leftDataIn))
+	result := make([]AdminUser, 0, len(leftDataIn))
 
 	emptyLeftData := Admin{}
 	emptyRightData := User{}
-	language.QueryJoinInternal(
-		"inner",
-		len(leftDataIn),
-		len(rightDataIn),
-		func(i int, j int) int {
-			if newRightData[i].UserId < newRightData[j].UserId {
-				return -1
-			} else if newRightData[i].UserId > newRightData[j].UserId {
-				return 1
-			}
+	joinPlace = "inner"
 
-			return 0
-		},
-		func(i int, j int) {
-			newRightData[j], newRightData[i] = newRightData[i], newRightData[j]
-		},
-		func(i int, j int) int {
-			if leftDataIn[i].AdminId < newRightData[j].UserId {
-				return -1
-			} else if leftDataIn[i].AdminId > newRightData[j].UserId {
-				return 1
-			}
+	nextData := make([]int, len(rightDataIn), len(rightDataIn))
+	mapDataNext := make(map[int]int, len(rightDataIn))
+	mapDataFirst := make(map[int]int, len(rightDataIn))
 
-			return 0
-		},
-		func(i int, j int) {
-			left := emptyLeftData
-			if i != -1 {
-				left = leftDataIn[i]
+	for i := 0; i != len(rightDataIn); i++ {
+		fieldValue := rightDataIn[i].UserId
+		lastIndex, isExist := mapDataNext[fieldValue]
+		if isExist {
+			nextData[lastIndex] = i
+		} else {
+			mapDataFirst[fieldValue] = i
+		}
+		nextData[i] = -1
+		mapDataNext[fieldValue] = i
+	}
+
+	rightHaveJoin := make([]bool, len(rightDataIn), len(rightDataIn))
+	for i := 0; i != len(leftDataIn); i++ {
+		leftValue := leftDataIn[i]
+		fieldValue := leftValue.AdminId
+		rightIndex, isExist := mapDataFirst[fieldValue]
+		if isExist {
+			//找到右值
+			j := rightIndex
+			for nextData[j] != -1 {
+				singleResult := joinFunctorIn(leftValue, rightDataIn[j])
+				result = append(result, singleResult)
+				rightHaveJoin[j] = true
+				j = nextData[j]
 			}
-			right := emptyRightData
-			if j != -1 {
-				right = newRightData[j]
+			singleResult := joinFunctorIn(leftValue, rightDataIn[j])
+			result = append(result, singleResult)
+			rightHaveJoin[j] = true
+		} else {
+			//找不到右值
+			if joinPlace == "left" || joinPlace == "outer" {
+				singleResult := joinFunctorIn(leftValue, emptyRightData)
+				result = append(result, singleResult)
 			}
-			single := joinFunctorIn(left, right)
-			newData2 = append(newData2, single)
-		},
-	)
-	return newData2
+		}
+	}
+	if joinPlace == "right" || joinPlace == "outer" {
+		for j := 0; j != len(rightDataIn); j++ {
+			if rightHaveJoin[j] {
+				continue
+			}
+			singleResult := joinFunctorIn(emptyLeftData, rightDataIn[j])
+			result = append(result, singleResult)
+		}
+	}
+	return result
 }
 
 func queryJoin_1ba84e33b88ae2e0926f0db2690423b5df5992fc(leftData interface{}, rightData interface{}, joinPlace string, joinType string, joinFunctor interface{}) interface{} {
 	leftDataIn := leftData.([]Admin)
 	rightDataIn := rightData.([]User)
 	joinFunctorIn := joinFunctor.(func(Admin, User) AdminUser)
-	newRightData := make([]User, len(rightDataIn), len(rightDataIn))
-	copy(newRightData, rightDataIn)
-	newData2 := make([]AdminUser, 0, len(leftDataIn))
+	result := make([]AdminUser, 0, len(leftDataIn))
 
 	emptyLeftData := Admin{}
 	emptyRightData := User{}
-	language.QueryJoinInternal(
-		"left",
-		len(leftDataIn),
-		len(rightDataIn),
-		func(i int, j int) int {
-			if newRightData[i].UserId < newRightData[j].UserId {
-				return -1
-			} else if newRightData[i].UserId > newRightData[j].UserId {
-				return 1
-			}
+	joinPlace = "left"
 
-			return 0
-		},
-		func(i int, j int) {
-			newRightData[j], newRightData[i] = newRightData[i], newRightData[j]
-		},
-		func(i int, j int) int {
-			if leftDataIn[i].AdminId < newRightData[j].UserId {
-				return -1
-			} else if leftDataIn[i].AdminId > newRightData[j].UserId {
-				return 1
-			}
+	nextData := make([]int, len(rightDataIn), len(rightDataIn))
+	mapDataNext := make(map[int]int, len(rightDataIn))
+	mapDataFirst := make(map[int]int, len(rightDataIn))
 
-			return 0
-		},
-		func(i int, j int) {
-			left := emptyLeftData
-			if i != -1 {
-				left = leftDataIn[i]
+	for i := 0; i != len(rightDataIn); i++ {
+		fieldValue := rightDataIn[i].UserId
+		lastIndex, isExist := mapDataNext[fieldValue]
+		if isExist {
+			nextData[lastIndex] = i
+		} else {
+			mapDataFirst[fieldValue] = i
+		}
+		nextData[i] = -1
+		mapDataNext[fieldValue] = i
+	}
+
+	rightHaveJoin := make([]bool, len(rightDataIn), len(rightDataIn))
+	for i := 0; i != len(leftDataIn); i++ {
+		leftValue := leftDataIn[i]
+		fieldValue := leftValue.AdminId
+		rightIndex, isExist := mapDataFirst[fieldValue]
+		if isExist {
+			//找到右值
+			j := rightIndex
+			for nextData[j] != -1 {
+				singleResult := joinFunctorIn(leftValue, rightDataIn[j])
+				result = append(result, singleResult)
+				rightHaveJoin[j] = true
+				j = nextData[j]
 			}
-			right := emptyRightData
-			if j != -1 {
-				right = newRightData[j]
+			singleResult := joinFunctorIn(leftValue, rightDataIn[j])
+			result = append(result, singleResult)
+			rightHaveJoin[j] = true
+		} else {
+			//找不到右值
+			if joinPlace == "left" || joinPlace == "outer" {
+				singleResult := joinFunctorIn(leftValue, emptyRightData)
+				result = append(result, singleResult)
 			}
-			single := joinFunctorIn(left, right)
-			newData2 = append(newData2, single)
-		},
-	)
-	return newData2
+		}
+	}
+	if joinPlace == "right" || joinPlace == "outer" {
+		for j := 0; j != len(rightDataIn); j++ {
+			if rightHaveJoin[j] {
+				continue
+			}
+			singleResult := joinFunctorIn(emptyLeftData, rightDataIn[j])
+			result = append(result, singleResult)
+		}
+	}
+	return result
+}
+
+func queryJoin_69248e7728f46e4a00d6cea63f2eabca6513fee8(leftData interface{}, rightData interface{}, joinPlace string, joinType string, joinFunctor interface{}) interface{} {
+	leftDataIn := leftData.([]User)
+	rightDataIn := rightData.([]int)
+	joinFunctorIn := joinFunctor.(func(User, int) User)
+	result := make([]User, 0, len(leftDataIn))
+
+	emptyLeftData := User{}
+	emptyRightData := 0
+	joinPlace = "right"
+
+	nextData := make([]int, len(rightDataIn), len(rightDataIn))
+	mapDataNext := make(map[int]int, len(rightDataIn))
+	mapDataFirst := make(map[int]int, len(rightDataIn))
+
+	for i := 0; i != len(rightDataIn); i++ {
+		fieldValue := rightDataIn[i]
+		lastIndex, isExist := mapDataNext[fieldValue]
+		if isExist {
+			nextData[lastIndex] = i
+		} else {
+			mapDataFirst[fieldValue] = i
+		}
+		nextData[i] = -1
+		mapDataNext[fieldValue] = i
+	}
+
+	rightHaveJoin := make([]bool, len(rightDataIn), len(rightDataIn))
+	for i := 0; i != len(leftDataIn); i++ {
+		leftValue := leftDataIn[i]
+		fieldValue := leftValue.UserId
+		rightIndex, isExist := mapDataFirst[fieldValue]
+		if isExist {
+			//找到右值
+			j := rightIndex
+			for nextData[j] != -1 {
+				singleResult := joinFunctorIn(leftValue, rightDataIn[j])
+				result = append(result, singleResult)
+				rightHaveJoin[j] = true
+				j = nextData[j]
+			}
+			singleResult := joinFunctorIn(leftValue, rightDataIn[j])
+			result = append(result, singleResult)
+			rightHaveJoin[j] = true
+		} else {
+			//找不到右值
+			if joinPlace == "left" || joinPlace == "outer" {
+				singleResult := joinFunctorIn(leftValue, emptyRightData)
+				result = append(result, singleResult)
+			}
+		}
+	}
+	if joinPlace == "right" || joinPlace == "outer" {
+		for j := 0; j != len(rightDataIn); j++ {
+			if rightHaveJoin[j] {
+				continue
+			}
+			singleResult := joinFunctorIn(emptyLeftData, rightDataIn[j])
+			result = append(result, singleResult)
+		}
+	}
+	return result
 }
 
 func querySelect_330d97a8f08ab419926dd507be00ec1c6a1de660(data interface{}, selectFunctor interface{}) interface{} {
@@ -455,11 +548,11 @@ func init() {
 
 	language.QueryGroupMacroRegister([]User{}, "UserId", (func([]User) Department)(nil), queryGroup_37e53ff8d9e8cce0d72071f5eacc22898cd03373)
 
-	language.QueryJoinMacroRegister([]int{}, []User{}, "left", ". = UserId", (func(int, User) User)(nil), queryJoin_1254d5ef2a65146cc4abcae6587de7f6467f607e)
-
 	language.QueryJoinMacroRegister([]Admin{}, []User{}, "inner", "AdminId = UserId", (func(Admin, User) AdminUser)(nil), queryJoin_18a90660a498dc8a2c84eae90b4a430815a5d594)
 
 	language.QueryJoinMacroRegister([]Admin{}, []User{}, "left", "AdminId = UserId", (func(Admin, User) AdminUser)(nil), queryJoin_1ba84e33b88ae2e0926f0db2690423b5df5992fc)
+
+	language.QueryJoinMacroRegister([]User{}, []int{}, "right", "UserId = .", (func(User, int) User)(nil), queryJoin_69248e7728f46e4a00d6cea63f2eabca6513fee8)
 
 	language.QuerySelectMacroRegister([]User{}, (func(User) Sex)(nil), querySelect_330d97a8f08ab419926dd507be00ec1c6a1de660)
 
