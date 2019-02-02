@@ -77,35 +77,24 @@ func BenchmarkQueryGroupHand(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i != b.N; i++ {
-		nextData := make([]int, len(data), len(data))
-		findMap := make(map[int]int, len(data))
-		newData := make([]User, len(data), len(data))
+		findMap := make(map[int][]User, len(data))
 		result := make([]Department, 0, len(data))
-		for i, single := range newData {
-			lastIndex, isExist := findMap[single.UserId]
-			if isExist {
-				nextData[lastIndex] = i
+		for _, single := range data {
+			users, isExist := findMap[single.UserId]
+			if isExist == false {
+				users = []User{}
 			}
-			nextData[i] = -1
-			findMap[single.UserId] = i
+			users = append(users, single)
+			findMap[single.UserId] = users
 		}
-		for i := 0; i != len(nextData); i++ {
-			j := i
-			k := 0
-			if nextData[j] == 0 {
+		for _, single := range data {
+			users, isExist := findMap[single.UserId]
+			if isExist {
 				continue
 			}
-			for nextData[j] != -1 {
-				nextJ := nextData[j]
-				newData[k] = data[j]
-				nextData[j] = 0
-				k++
-				j = nextJ
-			}
-			newData[k] = data[j]
-			k++
+			delete(findMap, single.UserId)
 			result = append(result, Department{
-				Employees: newData[:k],
+				Employees: users,
 			})
 		}
 	}
