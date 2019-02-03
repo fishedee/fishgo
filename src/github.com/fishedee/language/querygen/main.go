@@ -119,7 +119,7 @@ func generate(packageName string, packagePath string, packages []queryGenRespons
 	if string(oldData) == result {
 		return
 	}
-	err := ioutil.WriteFile(filePath, formatSource(result), os.ModePerm)
+	err := ioutil.WriteFile(filePath, formatSource(result), 0644)
 	if err != nil {
 		panic(err)
 	}
