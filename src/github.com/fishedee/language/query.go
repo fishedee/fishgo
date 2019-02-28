@@ -447,17 +447,26 @@ func getQueryCompare(fieldType reflect.Type) queryCompare {
 			}
 		}
 	} else if typeKind == TypeKind.STRING {
-		return func(left reflect.Value, right reflect.Value) int {
-			leftString := left.String()
-			rightString := right.String()
-			if leftString < rightString {
-				return -1
-			} else if leftString > rightString {
-				return 1
-			} else {
-				return 0
+		if fieldType == reflect.TypeOf(Decimal("")) {
+			return func(left reflect.Value, right reflect.Value) int {
+				leftDecimal := left.Interface().(Decimal)
+				rightDecimal := right.Interface().(Decimal)
+				return leftDecimal.Cmp(rightDecimal)
+			}
+		} else {
+			return func(left reflect.Value, right reflect.Value) int {
+				leftString := left.String()
+				rightString := right.String()
+				if leftString < rightString {
+					return -1
+				} else if leftString > rightString {
+					return 1
+				} else {
+					return 0
+				}
 			}
 		}
+
 	} else if typeKind == TypeKind.STRUCT && fieldType == reflect.TypeOf(time.Time{}) {
 		return func(left reflect.Value, right reflect.Value) int {
 			leftTime := left.Interface().(time.Time)
