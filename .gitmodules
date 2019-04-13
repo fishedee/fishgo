@@ -232,3 +232,6 @@
 [submodule "src/github.com/aliyun/alibaba-cloud-sdk-go"]
 	path = src/github.com/aliyun/alibaba-cloud-sdk-go
 	url = git@github.com:aliyun/alibaba-cloud-sdk-go.git
+[submodule "src/github.com/dgrijalva/jwt-go"]
+	path = src/github.com/dgrijalva/jwt-go
+	url = git@github.com:dgrijalva/jwt-go.git
