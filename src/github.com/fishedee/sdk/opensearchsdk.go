@@ -55,8 +55,9 @@ type OpenSearchSearchResponse struct {
 }
 
 type OpenSearchError struct {
-	Code    int
-	Message string
+	Code      int
+	Message   string
+	RequestId string
 }
 
 func (this *OpenSearchError) GetCode() int {
@@ -68,7 +69,7 @@ func (this *OpenSearchError) GetMsg() string {
 }
 
 func (this *OpenSearchError) Error() string {
-	return fmt.Sprintf("错误码为：%v，错误描述为：%v", this.Code, this.Message)
+	return fmt.Sprintf("错误码为：%v，错误描述为：%v, 请求Id: %v", this.Code, this.Message, this.RequestId)
 }
 
 func (this *OpenSearchSdk) encodeUrl(input string) (string, error) {
@@ -167,7 +168,7 @@ func (this *OpenSearchSdk) api(method string, url string, query map[string]strin
 		return err
 	}
 	if result.Status != "OK" {
-		return &OpenSearchError{result.Errors[0].Code, result.Errors[0].Message}
+		return &OpenSearchError{result.Errors[0].Code, result.Errors[0].Message, result.RequestId}
 	}
 	return nil
 }
