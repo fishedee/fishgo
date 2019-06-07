@@ -96,16 +96,17 @@ type Database interface {
 }
 
 type DatabaseConfig struct {
-	Driver        string `config:"driver"`
-	Host          string `config:"host"`
-	Port          int    `config:"port"`
-	User          string `config:"user"`
-	Passowrd      string `config:"password"`
-	Charset       string `config:"charset"`
-	Collation     string `config:"collation"`
-	Database      string `config:"database"`
-	Debug         bool   `config:"debug"`
-	MaxConnection int    `config:"maxconnection"`
+	Driver            string `config:"driver"`
+	Host              string `config:"host"`
+	Port              int    `config:"port"`
+	User              string `config:"user"`
+	Passowrd          string `config:"password"`
+	Charset           string `config:"charset"`
+	Collation         string `config:"collation"`
+	Database          string `config:"database"`
+	Debug             bool   `config:"debug"`
+	MaxConnection     int    `config:"maxconnection"`
+	MaxIdleConnection int    `config:"maxidleconnection"`
 }
 
 type databaseImplement struct {
@@ -165,6 +166,10 @@ func NewDatabase(config DatabaseConfig) (Database, error) {
 	if config.MaxConnection > 0 {
 		tempDb.SetMaxOpenConns(config.MaxConnection)
 	}
+	if config.MaxIdleConnection <= 0 {
+		config.MaxIdleConnection = 100
+	}
+	tempDb.SetMaxIdleConns(config.MaxIdleConnection)
 	tempDb.Ping()
 	return &databaseImplement{
 		Engine: tempDb,
