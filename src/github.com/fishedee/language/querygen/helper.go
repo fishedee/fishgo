@@ -109,24 +109,35 @@ func getExtendFieldType(line string, t types.Type, column string) (string, types
 	column = strings.Trim(column, " ")
 	if column == "." {
 		return "", t
-	} else {
-		tNamed, isNamed := t.(*types.Named)
+	}
+	columnList := Explode(column, ".")
+
+	columnExact := ""
+	columnType := t
+	for _, singleColumn := range columnList {
+		tNamed, isNamed := columnType.(*types.Named)
 		if isNamed == false {
-			Throw(1, "%v:should be named type!because column is not comma :%v,%v", line, t, column)
+			Throw(1, "%v:should be named type!because column is not comma :%v,%v", line, t, singleColumn)
 		}
 		tStruct, isStruct := tNamed.Underlying().(*types.Struct)
 		if isStruct == false {
-			Throw(1, "%v:should be struct type!because column is not comma :%v,%v", line, t, column)
+			Throw(1, "%v:should be struct type!because column is not comma :%v,%v", line, t, singleColumn)
 		}
-		for i := 0; i != tStruct.NumFields(); i++ {
+		i := 0
+		for ; i != tStruct.NumFields(); i++ {
 			field := tStruct.Field(i)
-			if field.Name() == column {
-				return "." + column, field.Type()
+			if field.Name() == singleColumn {
+				columnExact = columnExact + "." + singleColumn
+				columnType = field.Type()
+				break
 			}
 		}
-		Throw(1, "%v:%v has not found column %v", line, tStruct, column)
-		return "", nil
+		if i == tStruct.NumFields() {
+			Throw(1, "%v:%v has not found column %v", line, tStruct, singleColumn)
+		}
 	}
+
+	return columnExact, columnType
 }
 
 func getTypeDeclareCode(line string, t types.Type) string {
@@ -138,6 +149,10 @@ func getTypeDeclareCode(line string, t types.Type) string {
 			return "int"
 		case types.String:
 			return "string"
+		case types.Float32:
+			return "float32"
+		case types.Float64:
+			return "float64"
 		default:
 			Throw(1, "%v:unknown basic type %v", line, t.String())
 			return ""
@@ -310,13 +325,22 @@ func getLessCompareCode(line string, name1 string, extractFieldName1 string, nam
 		lessTrueCode = "1"
 		lessFalseCode = "-1"
 	}
-	_, isBasic := sortFieldType.(*types.Basic)
+
+	tBasic, isBasic := sortFieldType.(*types.Basic)
 	if isBasic {
-		return "if " + name1 + extractFieldName1 + "<" + name2 + extractFieldName2 + "{\n" +
-			"return " + lessTrueCode + "\n" +
-			"} else if " + name1 + extractFieldName1 + ">" + name2 + extractFieldName2 + "{\n" +
-			"return " + lessFalseCode + "\n" +
-			"}\n"
+		if tBasic.Kind() == types.Bool {
+			return "if " + name1 + extractFieldName1 + "== false && " + name2 + extractFieldName2 + "== true {\n" +
+				"return " + lessTrueCode + "\n" +
+				"} else if " + name1 + extractFieldName1 + "== true && " + name2 + extractFieldName2 + "== false {\n" +
+				"return " + lessFalseCode + "\n" +
+				"}\n"
+		} else {
+			return "if " + name1 + extractFieldName1 + "<" + name2 + extractFieldName2 + "{\n" +
+				"return " + lessTrueCode + "\n" +
+				"} else if " + name1 + extractFieldName1 + ">" + name2 + extractFieldName2 + "{\n" +
+				"return " + lessFalseCode + "\n" +
+				"}\n"
+		}
 	} else {
 		tNamed, isNamed := sortFieldType.(*types.Named)
 		if isNamed && tNamed.String() == "time.Time" {

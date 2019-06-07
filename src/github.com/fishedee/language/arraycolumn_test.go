@@ -1,6 +1,7 @@
-package language
+package language_test
 
 import (
+	. "github.com/fishedee/language"
 	"testing"
 	"time"
 )

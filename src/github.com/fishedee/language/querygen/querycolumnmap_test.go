@@ -19,6 +19,11 @@ func TestQueryColumnMap(t *testing.T) {
 		-2: User{UserId: -2},
 		3:  User{UserId: 3},
 	})
+	AssertEqual(t, QueryColumnMap(data, "[]UserId"), map[int][]User{
+		1:  []User{User{UserId: 1}},
+		-2: []User{User{UserId: -2}},
+		3:  []User{User{UserId: 3}},
+	})
 	AssertEqual(t, QueryColumnMap([]int{5, 6, 8, 8, 0, 6}, "."), map[int]int{
 		5: 5,
 		6: 6,
@@ -63,5 +68,37 @@ func BenchmarkQueryColumnMapReflect(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i != b.N; i++ {
 		QueryColumnMap(data, "Age")
+	}
+}
+
+func BenchmarkQueryColumnMapSliceHand(b *testing.B) {
+	data := initQueryColumnMapData()
+
+	b.ResetTimer()
+	for i := 0; i != b.N; i++ {
+		newData := make(map[int][]User, len(data))
+		for _, single := range data {
+			temp := newData[single.UserId]
+			temp = append(temp, single)
+			newData[single.UserId] = temp
+		}
+	}
+}
+
+func BenchmarkQueryColumnMapSliceMacro(b *testing.B) {
+	data := initQueryColumnMapData()
+
+	b.ResetTimer()
+	for i := 0; i != b.N; i++ {
+		QueryColumnMap(data, "[]UserId")
+	}
+}
+
+func BenchmarkQueryColumnMapSliceReflect(b *testing.B) {
+	data := initQueryColumnMapData()
+
+	b.ResetTimer()
+	for i := 0; i != b.N; i++ {
+		QueryColumnMap(data, "[]Age")
 	}
 }

@@ -12,6 +12,11 @@ func QueryColumnMapGen(request queryGenRequest) *queryGenResponse {
 	//解析第二个参数
 	secondArgValue := getContantStringValue(line, args[1].Value)
 	column := strings.Trim(secondArgValue, " ")
+	isColumnMapSlice := false
+	if len(column) >= 2 && column[0:2] == "[]" {
+		column = column[2:]
+		isColumnMapSlice = true
+	}
 
 	//解析第一个参数
 	firstArgSlice := getSliceType(line, args[0].Type)
@@ -28,12 +33,23 @@ func QueryColumnMapGen(request queryGenRequest) *queryGenResponse {
 	setImportPackage(line, firstArgElem, importPackage)
 	setImportPackage(line, columnArgType, importPackage)
 	argumentDefine := getFunctionArgumentCode(line, args, []bool{false, true})
-	funcBody := excuteTemplate(queryColumnMapFuncTmpl, map[string]string{
-		"signature":              signature,
-		"firstArgElemType":       getTypeDeclareCode(line, firstArgElem),
-		"firstArgElemColumnType": getTypeDeclareCode(line, columnArgType),
-		"columnExtract":          columnExtract,
-	})
+	var funcBody string
+	if isColumnMapSlice == false {
+		funcBody = excuteTemplate(queryColumnMapFuncTmpl, map[string]string{
+			"signature":              signature,
+			"firstArgElemType":       getTypeDeclareCode(line, firstArgElem),
+			"firstArgElemColumnType": getTypeDeclareCode(line, columnArgType),
+			"columnExtract":          columnExtract,
+		})
+	} else {
+		funcBody = excuteTemplate(queryGroupFuncTmpl, map[string]string{
+			"signature":        signature,
+			"isFunctorGroup":   "false",
+			"firstArgElemType": getTypeDeclareCode(line, firstArgElem),
+			"columnType":       getTypeDeclareCode(line, columnArgType),
+			"columnExtract":    columnExtract,
+		})
+	}
 	initBody := excuteTemplate(queryColumnMapInitTmpl, map[string]string{
 		"signature":      signature,
 		"argumentDefine": argumentDefine,
@@ -59,7 +75,8 @@ func init() {
 		dataIn := data.([]{{ .firstArgElemType }})
 		result := make(map[{{ .firstArgElemColumnType }}]{{ .firstArgElemType }},len(dataIn))
 
-		for _,single := range dataIn{
+		for i := len(dataIn) - 1 ;i >= 0 ; i--{
+			single := dataIn[i]
 			result[single{{ .columnExtract }}] = single
 		}
 		return result

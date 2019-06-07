@@ -1,7 +1,8 @@
-package language
+package language_test
 
 import (
 	"fmt"
+	. "github.com/fishedee/language"
 	"reflect"
 	"testing"
 	"time"

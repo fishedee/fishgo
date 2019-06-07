@@ -21,6 +21,7 @@ type User struct {
 type Admin struct {
 	AdminId int
 	Level   int
+	IsMale  bool
 }
 
 type AdminUser struct {
@@ -49,14 +50,19 @@ func logic() {
 	})
 	QuerySort([]User{}, "UserId desc,Name asc,CreateTime asc")
 	QuerySort([]User{}, "UserId asc")
+	QuerySort([]Admin{}, "IsMale asc")
 	QuerySort([]int{}, ". desc")
 	QueryColumnMap([]User{}, "UserId")
+	QueryColumnMap([]User{}, "[]UserId")
 	QueryColumnMap([]int{}, ".")
 	QueryGroup([]User{}, "UserId", func(user []User) Department {
 		return Department{}
 	})
 	QueryGroup([]User{}, "CreateTime", func(user []User) Department {
 		return Department{}
+	})
+	QueryGroup([]User{}, "CreateTime", func(user []User) []Department {
+		return []Department{}
 	})
 	QueryGroup([]int{}, ".", func(ids []int) Department {
 		users := QuerySelect(ids, func(id int) User {

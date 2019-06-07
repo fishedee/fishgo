@@ -1,6 +1,7 @@
-package language
+package language_test
 
 import (
+	. "github.com/fishedee/language"
 	"testing"
 )
 
@@ -56,28 +57,28 @@ func getLastStackTraceLine(e Exception) string {
 
 func TestCatchStack1(t *testing.T) {
 	defer Catch(func(e Exception) {
-		AssertEqual(t, getLastStackTraceLine(e), "exception_test.go:61")
+		AssertEqual(t, getLastStackTraceLine(e), "exception_test.go:62")
 	})
 	Throw(1, "test1")
 }
 
 func TestCatchStack2(t *testing.T) {
 	defer CatchCrash(func(e Exception) {
-		AssertEqual(t, getLastStackTraceLine(e), "exception_test.go:68")
+		AssertEqual(t, getLastStackTraceLine(e), "exception_test.go:69")
 	})
 	Throw(1, "test2")
 }
 
 func TestCatchStack3(t *testing.T) {
 	defer CatchCrash(func(e Exception) {
-		AssertEqual(t, getLastStackTraceLine(e), "exception_test.go:75")
+		AssertEqual(t, getLastStackTraceLine(e), "exception_test.go:76")
 	})
 	panic("test3")
 }
 
 func TestCatchStack4(t *testing.T) {
 	defer CatchCrash(func(e Exception) {
-		AssertEqual(t, getLastStackTraceLine(e), "exception_test.go:85")
+		AssertEqual(t, getLastStackTraceLine(e), "exception_test.go:86")
 	})
 	defer Catch(func(e Exception) {
 		AssertEqual(t, "should not be here!", false)
@@ -87,7 +88,7 @@ func TestCatchStack4(t *testing.T) {
 
 func TestCatchStack5(t *testing.T) {
 	defer CatchCrash(func(e Exception) {
-		AssertEqual(t, getLastStackTraceLine(e), "exception_test.go:95")
+		AssertEqual(t, getLastStackTraceLine(e), "exception_test.go:96")
 	})
 	defer Catch(func(e Exception) {
 		panic(&e)
@@ -97,7 +98,7 @@ func TestCatchStack5(t *testing.T) {
 
 func TestCatchStack6(t *testing.T) {
 	defer Catch(func(e Exception) {
-		AssertEqual(t, getLastStackTraceLine(e), "exception_test.go:105")
+		AssertEqual(t, getLastStackTraceLine(e), "exception_test.go:106")
 	})
 	defer Catch(func(e Exception) {
 		panic(&e)
@@ -107,7 +108,7 @@ func TestCatchStack6(t *testing.T) {
 
 func TestCatchStack7(t *testing.T) {
 	defer CatchCrash(func(e Exception) {
-		AssertEqual(t, getLastStackTraceLine(e), "exception_test.go:115")
+		AssertEqual(t, getLastStackTraceLine(e), "exception_test.go:116")
 	})
 	defer CatchCrash(func(e Exception) {
 		panic(&e)

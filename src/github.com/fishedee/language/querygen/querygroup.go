@@ -2,6 +2,7 @@ package main
 
 import (
 	. "github.com/fishedee/language"
+	"go/types"
 	"html/template"
 	"strings"
 )
@@ -38,19 +39,31 @@ func QueryGroupGen(request queryGenRequest) *queryGenResponse {
 	if hasQueryGroupGenerate[signature] == true {
 		return nil
 	}
+	isSliceReturn := ""
+	var returnElemType types.Type
+	returnSliceType, isSlice := thirdArgFuncReturn[0].(*types.Slice)
+	if isSlice {
+		isSliceReturn = "..."
+		returnElemType = returnSliceType.Elem()
+	} else {
+		isSliceReturn = ""
+		returnElemType = thirdArgFuncReturn[0]
+	}
 	hasQueryGroupGenerate[signature] = true
 	importPackage := map[string]bool{}
 	setImportPackage(line, firstArgSliceElem, importPackage)
-	setImportPackage(line, thirdArgFuncReturn[0], importPackage)
+	setImportPackage(line, returnElemType, importPackage)
 	setImportPackage(line, groupFieldType, importPackage)
 	argumentDefine := getFunctionArgumentCode(line, args, []bool{false, true, false})
 	funcBody := excuteTemplate(queryGroupFuncTmpl, map[string]string{
 		"signature":          signature,
+		"isFunctorGroup":     "true",
 		"firstArgElemType":   getTypeDeclareCode(line, firstArgSliceElem),
 		"thirdArgType":       getTypeDeclareCode(line, thirdArgFunc),
-		"thirdArgReturnType": getTypeDeclareCode(line, thirdArgFuncReturn[0]),
+		"thirdArgReturnType": getTypeDeclareCode(line, returnElemType),
 		"columnType":         getTypeDeclareCode(line, groupFieldType),
 		"columnExtract":      groupFieldExtract,
+		"isSliceReturn":      isSliceReturn,
 	})
 	initBody := excuteTemplate(queryGroupInitTmpl, map[string]string{
 		"signature":      signature,
@@ -73,13 +86,17 @@ var (
 func init() {
 	var err error
 	queryGroupFuncTmpl, err = template.New("name").Parse(`
-	func queryGroup_{{ .signature }}(data interface{},groupType string,groupFunctor interface{})interface{}{
-		dataIn := data.([]{{ .firstArgElemType }})
-		groupFunctorIn := groupFunctor.({{ .thirdArgType }})
+	 {{if eq .isFunctorGroup "true"}}` +
+		"func queryGroup_{{ .signature }}(data interface{},groupType string,groupFunctor interface{})interface{}{\n" +
+		`{{else}}` +
+		"func queryColumnMap_{{ .signature }}(data interface{},column string)interface{}{\n" +
+		`{{end}}dataIn := data.([]{{ .firstArgElemType }})
 		bufferData := make([]{{ .firstArgElemType }},len(dataIn),len(dataIn))
 		mapData := make(map[{{ .columnType }}]int,len(dataIn))
+		{{if eq .isFunctorGroup "true"}}groupFunctorIn := groupFunctor.({{ .thirdArgType }})
 		result := make([]{{ .thirdArgReturnType}},0,len(dataIn))
-
+		{{else}}result := make(map[{{ .columnType }}][]{{ .firstArgElemType}},len(dataIn))
+		{{end}}
 		length := len(dataIn)
 		nextData := make([]int, length, length)
 		for i := 0; i != length; i++ {
@@ -108,10 +125,13 @@ func init() {
 			bufferData[k] = dataIn[j]
 			k++
 			nextData[j] = 0
+			{{if eq .isFunctorGroup "true"}}
 			single := groupFunctorIn(bufferData[kbegin:k])
-			result = append(result,single)
+			result = append(result,single{{ .isSliceReturn }})
+			{{else}}
+			result[bufferData[kbegin]{{ .columnExtract }}] = bufferData[kbegin:k]
+			{{end}}
 		}
-
 		return result
 	}
 	`)
