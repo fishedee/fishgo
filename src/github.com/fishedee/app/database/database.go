@@ -170,6 +170,7 @@ func NewDatabase(config DatabaseConfig) (Database, error) {
 		config.MaxIdleConnection = 100
 	}
 	tempDb.SetMaxIdleConns(config.MaxIdleConnection)
+	tempDb.DB().SetConnMaxLifetime(time.Hour * 7)
 	tempDb.Ping()
 	return &databaseImplement{
 		Engine: tempDb,
