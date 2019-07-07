@@ -235,3 +235,6 @@
 [submodule "src/github.com/dgrijalva/jwt-go"]
 	path = src/github.com/dgrijalva/jwt-go
 	url = git@github.com:dgrijalva/jwt-go.git
+[submodule "src/github.com/axgle/mahonia"]
+	path = src/github.com/axgle/mahonia
+	url = git@github.com:axgle/mahonia.git
