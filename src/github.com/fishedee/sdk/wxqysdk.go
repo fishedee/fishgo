@@ -31,22 +31,22 @@ type WxQySdkUploadMediaResult struct {
 }
 
 type WxQySdkSendTextMessage struct {
-	Content string `json:"content"`
+	Content string `json:"content,omitempty"`
 }
 
 type WxQySdkSendImageMessage struct {
-	MediaId string `json:"media_id"`
+	MediaId string `json:"media_id,omitempty"`
 }
 
 type WxQySdkSendNewsArticleMessage struct {
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	Url         string `json:"url"`
-	PicUrl      string `json:"picurl"`
+	Title       string `json:"title,omitempty"`
+	Description string `json:"description,omitempty"`
+	Url         string `json:"url,omitempty"`
+	PicUrl      string `json:"picurl,omitempty"`
 }
 
 type WxQySdkSendNewsMessage struct {
-	Articles []WxQySdkSendNewsArticleMessage `json:"articles"`
+	Articles []WxQySdkSendNewsArticleMessage `json:"articles,omitempty"`
 }
 
 type WxQySdkSendMessage struct {
@@ -54,14 +54,14 @@ type WxQySdkSendMessage struct {
 	ToParty string `json:"toparty,omitempty"`
 	ToTag   int    `json:"totag,omitempty"`
 	MsgType string `json:"msgtype"`
-	Safe    int    `json:"safe"`
+	Safe    int    `json:"safe,omitempty"`
 	AgentId int    `json:"agentid"`
 	//文本消息
 	Text WxQySdkSendTextMessage `json:"text,omitempty"`
 	//图片消息
-	Image WxSdkSendImageMessage `json:"image,omitempty"`
+	Image WxQySdkSendImageMessage `json:"image,omitempty"`
 	//图文消息
-	News WxQySdkSendNewsMessage `json:"image,omitempty"`
+	News WxQySdkSendNewsMessage `json:"news,omitempty"`
 }
 
 type WxQySdkSendMessageResult struct {
@@ -184,7 +184,7 @@ func (this *WxQySdk) SendMessage(message WxQySdkSendMessage) (WxQySdkSendMessage
 	message.AgentId = this.AgentId
 	err := this.apiJson("POST", "/cgi-bin/message/send", map[string]string{
 		"access_token": this.AccessToken,
-	}, "json", message, &result)
+	}, "", message, &result)
 	if err != nil {
 		return WxQySdkSendMessageResult{}, err
 	}
