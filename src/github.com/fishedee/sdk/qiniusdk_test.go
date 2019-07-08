@@ -106,8 +106,8 @@ func newQiniuSdk() QiniuSdk {
 		panic(err)
 	}
 	return QiniuSdk{
-		data.Qiniu.AccessKey,
-		data.Qiniu.SecretKey,
+		AccessKey: data.Qiniu.AccessKey,
+		SecretKey: data.Qiniu.SecretKey,
 	}
 }
 
