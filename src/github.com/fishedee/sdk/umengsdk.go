@@ -72,8 +72,10 @@ type UmengAndroidPolicy struct {
 
 type UmengAndroid struct {
 	UmengCommon
-	Payload UmengAndroidPayload `json:"payload"`
-	Policy  UmengAndroidPolicy  `json:"policy"`
+	Payload		UmengAndroidPayload `json:"payload"`
+	Policy		UmengAndroidPolicy  `json:"policy"`
+	Mipush		string				`json:"mipush"`
+	MiActivity	string				`json:"mi_activity"`
 }
 
 type UmengIOSPayload struct {
