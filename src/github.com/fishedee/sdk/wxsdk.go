@@ -339,6 +339,9 @@ type WxSdkReceiveMessage struct {
 	Latitude  float64
 	Longitude float64
 	Precision float64
+    //小程序
+    Query string
+    Scene int
 }
 
 type WxSdkSendImageMessage struct {
@@ -351,8 +354,8 @@ type WxSdkSendVoiceMessage struct {
 
 type WxSdkSendVideoMessage struct {
 	MediaId     string `xml:"MediaId,omitempty"`
-	Title       string `xml:"MediaId,title"`
-	Description string `xml:"MediaId,description"`
+	Title       string `xml:"Title,omitempty"`
+	Description string `xml:"Description,omitempty"`
 }
 
 type WxSdkSendMusicMessage struct {
