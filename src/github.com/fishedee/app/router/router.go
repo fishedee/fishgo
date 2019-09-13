@@ -337,12 +337,17 @@ func (this *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type routerConfig struct {
+	method   int
+	priority int
+	path     string
+	handler  interface{}
+}
 type RouterFactory struct {
 	basePath   string
 	middleware []RouterMiddleware
-	tree       map[string]routerFactoryPathInfo
+	config     []routerConfig
 	group      []*RouterFactory
-	maxSegment int
 }
 
 type RouterMiddlewareContext struct {
@@ -393,9 +398,7 @@ func newRouterFactory(basePath string) *RouterFactory {
 	routerFactory := &RouterFactory{}
 	routerFactory.basePath = basePath
 	routerFactory.middleware = []RouterMiddleware{}
-	routerFactory.tree = map[string]routerFactoryPathInfo{}
 	routerFactory.group = []*RouterFactory{}
-	routerFactory.maxSegment = 0
 	return routerFactory
 }
 
@@ -404,86 +407,13 @@ func (this *RouterFactory) Use(middleware RouterMiddleware) *RouterFactory {
 	return this
 }
 
-func (this *RouterFactory) changeUrlPrefix(priority int, path string, handler interface{}) (int, string, interface{}) {
-	//过滤非url逻辑
-	if priority != 1 {
-		return priority, path, handler
-	}
-
-	//过滤前缀url逻辑
-	pathInfo := Explode(path, "/")
-
-	var singlePathIndex = 0
-	for ; singlePathIndex != len(pathInfo); singlePathIndex++ {
-		if pathInfo[singlePathIndex][0] == ':' {
-			break
-		}
-	}
-	if singlePathIndex == len(pathInfo) {
-		return priority, path, handler
-	}
-
-	//处理前缀url逻辑
-	urlPrefixHandler := &routerFactoryUrlPrefixHandler{
-		param:   map[int]string{},
-		handler: handler,
-	}
-	path = Implode(pathInfo[0:singlePathIndex], "/")
-	if len(path) != 0 {
-		path += "/"
-	}
-	for ; singlePathIndex != len(pathInfo); singlePathIndex++ {
-		if pathInfo[singlePathIndex][0] != ':' {
-			panic("invalid path : " + path)
-		}
-		urlPrefixHandler.param[singlePathIndex] = pathInfo[singlePathIndex][1:]
-	}
-
-	if len(pathInfo) > this.maxSegment {
-		this.maxSegment = len(pathInfo)
-	}
-	return 2, path, urlPrefixHandler
-}
-
-func (this *RouterFactory) addSingleRoute(method int, priority int, path string, handler interface{}) {
-	//处理path
-	pathInfo := Explode(this.basePath+"/"+path, "/")
-	path = Implode(pathInfo, "/")
-	if len(path) != 0 {
-		path += "/"
-	}
-
-	//处理特殊的url前缀逻辑
-	priority, path, handler = this.changeUrlPrefix(priority, path, handler)
-
-	treeInfo, isExist := this.tree[path]
-	if isExist == false {
-		treeInfo = routerFactoryPathInfo{}
-		this.tree[path] = treeInfo
-	}
-	methodInfo, isExist := treeInfo[method]
-	if isExist == false {
-		methodInfo = &routerFactoryHandler{
-			urlExactHandler:       nil,
-			urlPrefixHandler:      map[int]*routerFactoryUrlPrefixHandler{},
-			staticPrefixHandler:   nil,
-			notFoundPrefixHandler: nil,
-		}
-		treeInfo[method] = methodInfo
-	}
-	if priority == 1 {
-		methodInfo.urlExactHandler = handler
-	} else if priority == 2 {
-		methodInfo.urlPrefixHandler[len(pathInfo)] = handler.(*routerFactoryUrlPrefixHandler)
-	} else if priority == 3 {
-		methodInfo.staticPrefixHandler = handler
-	} else if priority == 4 {
-		methodInfo.notFoundPrefixHandler = handler
-	}
-}
-
 func (this *RouterFactory) addRoute(method int, priority int, path string, handler interface{}) {
-	this.addSingleRoute(method, priority, path, handler)
+	this.config = append(this.config, routerConfig{
+		method:   method,
+		priority: priority,
+		path:     path,
+		handler:  handler,
+	})
 }
 
 func (this *RouterFactory) HEAD(path string, handler interface{}) *RouterFactory {
@@ -559,7 +489,85 @@ func (this *RouterFactory) Group(basePath string, handler func(r *RouterFactory)
 	return this
 }
 
-func (this *RouterFactory) createHandler(middlewares []RouterMiddleware, handler interface{}) routerFactoryHandlerFunc {
+func changeUrlPrefix(maxSegment *int, priority int, path string, handler interface{}) (int, string, interface{}) {
+	//过滤非url逻辑
+	if priority != 1 {
+		return priority, path, handler
+	}
+
+	//过滤前缀url逻辑
+	pathInfo := Explode(path, "/")
+
+	var singlePathIndex = 0
+	for ; singlePathIndex != len(pathInfo); singlePathIndex++ {
+		if pathInfo[singlePathIndex][0] == ':' {
+			break
+		}
+	}
+	if singlePathIndex == len(pathInfo) {
+		return priority, path, handler
+	}
+
+	//处理前缀url逻辑
+	urlPrefixHandler := &routerFactoryUrlPrefixHandler{
+		param:   map[int]string{},
+		handler: handler,
+	}
+	path = Implode(pathInfo[0:singlePathIndex], "/")
+	if len(path) != 0 {
+		path += "/"
+	}
+	for ; singlePathIndex != len(pathInfo); singlePathIndex++ {
+		if pathInfo[singlePathIndex][0] != ':' {
+			panic("invalid path : " + path)
+		}
+		urlPrefixHandler.param[singlePathIndex] = pathInfo[singlePathIndex][1:]
+	}
+
+	if len(pathInfo) > *maxSegment {
+		*maxSegment = len(pathInfo)
+	}
+	return 2, path, urlPrefixHandler
+}
+
+func addSingleRoute(tree map[string]routerFactoryPathInfo, maxSegment *int, basePath string, method int, priority int, path string, handler interface{}) {
+	//处理path
+	pathInfo := Explode(basePath+"/"+path, "/")
+	path = Implode(pathInfo, "/")
+	if len(path) != 0 {
+		path += "/"
+	}
+
+	//处理特殊的url前缀逻辑
+	priority, path, handler = changeUrlPrefix(maxSegment, priority, path, handler)
+
+	treeInfo, isExist := tree[path]
+	if isExist == false {
+		treeInfo = routerFactoryPathInfo{}
+		tree[path] = treeInfo
+	}
+	methodInfo, isExist := treeInfo[method]
+	if isExist == false {
+		methodInfo = &routerFactoryHandler{
+			urlExactHandler:       nil,
+			urlPrefixHandler:      map[int]*routerFactoryUrlPrefixHandler{},
+			staticPrefixHandler:   nil,
+			notFoundPrefixHandler: nil,
+		}
+		treeInfo[method] = methodInfo
+	}
+	if priority == 1 {
+		methodInfo.urlExactHandler = handler
+	} else if priority == 2 {
+		methodInfo.urlPrefixHandler[len(pathInfo)] = handler.(*routerFactoryUrlPrefixHandler)
+	} else if priority == 3 {
+		methodInfo.staticPrefixHandler = handler
+	} else if priority == 4 {
+		methodInfo.notFoundPrefixHandler = handler
+	}
+}
+
+func createHandler(middlewares []RouterMiddleware, handler interface{}) routerFactoryHandlerFunc {
 	middlewareContext, isOk := handler.(RouterMiddlewareContext)
 	if isOk == false {
 		middlewareContext = RouterMiddlewareContext{
@@ -580,47 +588,39 @@ func (this *RouterFactory) createHandler(middlewares []RouterMiddleware, handler
 	return routerFactoryHandlerFunc(httpHandler)
 }
 
-func (this *RouterFactory) buildTrie(trieTree *TrieTree, rootMiddleware []RouterMiddleware) {
-	middlewares := append(rootMiddleware, this.middleware...)
+func buildRouterMapRecursive(tree map[string]routerFactoryPathInfo, maxSegment *int, routerFactory *RouterFactory, rootMiddleware []RouterMiddleware) {
+	middlewares := []RouterMiddleware{}
+	middlewares = append(middlewares, rootMiddleware...)
+	middlewares = append(middlewares, routerFactory.middleware...)
 
-	for path, mapper := range this.tree {
-		for _, methodMapper := range mapper {
-			if methodMapper.urlExactHandler != nil {
-				methodMapper.urlExactHandler = this.createHandler(middlewares, methodMapper.urlExactHandler)
-			}
-			for _, urlPrefixHandler := range methodMapper.urlPrefixHandler {
-				urlPrefixHandler.handler = this.createHandler(middlewares, urlPrefixHandler.handler)
-			}
-			if methodMapper.staticPrefixHandler != nil {
-				methodMapper.staticPrefixHandler = this.createHandler(middlewares, methodMapper.staticPrefixHandler)
-			}
-			if methodMapper.notFoundPrefixHandler != nil {
-				methodMapper.notFoundPrefixHandler = this.createHandler(middlewares, methodMapper.notFoundPrefixHandler)
-			}
-		}
-		trieTree.Set(path, mapper)
+	for _, config := range routerFactory.config {
+		wrapperHandler := createHandler(middlewares, config.handler)
+		addSingleRoute(tree, maxSegment, routerFactory.basePath, config.method, config.priority, config.path, wrapperHandler)
 	}
 
-	for _, singleGroup := range this.group {
-		singleGroup.buildTrie(trieTree, middlewares)
+	for _, singleGroup := range routerFactory.group {
+		buildRouterMapRecursive(tree, maxSegment, singleGroup, middlewares)
 	}
 }
 
-func (this *RouterFactory) getMaxSegment() int {
-	maxSegment := this.maxSegment
-	for _, singleGroup := range this.group {
-		groupSegment := singleGroup.getMaxSegment()
-		if groupSegment > maxSegment {
-			maxSegment = groupSegment
-		}
+func buildRouterMap(routerFactory *RouterFactory) (map[string]routerFactoryPathInfo, int) {
+	tree := map[string]routerFactoryPathInfo{}
+	maxSegment := 0
+	buildRouterMapRecursive(tree, &maxSegment, routerFactory, []RouterMiddleware{})
+	return tree, maxSegment
+}
+
+func buildRouterTrie(tree map[string]routerFactoryPathInfo) *TrieTree {
+	trieTree := NewTrieTree()
+	for path, mapper := range tree {
+		trieTree.Set(path, mapper)
 	}
-	return maxSegment
+	return trieTree
 }
 
 func (this *RouterFactory) Create() *Router {
-	trieTree := NewTrieTree()
-	this.buildTrie(trieTree, []RouterMiddleware{})
-	maxSegment := this.getMaxSegment()
+	tree, maxSegment := buildRouterMap(this)
+	trieTree := buildRouterTrie(tree)
 	router := newRouter(trieTree, maxSegment)
 	return router
 }

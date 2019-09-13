@@ -27,7 +27,7 @@ func TestMetric(t *testing.T) {
 			metric.UpdateTimer("reqTime2", time.Second*2)
 
 			//计量Gauge
-			metric.UpdateGauge("reqTime3[path=/user/get]", 12)
+			metric.UpdateGauge("reqTime3?path=/user/get", 12)
 
 			fmt.Println("finish")
 		}

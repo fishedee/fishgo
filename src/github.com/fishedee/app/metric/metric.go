@@ -7,7 +7,7 @@ import (
 )
 
 type MetricConfig struct {
-	ConnectUrl string `config:"driver"`
+	ConnectUrl string `config:"connecturl"`
 	Database   string `config:"database"`
 	User       string `config:"user"`
 	Password   string `config:"password"`

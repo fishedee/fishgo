@@ -4,6 +4,7 @@ package metric
 
 import (
 	"fmt"
+	. "github.com/fishedee/encoding"
 	. "github.com/fishedee/language"
 	client "github.com/influxdata/influxdb1-client/v2"
 	"github.com/rcrowley/go-metrics"
@@ -84,20 +85,21 @@ func (r *reporter) getTags(name string) (string, map[string]string) {
 			result[k] = v
 		}
 	}
-	leftBraceIndex := strings.IndexByte(name, '[')
+	leftBraceIndex := strings.IndexByte(name, '?')
 	if leftBraceIndex == -1 {
 		return name, result
 	}
 	measurement := name[0:leftBraceIndex]
 	tagStr := name[leftBraceIndex+1:]
-	if len(tagStr) > 0 && tagStr[len(tagStr)-1] == ']' {
-		tagStr = tagStr[:len(tagStr)-1]
-	}
-	tagList := Explode(tagStr, ",")
+	tagList := Explode(tagStr, "&")
 	for _, tag := range tagList {
 		tagInfo := Explode(tag, "=")
 		if len(tagInfo) == 2 {
-			result[tagInfo[0]] = tagInfo[1]
+			var err error
+			result[tagInfo[0]], err = DecodeUrl(tagInfo[1])
+			if err != nil {
+				panic(err)
+			}
 		}
 	}
 	return measurement, result
