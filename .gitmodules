@@ -238,3 +238,9 @@
 [submodule "src/github.com/axgle/mahonia"]
 	path = src/github.com/axgle/mahonia
 	url = git@github.com:axgle/mahonia.git
+[submodule "src/github.com/rcrowley/go-metrics"]
+	path = src/github.com/rcrowley/go-metrics
+	url = git@github.com:rcrowley/go-metrics.git
+[submodule "src/github.com/influxdata/influxdb1-client"]
+	path = src/github.com/influxdata/influxdb1-client
+	url = git@github.com:influxdata/influxdb1-client.git
