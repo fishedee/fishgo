@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"fmt"
 	. "github.com/fishedee/app/metric"
 	. "github.com/fishedee/app/router"
 	. "github.com/fishedee/encoding"
@@ -29,7 +28,6 @@ func NewMetricMiddleware(metric Metric, tags map[string]string) RouterMiddleware
 		return RouterMiddlewareContext{
 			Data: prev.Data,
 			Handler: func(w http.ResponseWriter, r *http.Request, param RouterParam) {
-				fmt.Println("cu" + tagStr)
 				url := r.URL.Path
 				begin := time.Now()
 				defer func() {
