@@ -6,6 +6,18 @@ import (
 	"time"
 )
 
+type MetricCounter = metrics.Counter
+
+type MetricGauge = metrics.Gauge
+
+type MetricGaugeFloat64 = metrics.GaugeFloat64
+
+type MetricHistogram = metrics.Histogram
+
+type MetricMeter = metrics.Meter
+
+type MetricTimer = metrics.Timer
+
 type MetricConfig struct {
 	ConnectUrl string `config:"connecturl"`
 	Database   string `config:"database"`
@@ -14,11 +26,12 @@ type MetricConfig struct {
 }
 type Metric interface {
 	SetDefaultTags(defaultTags map[string]string)
-	IncCounter(name string, counter int64)
-	UpdateGauge(name string, data int64)
-	UpdateHistogram(name string, data int64)
-	MarkMeter(name string, data int64)
-	UpdateTimer(name string, duration time.Duration)
+	GetCounter(name string) MetricCounter
+	GetGauge(name string) MetricGauge
+	GetGaugeFloat64(name string) MetricGaugeFloat64
+	GetHistogram(name string) MetricHistogram
+	GetMeter(name string) MetricMeter
+	GetTimer(name string) MetricTimer
 
 	Run() error
 	Close()
@@ -42,42 +55,29 @@ func NewMetric(config MetricConfig) (Metric, error) {
 	}, nil
 }
 
-func (this *metricImplement) IncCounter(name string, data int64) {
-	counter := metrics.GetOrRegisterCounter(name, this.registry)
-
-	counter.Inc(data)
+func (this *metricImplement) GetCounter(name string) metrics.Counter {
+	return metrics.GetOrRegisterCounter(name, this.registry)
 }
 
-func (this *metricImplement) UpdateGauge(name string, data int64) {
-	gauge := metrics.GetOrRegisterGauge(name, this.registry)
-
-	gauge.Update(data)
+func (this *metricImplement) GetGauge(name string) metrics.Gauge {
+	return metrics.GetOrRegisterGauge(name, this.registry)
 }
 
-func (this *metricImplement) UpdateGaugeFloat64(name string, data float64) {
-	gauge := metrics.GetOrRegisterGaugeFloat64(name, this.registry)
-
-	gauge.Update(data)
+func (this *metricImplement) GetGaugeFloat64(name string) metrics.GaugeFloat64 {
+	return metrics.GetOrRegisterGaugeFloat64(name, this.registry)
 }
 
-func (this *metricImplement) UpdateHistogram(name string, data int64) {
+func (this *metricImplement) GetHistogram(name string) metrics.Histogram {
 	s := metrics.NewExpDecaySample(1028, 0.015)
-
-	histogram := metrics.GetOrRegisterHistogram(name, this.registry, s)
-
-	histogram.Update(data)
+	return metrics.GetOrRegisterHistogram(name, this.registry, s)
 }
 
-func (this *metricImplement) MarkMeter(name string, data int64) {
-	meter := metrics.GetOrRegisterMeter(name, this.registry)
-
-	meter.Mark(data)
+func (this *metricImplement) GetMeter(name string) metrics.Meter {
+	return metrics.GetOrRegisterMeter(name, this.registry)
 }
 
-func (this *metricImplement) UpdateTimer(name string, data time.Duration) {
-	timer := metrics.GetOrRegisterTimer(name, this.registry)
-
-	timer.Update(data)
+func (this *metricImplement) GetTimer(name string) metrics.Timer {
+	return metrics.GetOrRegisterTimer(name, this.registry)
 }
 
 func (this *metricImplement) SetDefaultTags(defaultTags map[string]string) {

@@ -2,6 +2,7 @@ package middleware
 
 import (
 	. "github.com/fishedee/app/log"
+	. "github.com/fishedee/app/metric"
 	. "github.com/fishedee/app/render"
 	. "github.com/fishedee/app/router"
 	. "github.com/fishedee/app/session"
@@ -11,7 +12,12 @@ import (
 	"strings"
 )
 
-func NewEasyMiddleware(log Log, validatorFactory ValidatorFactory, sessionFactory SessionFactory, renderFactory RenderFactory) RouterMiddleware {
+func NewEasyMiddleware(log Log, validatorFactory ValidatorFactory, sessionFactory SessionFactory, renderFactory RenderFactory, metric Metric) RouterMiddleware {
+	var serverError MetricCounter
+	if metric != nil {
+		serverError = metric.GetCounter("server.error")
+	}
+
 	return func(prev RouterMiddlewareContext) RouterMiddlewareContext {
 		lastHandler, isOk := prev.Handler.(func(v Validator, s Session) interface{})
 		if isOk == false {
@@ -93,6 +99,9 @@ func NewEasyMiddleware(log Log, validatorFactory ValidatorFactory, sessionFactor
 				var exception Exception
 				func() {
 					doException := func(e Exception) {
+						if serverError != nil {
+							serverError.Inc(1)
+						}
 						exception = e
 						log.Error("Buiness Error Code:[%d] Message:[%s]\nStackTrace:[%s]", e.GetCode(), e.GetMessage(), e.GetStackTrace())
 					}

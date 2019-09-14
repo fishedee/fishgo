@@ -567,7 +567,7 @@ func addSingleRoute(tree map[string]routerFactoryPathInfo, maxSegment *int, base
 	}
 }
 
-func createHandler(middlewares []RouterMiddleware, handler interface{}) routerFactoryHandlerFunc {
+func createHandler(middlewares []RouterMiddleware, handler interface{}, path string) routerFactoryHandlerFunc {
 	middlewareContext, isOk := handler.(RouterMiddlewareContext)
 	if isOk == false {
 		middlewareContext = RouterMiddlewareContext{
@@ -575,6 +575,8 @@ func createHandler(middlewares []RouterMiddleware, handler interface{}) routerFa
 			Handler: handler,
 		}
 	}
+	//设置默认的path参数
+	middlewareContext.Data["path"] = path
 	middlewares = append(middlewares, NewNoParamMiddleware())
 	curContext := middlewareContext
 	for i := len(middlewares) - 1; i >= 0; i-- {
@@ -588,13 +590,20 @@ func createHandler(middlewares []RouterMiddleware, handler interface{}) routerFa
 	return routerFactoryHandlerFunc(httpHandler)
 }
 
+func getRegularPath(basePath string, path string) string {
+	pathInfo := Explode(basePath+"/"+path, "/")
+	path = Implode(pathInfo, "/")
+	return "/" + path
+}
+
 func buildRouterMapRecursive(tree map[string]routerFactoryPathInfo, maxSegment *int, routerFactory *RouterFactory, rootMiddleware []RouterMiddleware) {
 	middlewares := []RouterMiddleware{}
 	middlewares = append(middlewares, rootMiddleware...)
 	middlewares = append(middlewares, routerFactory.middleware...)
 
 	for _, config := range routerFactory.config {
-		wrapperHandler := createHandler(middlewares, config.handler)
+		inputPath := getRegularPath(routerFactory.basePath, config.path)
+		wrapperHandler := createHandler(middlewares, config.handler, inputPath)
 		addSingleRoute(tree, maxSegment, routerFactory.basePath, config.method, config.priority, config.path, wrapperHandler)
 	}
 

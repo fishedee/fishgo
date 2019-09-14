@@ -18,16 +18,20 @@ func TestMetric(t *testing.T) {
 	}
 
 	go func() {
+		counter := metric.GetCounter("reqTime")
+		timer := metric.GetTimer("reqTime2")
+		gauge := metric.GetGauge("reqTime3?path=/user/get")
+
 		for i := 0; i != 10; i++ {
 			time.Sleep(time.Millisecond * 100)
 			//递增计数器
-			metric.IncCounter("reqTime", 1)
+			counter.Inc(1)
 
 			//计量时间与次数
-			metric.UpdateTimer("reqTime2", time.Second*2)
+			timer.Update(time.Second * 2)
 
 			//计量Gauge
-			metric.UpdateGauge("reqTime3?path=/user/get", 12)
+			gauge.Update(12)
 
 			fmt.Println("finish")
 		}
