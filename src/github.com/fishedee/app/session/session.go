@@ -13,14 +13,14 @@ import (
 )
 
 type Session interface {
-	Set(key, value interface{}) error
-	MustSet(key, value interface{})
+	Set(key string, value interface{}) error
+	MustSet(key string, value interface{})
 
-	Get(key interface{}) (interface{}, error)
-	MustGet(key interface{}) interface{}
+	Get(key string) (interface{}, error)
+	MustGet(key string) interface{}
 
-	Delete(key interface{}) error
-	MustDelete(key interface{})
+	Delete(key string) error
+	MustDelete(key string)
 
 	SessionId() string
 
@@ -106,7 +106,7 @@ func newSession(manager *session.Manager, config SessionConfig, w http.ResponseW
 	return result
 }
 
-func (this *sessionImplement) Set(key, value interface{}) error {
+func (this *sessionImplement) Set(key string, value interface{}) error {
 	if this.store == nil {
 		return errors.New("you should begin session first")
 	}
@@ -114,14 +114,14 @@ func (this *sessionImplement) Set(key, value interface{}) error {
 	return nil
 }
 
-func (this *sessionImplement) MustSet(key, value interface{}) {
+func (this *sessionImplement) MustSet(key string, value interface{}) {
 	err := this.Set(key, value)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func (this *sessionImplement) Get(key interface{}) (interface{}, error) {
+func (this *sessionImplement) Get(key string) (interface{}, error) {
 	if this.store == nil {
 		return nil, errors.New("you should begin session first")
 	}
@@ -129,7 +129,7 @@ func (this *sessionImplement) Get(key interface{}) (interface{}, error) {
 	return result, nil
 }
 
-func (this *sessionImplement) MustGet(key interface{}) interface{} {
+func (this *sessionImplement) MustGet(key string) interface{} {
 	result, err := this.Get(key)
 	if err != nil {
 		panic(err)
@@ -137,7 +137,7 @@ func (this *sessionImplement) MustGet(key interface{}) interface{} {
 	return result
 }
 
-func (this *sessionImplement) Delete(key interface{}) error {
+func (this *sessionImplement) Delete(key string) error {
 	if this.store == nil {
 		return errors.New("you should begin session first")
 	}
@@ -145,7 +145,7 @@ func (this *sessionImplement) Delete(key interface{}) error {
 	return nil
 }
 
-func (this *sessionImplement) MustDelete(key interface{}) {
+func (this *sessionImplement) MustDelete(key string) {
 	err := this.Delete(key)
 	if err != nil {
 		panic(err)
