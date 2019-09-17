@@ -53,6 +53,9 @@ func TestProxy(t *testing.T) {
 	testLogOut := ""
 	proxy := NewProxy()
 	proxy.Hook(func(ctx ProxyContext, origin reflect.Value) reflect.Value {
+		if ctx.MethodName == "Add" {
+			return origin
+		}
 		return reflect.MakeFunc(origin.Type(), func(in []reflect.Value) []reflect.Value {
 			testLogOut += "1"
 			result := origin.Call(in)
@@ -86,11 +89,7 @@ func TestProxy(t *testing.T) {
 		return &UserAo{}
 	}).(func(p Proxy) IUserAo)
 	userAo2 := userAoCreator(proxy)
-	result2 := userAo2.Get(10003)
-	AssertEqual(t, result2, User{
-		UserId: 123,
-		Age:    789,
-		Name:   "fish",
-	})
-	AssertEqual(t, testLogOut, "1234")
+	result2 := userAo2.Add(User{})
+	AssertEqual(t, result2, 456)
+	AssertEqual(t, testLogOut, "23")
 }

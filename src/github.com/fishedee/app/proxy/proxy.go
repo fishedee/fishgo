@@ -10,8 +10,9 @@ var (
 )
 
 type ProxyContext struct {
-	PkgPath string
-	Name    string
+	PkgPath       string
+	InterfaceName string
+	MethodName    string
 }
 
 type ProxyHooker = func(ctx ProxyContext, origin reflect.Value) reflect.Value
@@ -54,7 +55,8 @@ func (this *proxyImplement) Proxy(originTarget interface{}) interface{} {
 type proxyMockInfo struct {
 	ProxyMethodIndex   int
 	ProxyMethodName    string
-	ProxyMethodPkgPath string
+	ProxyPkgPath       string
+	ProxyInterfaceName string
 	MockFieldIndex     []int
 }
 
@@ -102,7 +104,8 @@ func RegisterProxyMock(proxyTarget interface{}) {
 		}
 		proxyInfos = append(proxyInfos, proxyMockInfo{
 			ProxyMethodIndex:   i,
-			ProxyMethodPkgPath: proxySingleMethod.PkgPath,
+			ProxyPkgPath:       proxyType.PkgPath(),
+			ProxyInterfaceName: proxyType.Name(),
 			ProxyMethodName:    proxySingleMethod.Name,
 			MockFieldIndex:     mockMethodField.Index,
 		})
@@ -114,8 +117,9 @@ func RegisterProxyMock(proxyTarget interface{}) {
 
 		for _, proxyInfo := range proxyInfos {
 			ctx := ProxyContext{
-				PkgPath: proxyInfo.ProxyMethodPkgPath,
-				Name:    proxyInfo.ProxyMethodName,
+				PkgPath:       proxyInfo.ProxyPkgPath,
+				InterfaceName: proxyInfo.ProxyInterfaceName,
+				MethodName:    proxyInfo.ProxyMethodName,
 			}
 			method := originTarget.Method(proxyInfo.ProxyMethodIndex)
 			for i := len(hookers) - 1; i >= 0; i-- {
