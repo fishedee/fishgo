@@ -15,27 +15,27 @@ type ProxyContext struct {
 	MethodName    string
 }
 
-type ProxyHooker = func(ctx ProxyContext, origin reflect.Value) reflect.Value
+type ProxyHook = func(ctx ProxyContext, origin reflect.Value) reflect.Value
 
-type ProxyHandler = func(originTarget reflect.Value, hookers []ProxyHooker) reflect.Value
+type ProxyHandler = func(originTarget reflect.Value, hookers []ProxyHook) reflect.Value
 
 type Proxy interface {
-	Hook(hooker ProxyHooker)
+	Hook(hooker ProxyHook)
 	Proxy(originTarget interface{}) interface{}
 	ProxyValue(originTarget reflect.Value) reflect.Value
 }
 
 type proxyImplement struct {
-	hookers []ProxyHooker
+	hookers []ProxyHook
 }
 
 func NewProxy() Proxy {
 	return &proxyImplement{
-		hookers: []ProxyHooker{},
+		hookers: []ProxyHook{},
 	}
 }
 
-func (this *proxyImplement) Hook(hooker ProxyHooker) {
+func (this *proxyImplement) Hook(hooker ProxyHook) {
 	this.hookers = append(this.hookers, hooker)
 }
 
@@ -111,7 +111,7 @@ func RegisterProxyMock(proxyTarget interface{}) {
 		})
 	}
 
-	proxyMock[proxyType] = func(originTarget reflect.Value, hookers []ProxyHooker) reflect.Value {
+	proxyMock[proxyType] = func(originTarget reflect.Value, hookers []ProxyHook) reflect.Value {
 		newMockValue := reflect.New(mockElemType)
 		newMockElemValue := newMockValue.Elem()
 

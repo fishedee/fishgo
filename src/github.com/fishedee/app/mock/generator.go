@@ -43,6 +43,14 @@ func generateSingleResult(data []FieldInfo) string {
 	return strings.Join(result, ",")
 }
 
+func getInterfaceName(typeName string) string {
+	return "I" + strings.ToUpper(typeName[0:1]) + typeName[1:]
+}
+
+func getMockName(typeName string) string {
+	return typeName + "Mock"
+}
+
 func generateSingleInterface(typeName string, methods []FunctionInfo) string {
 	funResult := []string{}
 	for _, method := range methods {
@@ -51,8 +59,7 @@ func generateSingleInterface(typeName string, methods []FunctionInfo) string {
 			"(" + generateSingleResult(method.results) + ")"
 		funResult = append(funResult, single)
 	}
-	typeName = strings.ToUpper(typeName[0:1]) + typeName[1:]
-	return "type I" + typeName + " interface{\n" + strings.Join(funResult, "\n") + "\n}\n"
+	return "type " + getInterfaceName(typeName) + " interface{\n" + strings.Join(funResult, "\n") + "\n}\n"
 }
 
 func generateSingleMock(typeName string, methods []FunctionInfo) string {
@@ -64,11 +71,11 @@ func generateSingleMock(typeName string, methods []FunctionInfo) string {
 			"(" + generateSingleResult(method.results) + ")"
 		funResult = append(funResult, single)
 	}
-	mockTypeStruct := "type " + typeName + "Mock struct{\n" + strings.Join(funResult, "\n") + "\n}\n"
+	mockTypeStruct := "type " + getMockName(typeName) + " struct{\n" + strings.Join(funResult, "\n") + "\n}\n"
 
 	methodResult := []string{}
 	for _, method := range methods {
-		single := "func ( this *" + typeName + "Mock)" +
+		single := "func ( this *" + getMockName(typeName) + ")" +
 			method.name +
 			"(" + generateSingleField(method.params) + ")" +
 			"(" + generateSingleResult(method.results) + "){\n"
@@ -100,6 +107,10 @@ func generateSingleType(typeName string, methodInfo generateTypeInfo) string {
 	result = append(result, generateSingleInterface(typeName, methods))
 	result = append(result, generateSingleMock(typeName, methods))
 	return strings.Join(result, "\n")
+}
+
+func generateSingleInit(typeName string) string {
+	return "RegisterProxyMock([]" + getInterfaceName(typeName) + "{&" + getMockName(typeName) + "{}})"
 }
 
 var dirDeclTypeCache map[string]map[string]bool
@@ -147,7 +158,7 @@ func generateSingleFileImport(data []ParserInfo, source string) (string, error) 
 		return "", err
 	}
 
-	//建立导入符号的映射
+	//建立导入符号的映射，key是类型的来源，ImportInfo是类型的来源
 	nameImport := map[string]ImportInfo{}
 	for _, singleParserInfo := range data {
 		for _, singleImport := range singleParserInfo.imports {
@@ -167,8 +178,10 @@ func generateSingleFileImport(data []ParserInfo, source string) (string, error) 
 				}
 			} else {
 				if singleImport.name != "" {
+					//import的路径带有重命名package的
 					nameImport[singleImport.name] = singleImport
 				} else {
+					//import的路径没有重命名package的
 					nameImport[path.Base(singleImport.path)] = singleImport
 				}
 			}
@@ -195,6 +208,9 @@ func generateSingleFileImport(data []ParserInfo, source string) (string, error) 
 			singleUseType == "error" {
 			continue
 		} else {
+			if singleUseType == "RegisterProxyMock" {
+				panic("ohno")
+			}
 			singleNameImport, ok := nameImport[singleUseType]
 			if ok {
 				result[singleNameImport.path] = singleNameImport
@@ -214,6 +230,9 @@ func generateSingleFileImport(data []ParserInfo, source string) (string, error) 
 			resultArray,
 			singleImportInfo.name+" \""+singleImportInfo.path+"\"",
 		)
+	}
+	if len(resultArray) != 0 {
+		resultArray = append(resultArray, ". \"github.com/fishedee/app/proxy\"")
 	}
 	return "import (" + strings.Join(resultArray, "\n") + ")\n", nil
 }
@@ -289,7 +308,18 @@ func generateSingleFileInterface(data []ParserInfo) (string, error) {
 		singleResult := generateSingleType(singleTypeInfo.name, singleTypeInfo.info)
 		result = append(result, singleResult)
 	}
-	return strings.Join(result, "\n"), nil
+
+	mockImplements := strings.Join(result, "\n")
+
+	result2 := []string{}
+	for _, singleTypeInfo := range typeInfoList {
+		singleResult := generateSingleInit(singleTypeInfo.name)
+		result2 = append(result2, singleResult)
+	}
+
+	initImplements := "func init(){\n" + strings.Join(result2, "\n") + "\n}\n"
+
+	return mockImplements + "\n" + initImplements, nil
 }
 
 func generateSingleFileContent(data []ParserInfo) (string, error) {
