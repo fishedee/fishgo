@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -28,6 +27,7 @@ type sqlTypeOperation struct {
 
 var (
 	sqlTypeOperationMap = sync.Map{}
+	commaCache          = []string{}
 )
 
 func extractResult(data interface{}, rows *gosql.Rows) error {
@@ -46,7 +46,7 @@ func genSql(query string, args []interface{}) (string, []interface{}, error) {
 	realArgs := make([]interface{}, 0, len(args))
 	argsIndex := 0
 	sqlBuilder := strings.Builder{}
-	tempArgSql := ""
+	sqlBuilder.Grow(len(query) * 2)
 	var err error
 	for {
 		index := strings.IndexByte(query, '?')
@@ -54,23 +54,24 @@ func genSql(query string, args []interface{}) (string, []interface{}, error) {
 			sqlBuilder.WriteString(query)
 			break
 		}
-		sqlBuilder.WriteString(query[0 : index-1])
+		sqlBuilder.WriteString(query[0:index])
+		sqlBuilder.WriteByte(' ')
 		query = query[index:]
 		if argsIndex >= len(args) {
 			return "", nil, errors.New(fmt.Sprintf("invalid ? index %v,%v", argsIndex, len(args)))
 		}
-		columnSql := ".column "
-		setValueSql := ".setValue "
+		columnSql := "?.column "
+		setValueSql := "?.setValue "
 		if len(query) >= len(columnSql) && query[0:len(columnSql)] == columnSql {
 			//提取column的name
-			query = query[len(columnSql)+1:]
+			query = query[len(columnSql):]
 			err = operation[argsIndex].column(&sqlBuilder)
 			if err != nil {
 				return "", nil, err
 			}
 		} else if len(query) >= len(setValueSql) && query[0:len(setValueSql)] == setValueSql {
 			//提取set sql
-			query = query[len(setValueSql)+1:]
+			query = query[len(setValueSql):]
 			realArgs, err = operation[argsIndex].setValue(args[argsIndex], realArgs, &sqlBuilder)
 			if err != nil {
 				return "", nil, err
@@ -83,6 +84,8 @@ func genSql(query string, args []interface{}) (string, []interface{}, error) {
 				return "", nil, err
 			}
 		}
+		argsIndex++
+		sqlBuilder.WriteByte(' ')
 	}
 	return sqlBuilder.String(), realArgs, nil
 }
@@ -91,20 +94,19 @@ func getSqlOperationFromInterface(i interface{}) sqlTypeOperation {
 	return getSqlOperation(reflect.TypeOf(i))
 }
 
-func getSqlOperation(t reflect.Type) (sqlTypeOperation, error) {
+func getSqlOperation(t reflect.Type) sqlTypeOperation {
 	result, isExist := sqlTypeOperationMap.Load(t)
 
 	if isExist == true {
 		return *(result.(*sqlTypeOperation))
 	}
 
-	newResult = initSqlOperation(t)
+	newResult := initSqlOperation(t)
 	sqlTypeOperationMap.Store(t, &newResult)
-
 	return newResult
 }
 
-func initSqlOperation(t reflect.Type) (sqlTypeOperation, error) {
+func initSqlOperation(t reflect.Type) sqlTypeOperation {
 	return sqlTypeOperation{
 		toArgs:     initSqlToArgs(t),
 		fromResult: initSqlFromResult(t),
@@ -144,24 +146,14 @@ func getStructPublicField(t reflect.Type) []sqlStructPublicField {
 		field := t.Field(i)
 		fieldName := field.Name
 		if fieldName[0] >= 'A' && fieldName[0] <= 'Z' {
+			fieldName = strings.ToLower(fieldName[0:1]) + fieldName[1:]
 			result = append(result, sqlStructPublicField{
-				name:  field.Name,
+				name:  fieldName,
 				index: field.Index,
 			})
 		}
 	}
-	sort.Sort(result, func(i int, j int) {
-		return result[i].name < result[j].name
-	})
 	return result
-}
-
-func getSqlComma(num int) string {
-	if num == 1 {
-		return "?"
-	} else {
-		return strings.Repeat("?,", num-1) + "?"
-	}
 }
 
 func initSqlToArgs(t reflect.Type) sqlToArgsType {
@@ -204,18 +196,19 @@ func initSqlToArgs(t reflect.Type) sqlToArgsType {
 			structHandler := structToArgs(t.Elem())
 
 			return func(value reflect.Value, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
+				var err error
 				length := value.Len()
 				for i := 0; i != length; i++ {
 					if i != 0 {
 						builder.WriteString(",(")
 					} else {
-						builder.WriteString("(")
+						builder.WriteByte('(')
 					}
 					in, err = structHandler(value.Index(i), in, builder)
 					if err != nil {
 						return nil, err
 					}
-					builder.WriteString(")")
+					builder.WriteByte(')')
 				}
 				return in, nil
 			}
@@ -241,24 +234,24 @@ func initSqlColumn(t reflect.Type) sqlColumnType {
 	tKind := getTypeKind(t)
 	if tKind == 5 {
 		tName := t.String()
-		return func(v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
-			return nil, errors.New(fmt.Sprintf("%v dos not support toArgs", tName))
+		return func(builder *strings.Builder) error {
+			return errors.New(fmt.Sprintf("%v dos not support column", tName))
 		}
 	}
 
 	structColumn := func(t reflect.Type) string {
 		fields := getStructPublicField(t)
 
-		buffer := strings.Buffer{}
-		for i, field := range filed {
+		builder := strings.Builder{}
+		for i, field := range fields {
 			if i != 0 {
-				buffer.WriteString(",")
+				builder.WriteByte(',')
 			}
-			buffer.WriteString("`")
-			buffer.WriteString(field.name)
-			buffer.WriteString("`")
+			builder.WriteByte('`')
+			builder.WriteString(field.name)
+			builder.WriteByte('`')
 		}
-		return buffer.String()
+		return builder.String()
 	}
 	var result = ""
 
@@ -275,5 +268,105 @@ func initSqlColumn(t reflect.Type) sqlColumnType {
 	return func(builder *strings.Builder) error {
 		builder.WriteString(result)
 		return nil
+	}
+}
+
+func initSqlFromResult(t reflect.Type) sqlFromResultType {
+	tKind := getTypeKind(t)
+	if tKind != 4 {
+		tName := t.String()
+		return func(v interface{}, rows *gosql.Rows) error {
+			return errors.New(fmt.Sprintf("%v dos not support fromResult", tName))
+		}
+	}
+	sliceType := t.Elem()
+	structType := sliceType.Elem()
+	structInfo := getStructPublicField(structType)
+	fieldInfoMap := map[string]sqlStructPublicField{}
+	for _, single := range structInfo {
+		fieldInfoMap[single.name] = single
+	}
+	return func(v interface{}, rows *gosql.Rows) error {
+		//配置列
+		columns, err := rows.Columns()
+		if err != nil {
+			return err
+		}
+		temp := reflect.New(structType).Elem()
+		tempScan := make([]interface{}, len(columns), len(columns))
+		for i, column := range columns {
+			fieldInfo, isExist := fieldInfoMap[column]
+			if isExist == false {
+				return errors.New(fmt.Sprintf("%v dos not have column %v", structType.String(), column))
+			}
+			tempScan[i] = temp.FieldByIndex(fieldInfo.index).Addr().Interface()
+		}
+
+		//写入数组
+		result := reflect.MakeSlice(sliceType, 0, 16)
+		for rows.Next() {
+			err := rows.Scan(tempScan...)
+			if err != nil {
+				return err
+			}
+			result = reflect.Append(result, temp)
+		}
+		reflect.ValueOf(v).Elem().Set(result)
+		return nil
+	}
+}
+
+func initSqlSetValue(t reflect.Type) sqlSetValueType {
+	tKind := getTypeKind(t)
+	if tKind != 1 && tKind != 2 {
+		tName := t.String()
+		return func(v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
+			return nil, errors.New(fmt.Sprintf("%v dos not support setValue", tName))
+		}
+	}
+	structSetValue := func(t reflect.Type) func(v reflect.Value, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
+		fields := getStructPublicField(t)
+		return func(v reflect.Value, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
+			for i, field := range fields {
+				if i != 0 {
+					builder.WriteByte(',')
+				}
+				builder.WriteByte('`')
+				builder.WriteString(field.name)
+				builder.WriteString("` = ? ")
+				in = append(in, v.FieldByIndex(field.index).Interface())
+			}
+			return in, nil
+		}
+	}
+
+	if tKind == 1 {
+		structSetValueHandler := structSetValue(t)
+		return func(v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
+			value := reflect.ValueOf(v)
+			return structSetValueHandler(value, in, builder)
+		}
+	} else {
+		structSetValueHandler := structSetValue(t.Elem())
+		return func(v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
+			value := reflect.ValueOf(v).Elem()
+			return structSetValueHandler(value, in, builder)
+		}
+	}
+}
+
+func getSqlComma(num int) string {
+	if num < len(commaCache) {
+		return commaCache[num]
+	} else {
+		return strings.Repeat("?,", num-1) + "?"
+	}
+}
+
+func init() {
+	commaCache := make([]string, 128, 128)
+	commaCache[1] = "?"
+	for i := 2; i != len(commaCache); i++ {
+		commaCache[i] = commaCache[i-1] + ",?"
 	}
 }

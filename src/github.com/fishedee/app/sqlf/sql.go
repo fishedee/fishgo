@@ -1,5 +1,6 @@
 package sqlf
 
+//FIXME 对时间的处理，对日志的处理，还有包名，针对sqlite3的单元测试
 import (
 	gosql "database/sql"
 	"time"
