@@ -29,6 +29,9 @@ type SqlfTx interface {
 	Commit() error
 	MustCommit()
 
+	Close() error
+	MustClose()
+
 	Rollback() error
 	MustRollback()
 }
@@ -167,9 +170,12 @@ func (this *dbImplement) Begin() (SqlfTx, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &txImplement{tx: tx,
-		isDebug: this.isDebug,
-		log:     this.log,
+	return &txImplement{
+		tx:          tx,
+		isDebug:     this.isDebug,
+		log:         this.log,
+		hasCommit:   false,
+		hasRollback: false,
 	}, nil
 }
 
@@ -221,9 +227,11 @@ func (this *resultImplement) MustRowsAffected() int64 {
 }
 
 type txImplement struct {
-	tx      *gosql.Tx
-	log     Log
-	isDebug bool
+	tx          *gosql.Tx
+	log         Log
+	isDebug     bool
+	hasCommit   bool
+	hasRollback bool
 }
 
 func (this *txImplement) Query(data interface{}, query string, args ...interface{}) error {
@@ -258,7 +266,7 @@ func (this *txImplement) Exec(query string, args ...interface{}) (SqlfResult, er
 	var execResult SqlfResult
 	sqlRunner := func() (string, error) {
 		sql, args, err := genSql(query, args)
-		if args != nil {
+		if err != nil {
 			return query, err
 		}
 
@@ -277,7 +285,7 @@ func (this *txImplement) Exec(query string, args ...interface{}) (SqlfResult, er
 }
 
 func (this *txImplement) MustExec(query string, args ...interface{}) SqlfResult {
-	result, err := this.Exec(query, args)
+	result, err := this.Exec(query, args...)
 	if err != nil {
 		panic(err)
 	}
@@ -285,7 +293,12 @@ func (this *txImplement) MustExec(query string, args ...interface{}) SqlfResult 
 }
 
 func (this *txImplement) Commit() error {
-	return this.tx.Commit()
+	err := this.tx.Commit()
+	if err != nil {
+		return err
+	}
+	this.hasCommit = true
+	return nil
 }
 
 func (this *txImplement) MustCommit() {
@@ -296,11 +309,30 @@ func (this *txImplement) MustCommit() {
 }
 
 func (this *txImplement) Rollback() error {
-	return this.tx.Rollback()
+	err := this.tx.Rollback()
+	if err != nil {
+		return err
+	}
+	this.hasRollback = true
+	return nil
 }
 
 func (this *txImplement) MustRollback() {
 	err := this.Rollback()
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (this *txImplement) Close() error {
+	if this.hasCommit == true || this.hasRollback == true {
+		return nil
+	}
+	return this.Rollback()
+}
+
+func (this *txImplement) MustClose() {
+	err := this.Close()
 	if err != nil {
 		panic(err)
 	}

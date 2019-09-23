@@ -42,9 +42,7 @@ type UserAdd struct {
 
 type UserMod UserAdd
 
-func TestStructType(t *testing.T) {
-	db := initDatabase()
-
+func testStructType(t *testing.T, db SqlfCommon) {
 	//初始化，查询为空
 	users := []User{}
 	db.MustQuery(&users, "select * from t_user")
@@ -107,8 +105,17 @@ func TestStructType(t *testing.T) {
 	})
 }
 
-func TestBuildInType(t *testing.T) {
+func TestStructType(t *testing.T) {
 	db := initDatabase()
+	testStructType(t, db)
+
+	db2 := initDatabase().MustBegin()
+	defer db2.MustClose()
+	testStructType(t, db2)
+	db2.MustCommit()
+}
+
+func testBuildInType(t *testing.T, db SqlfCommon) {
 	users := []User{}
 
 	//测试单个type类型
@@ -127,5 +134,124 @@ func TestBuildInType(t *testing.T) {
 		[]Decimal{"123", "456", "789", "0ab"},
 		[]time.Time{time.Unix(1, 0)},
 	)
+	AssertEqual(t, users, []User{})
+}
+
+func TestBuildInType(t *testing.T) {
+	db := initDatabase()
+	testBuildInType(t, db)
+
+	db2 := initDatabase().MustBegin()
+	defer db2.MustClose()
+	testBuildInType(t, db2)
+	db2.MustCommit()
+}
+
+func TestTxCommit(t *testing.T) {
+	db := initDatabase()
+
+	tx := db.MustBegin()
+
+	//添加一个数据
+	userAdd := UserAdd{
+		Name:      "bird",
+		Age:       56,
+		Money:     "33",
+		LoginTime: time.Unix(4, 0),
+	}
+	tx.MustExec("insert into t_user(?.column) values (?)", userAdd, userAdd)
+
+	tx.MustCommit()
+
+	var users []User
+
+	db.MustQuery(&users, "select ?.column from t_user", users)
+
+	AssertEqual(t, users, []User{
+		User{UserId: 1, Name: "bird", Age: 56, Money: "33", LoginTime: time.Unix(4, 0), CreateTime: time.Unix(0, 0), ModifyTime: time.Unix(0, 0)},
+	})
+}
+
+func TestTxRollBack(t *testing.T) {
+	db := initDatabase()
+
+	tx := db.MustBegin()
+
+	//添加一个数据
+	userAdd := UserAdd{
+		Name:      "bird",
+		Age:       56,
+		Money:     "33",
+		LoginTime: time.Unix(4, 0),
+	}
+	tx.MustExec("insert into t_user(?.column) values (?)", userAdd, userAdd)
+
+	tx.MustRollback()
+
+	var users []User
+
+	db.MustQuery(&users, "select ?.column from t_user", users)
+
+	AssertEqual(t, users, []User{})
+}
+
+func TestTxCloseCommit(t *testing.T) {
+	db := initDatabase()
+
+	tx := db.MustBegin()
+
+	func() {
+		defer tx.MustClose()
+
+		//添加一个数据
+		userAdd := UserAdd{
+			Name:      "bird",
+			Age:       56,
+			Money:     "33",
+			LoginTime: time.Unix(4, 0),
+		}
+		tx.MustExec("insert into t_user(?.column) values (?)", userAdd, userAdd)
+
+		tx.MustCommit()
+	}()
+
+	var users []User
+
+	db.MustQuery(&users, "select ?.column from t_user", users)
+
+	AssertEqual(t, users, []User{
+		User{UserId: 1, Name: "bird", Age: 56, Money: "33", LoginTime: time.Unix(4, 0), CreateTime: time.Unix(0, 0), ModifyTime: time.Unix(0, 0)},
+	})
+}
+
+func TestTxCloseRollback(t *testing.T) {
+	db := initDatabase()
+
+	tx := db.MustBegin()
+
+	func() {
+		defer CatchCrash(func(e Exception) {
+
+		})
+		defer tx.MustClose()
+
+		//添加一个数据
+		userAdd := UserAdd{
+			Name:      "bird",
+			Age:       56,
+			Money:     "33",
+			LoginTime: time.Unix(4, 0),
+		}
+		tx.MustExec("insert into t_user(?.column) values (?)", userAdd, userAdd)
+
+		panic("ud")
+
+		tx.MustCommit()
+	}()
+
+	var users []User
+
+	db.MustQuery(&users, "select ?.column from t_user", users)
+
 	AssertEqual(t, users, []User{})
 }
