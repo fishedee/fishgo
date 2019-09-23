@@ -1,16 +1,16 @@
 package sqlf
 
 import (
-	"fmt"
+	. "github.com/fishedee/app/log"
 	"time"
 )
 
-func runSql(isDebug bool, handler func() (string, error)) error {
+func runSql(isDebug bool, log Log, handler func() (string, error)) error {
 	if isDebug {
 		beginTime := time.Now()
 		sql, err := handler()
 		duration := time.Now().Sub(beginTime)
-		fmt.Printf("[sqlf] sql:%s isErr:%v,duration:%v\n", sql, err, duration)
+		log.Debug("[sqlf] sql:[%s] isErr:[%v] duration:[%v]", sql, err, duration)
 		return err
 	} else {
 		_, err := handler()

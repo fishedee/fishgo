@@ -1,12 +1,15 @@
 package sqlf
 
-//FIXME 对时间的处理，对日志的处理，还有包名，针对sqlite3的单元测试
+//FIXME 针对sqlite3的单元测试
 import (
 	gosql "database/sql"
+	. "github.com/fishedee/app/log"
+	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/mattn/go-sqlite3"
 	"time"
 )
 
-type SqlResult interface {
+type SqlfResult interface {
 	LastInsertId() (int64, error)
 	MustLastInsertId() int64
 
@@ -14,16 +17,16 @@ type SqlResult interface {
 	MustRowsAffected() int64
 }
 
-type SqlCommon interface {
+type SqlfCommon interface {
 	Query(data interface{}, query string, args ...interface{}) error
 	MustQuery(data interface{}, query string, args ...interface{})
 
-	Exec(query string, args ...interface{}) (SqlResult, error)
-	MustExec(query string, args ...interface{}) SqlResult
+	Exec(query string, args ...interface{}) (SqlfResult, error)
+	MustExec(query string, args ...interface{}) SqlfResult
 }
 
-type SqlTx interface {
-	SqlCommon
+type SqlfTx interface {
+	SqlfCommon
 	Commit() error
 	MustCommit()
 
@@ -31,16 +34,16 @@ type SqlTx interface {
 	MustRollback()
 }
 
-type SqlDB interface {
-	SqlCommon
-	Begin() (SqlTx, error)
-	MustBegin() SqlTx
+type SqlfDB interface {
+	SqlfCommon
+	Begin() (SqlfTx, error)
+	MustBegin() SqlfTx
 
 	Close() error
 	MustClose()
 }
 
-type SqlDBConfig struct {
+type SqlfDBConfig struct {
 	Driver                string `config:"driver"`
 	SourceName            string `config:"sourceName"`
 	Debug                 bool   `config:"debug"`
@@ -49,7 +52,24 @@ type SqlDBConfig struct {
 	MaxConnectionLifeTime int    `config:"maxconnectionlifttime"`
 }
 
-func NewSqlDB(config SqlDBConfig) (SqlDB, error) {
+func NewSqlfTest() SqlfDB {
+	log, err := NewLog(LogConfig{
+		Driver: "console",
+	})
+	if err != nil {
+		panic(err)
+	}
+	db, err := NewSqlfDB(log, SqlfDBConfig{
+		Driver:     "sqlite3",
+		SourceName: ":memory:",
+	})
+	if err != nil {
+		panic(err)
+	}
+	return db
+}
+
+func NewSqlfDB(log Log, config SqlfDBConfig) (SqlfDB, error) {
 	db, err := gosql.Open(config.Driver, config.SourceName)
 	if err != nil {
 		return nil, err
@@ -73,12 +93,14 @@ func NewSqlDB(config SqlDBConfig) (SqlDB, error) {
 	}
 	return &dbImplement{
 		db:      db,
+		log:     log,
 		isDebug: isDebug,
 	}, nil
 }
 
 type dbImplement struct {
 	db      *gosql.DB
+	log     Log
 	isDebug bool
 }
 
@@ -100,7 +122,7 @@ func (this *dbImplement) Query(data interface{}, query string, args ...interface
 		return sql, nil
 	}
 
-	return runSql(this.isDebug, sqlRunner)
+	return runSql(this.isDebug, this.log, sqlRunner)
 }
 
 func (this *dbImplement) MustQuery(data interface{}, query string, args ...interface{}) {
@@ -110,8 +132,8 @@ func (this *dbImplement) MustQuery(data interface{}, query string, args ...inter
 	}
 }
 
-func (this *dbImplement) Exec(query string, args ...interface{}) (SqlResult, error) {
-	var execResult SqlResult
+func (this *dbImplement) Exec(query string, args ...interface{}) (SqlfResult, error) {
+	var execResult SqlfResult
 	sqlRunner := func() (string, error) {
 		sql, args, err := genSql(query, args)
 		if args != nil {
@@ -127,12 +149,12 @@ func (this *dbImplement) Exec(query string, args ...interface{}) (SqlResult, err
 		return sql, nil
 	}
 
-	err := runSql(this.isDebug, sqlRunner)
+	err := runSql(this.isDebug, this.log, sqlRunner)
 
 	return execResult, err
 }
 
-func (this *dbImplement) MustExec(query string, args ...interface{}) SqlResult {
+func (this *dbImplement) MustExec(query string, args ...interface{}) SqlfResult {
 	result, err := this.Exec(query, args)
 	if err != nil {
 		panic(err)
@@ -140,15 +162,18 @@ func (this *dbImplement) MustExec(query string, args ...interface{}) SqlResult {
 	return result
 }
 
-func (this *dbImplement) Begin() (SqlTx, error) {
+func (this *dbImplement) Begin() (SqlfTx, error) {
 	tx, err := this.db.Begin()
 	if err != nil {
 		return nil, err
 	}
-	return &txImplement{tx: tx, isDebug: this.isDebug}, nil
+	return &txImplement{tx: tx,
+		isDebug: this.isDebug,
+		log:     this.log,
+	}, nil
 }
 
-func (this *dbImplement) MustBegin() SqlTx {
+func (this *dbImplement) MustBegin() SqlfTx {
 	tx, err := this.Begin()
 	if err != nil {
 		panic(err)
@@ -197,6 +222,7 @@ func (this *resultImplement) MustRowsAffected() int64 {
 
 type txImplement struct {
 	tx      *gosql.Tx
+	log     Log
 	isDebug bool
 }
 
@@ -218,7 +244,7 @@ func (this *txImplement) Query(data interface{}, query string, args ...interface
 		return sql, nil
 	}
 
-	return runSql(this.isDebug, sqlRunner)
+	return runSql(this.isDebug, this.log, sqlRunner)
 }
 
 func (this *txImplement) MustQuery(data interface{}, query string, args ...interface{}) {
@@ -228,8 +254,8 @@ func (this *txImplement) MustQuery(data interface{}, query string, args ...inter
 	}
 }
 
-func (this *txImplement) Exec(query string, args ...interface{}) (SqlResult, error) {
-	var execResult SqlResult
+func (this *txImplement) Exec(query string, args ...interface{}) (SqlfResult, error) {
+	var execResult SqlfResult
 	sqlRunner := func() (string, error) {
 		sql, args, err := genSql(query, args)
 		if args != nil {
@@ -245,12 +271,12 @@ func (this *txImplement) Exec(query string, args ...interface{}) (SqlResult, err
 		return sql, nil
 	}
 
-	err := runSql(this.isDebug, sqlRunner)
+	err := runSql(this.isDebug, this.log, sqlRunner)
 
 	return execResult, err
 }
 
-func (this *txImplement) MustExec(query string, args ...interface{}) SqlResult {
+func (this *txImplement) MustExec(query string, args ...interface{}) SqlfResult {
 	result, err := this.Exec(query, args)
 	if err != nil {
 		panic(err)

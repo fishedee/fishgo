@@ -2,19 +2,27 @@ package main
 
 import (
 	"fmt"
+	. "github.com/fishedee/app/log"
 	. "github.com/fishedee/app/sqlf"
 )
 
 type SqlfDb struct {
-	db SqlDB
+	db SqlfDB
 }
 
 func (this *SqlfDb) Init() {
 	var err error
+	log, err := NewLog(LogConfig{
+		Driver: "console",
+	})
+	if err != nil {
+		panic(err)
+	}
 	dsn := fmt.Sprintf("%s:%s@%s(%s:%d)/%s?parseTime=true", USERNAME, PASSWORD, NETWORK, SERVER, PORT, DATABASE)
-	this.db, err = NewSqlDB(SqlDBConfig{
+	this.db, err = NewSqlfDB(log, SqlfDBConfig{
 		Driver:     "mysql",
 		SourceName: dsn,
+		Debug:      true,
 	})
 	if err != nil {
 		panic(err)
