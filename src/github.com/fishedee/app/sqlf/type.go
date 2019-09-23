@@ -4,6 +4,7 @@ import (
 	gosql "database/sql"
 	"errors"
 	"fmt"
+	. "github.com/fishedee/language"
 	"reflect"
 	"strings"
 	"sync"
@@ -28,11 +29,24 @@ type sqlTypeOperation struct {
 var (
 	sqlTypeOperationMap = sync.Map{}
 	commaCache          = []string{}
+	stringPtrType       = reflect.TypeOf((*string)(nil))
 )
 
 func extractResult(data interface{}, rows *gosql.Rows) error {
 	operation := getSqlOperationFromInterface(data)
 	return operation.fromResult(data, rows)
+}
+
+func notWordChar(data uint8) bool {
+	if data >= '0' && data <= '9' {
+		return false
+	} else if data >= 'A' && data <= 'Z' {
+		return false
+	} else if data >= 'a' && data <= 'z' {
+		return false
+	} else {
+		return true
+	}
 }
 
 func genSql(query string, args []interface{}) (string, []interface{}, error) {
@@ -55,21 +69,20 @@ func genSql(query string, args []interface{}) (string, []interface{}, error) {
 			break
 		}
 		sqlBuilder.WriteString(query[0:index])
-		sqlBuilder.WriteByte(' ')
 		query = query[index:]
 		if argsIndex >= len(args) {
 			return "", nil, errors.New(fmt.Sprintf("invalid ? index %v,%v", argsIndex, len(args)))
 		}
-		columnSql := "?.column "
-		setValueSql := "?.setValue "
-		if len(query) >= len(columnSql) && query[0:len(columnSql)] == columnSql {
+		columnSql := "?.column"
+		setValueSql := "?.setValue"
+		if len(query) > len(columnSql) && query[0:len(columnSql)] == columnSql && notWordChar(query[len(columnSql)]) == true {
 			//提取column的name
 			query = query[len(columnSql):]
 			err = operation[argsIndex].column(&sqlBuilder)
 			if err != nil {
 				return "", nil, err
 			}
-		} else if len(query) >= len(setValueSql) && query[0:len(setValueSql)] == setValueSql {
+		} else if len(query) > len(setValueSql) && query[0:len(setValueSql)] == setValueSql && notWordChar(query[len(setValueSql)]) == true {
 			//提取set sql
 			query = query[len(setValueSql):]
 			realArgs, err = operation[argsIndex].setValue(args[argsIndex], realArgs, &sqlBuilder)
@@ -85,7 +98,6 @@ func genSql(query string, args []interface{}) (string, []interface{}, error) {
 			}
 		}
 		argsIndex++
-		sqlBuilder.WriteByte(' ')
 	}
 	return sqlBuilder.String(), realArgs, nil
 }
@@ -135,11 +147,13 @@ func getTypeKind(t reflect.Type) int {
 }
 
 type sqlStructPublicField struct {
-	name  string
-	index []int
+	name          string
+	index         []int
+	isDecimalType bool
 }
 
 func getStructPublicField(t reflect.Type) []sqlStructPublicField {
+	decimalType := reflect.TypeOf(Decimal(""))
 	result := []sqlStructPublicField{}
 	numField := t.NumField()
 	for i := 0; i != numField; i++ {
@@ -147,9 +161,14 @@ func getStructPublicField(t reflect.Type) []sqlStructPublicField {
 		fieldName := field.Name
 		if fieldName[0] >= 'A' && fieldName[0] <= 'Z' {
 			fieldName = strings.ToLower(fieldName[0:1]) + fieldName[1:]
+			isDecimalType := false
+			if field.Type == decimalType {
+				isDecimalType = true
+			}
 			result = append(result, sqlStructPublicField{
-				name:  fieldName,
-				index: field.Index,
+				name:          fieldName,
+				index:         field.Index,
+				isDecimalType: isDecimalType,
 			})
 		}
 	}
@@ -299,7 +318,11 @@ func initSqlFromResult(t reflect.Type) sqlFromResultType {
 			if isExist == false {
 				return errors.New(fmt.Sprintf("%v dos not have column %v", structType.String(), column))
 			}
-			tempScan[i] = temp.FieldByIndex(fieldInfo.index).Addr().Interface()
+			if fieldInfo.isDecimalType == true {
+				tempScan[i] = temp.FieldByIndex(fieldInfo.index).Addr().Convert(stringPtrType).Interface()
+			} else {
+				tempScan[i] = temp.FieldByIndex(fieldInfo.index).Addr().Interface()
+			}
 		}
 
 		//写入数组

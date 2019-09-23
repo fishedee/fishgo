@@ -1,6 +1,5 @@
 package sqlf
 
-//FIXME 针对sqlite3的单元测试
 import (
 	gosql "database/sql"
 	. "github.com/fishedee/app/log"
@@ -52,7 +51,7 @@ type SqlfDBConfig struct {
 	MaxConnectionLifeTime int    `config:"maxconnectionlifttime"`
 }
 
-func NewSqlfTest() SqlfDB {
+func NewSqlfDbTest() SqlfDB {
 	log, err := NewLog(LogConfig{
 		Driver: "console",
 	})
@@ -62,6 +61,7 @@ func NewSqlfTest() SqlfDB {
 	db, err := NewSqlfDB(log, SqlfDBConfig{
 		Driver:     "sqlite3",
 		SourceName: ":memory:",
+		Debug:      true,
 	})
 	if err != nil {
 		panic(err)
@@ -136,7 +136,7 @@ func (this *dbImplement) Exec(query string, args ...interface{}) (SqlfResult, er
 	var execResult SqlfResult
 	sqlRunner := func() (string, error) {
 		sql, args, err := genSql(query, args)
-		if args != nil {
+		if err != nil {
 			return query, err
 		}
 
@@ -155,7 +155,7 @@ func (this *dbImplement) Exec(query string, args ...interface{}) (SqlfResult, er
 }
 
 func (this *dbImplement) MustExec(query string, args ...interface{}) SqlfResult {
-	result, err := this.Exec(query, args)
+	result, err := this.Exec(query, args...)
 	if err != nil {
 		panic(err)
 	}

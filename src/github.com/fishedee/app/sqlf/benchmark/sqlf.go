@@ -22,7 +22,7 @@ func (this *SqlfDb) Init() {
 	this.db, err = NewSqlfDB(log, SqlfDBConfig{
 		Driver:     "mysql",
 		SourceName: dsn,
-		Debug:      true,
+		Debug:      false,
 	})
 	if err != nil {
 		panic(err)
