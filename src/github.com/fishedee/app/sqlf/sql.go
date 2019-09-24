@@ -3,6 +3,7 @@ package sqlf
 import (
 	gosql "database/sql"
 	. "github.com/fishedee/app/log"
+	. "github.com/fishedee/app/metric"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/mattn/go-sqlite3"
 	"time"
@@ -61,7 +62,7 @@ func NewSqlfDbTest() SqlfDB {
 	if err != nil {
 		panic(err)
 	}
-	db, err := NewSqlfDB(log, SqlfDBConfig{
+	db, err := NewSqlfDB(log, nil, SqlfDBConfig{
 		Driver:     "sqlite3",
 		SourceName: ":memory:",
 		Debug:      true,
@@ -72,7 +73,7 @@ func NewSqlfDbTest() SqlfDB {
 	return db
 }
 
-func NewSqlfDB(log Log, config SqlfDBConfig) (SqlfDB, error) {
+func NewSqlfDB(log Log, metric Metric, config SqlfDBConfig) (SqlfDB, error) {
 	db, err := gosql.Open(config.Driver, config.SourceName)
 	if err != nil {
 		return nil, err
@@ -94,11 +95,40 @@ func NewSqlfDB(log Log, config SqlfDBConfig) (SqlfDB, error) {
 	if err != nil {
 		return nil, err
 	}
+	if metric != nil {
+		go metricSqlf(db, metric)
+	}
 	return &dbImplement{
 		db:      db,
 		log:     log,
 		isDebug: isDebug,
 	}, nil
+}
+
+func metricSqlf(db *gosql.DB, metric Metric) {
+	MaxOpenConnectionsGauge := metric.GetGauge("database.MaxOpenConnections")
+	OpenConnectionsGauge := metric.GetGauge("database.OpenConnections")
+	InUseGauge := metric.GetGauge("database.InUse")
+	IdleGauge := metric.GetGauge("database.Idle")
+	WaitCountGauge := metric.GetGauge("database.WaitCount")
+	WaitDurationGauge := metric.GetGauge("database.WaitDuration")
+	MaxIdleClosedGauge := metric.GetGauge("database.MaxIdleClosed")
+	MaxLifetimeClosedGauge := metric.GetGauge("database.MaxLifetimeClosed")
+
+	ticker := time.Tick(time.Second)
+	for {
+		<-ticker
+		stats := db.Stats()
+		MaxOpenConnectionsGauge.Update(int64(stats.MaxOpenConnections))
+		OpenConnectionsGauge.Update(int64(stats.OpenConnections))
+		InUseGauge.Update(int64(stats.InUse))
+		IdleGauge.Update(int64(stats.Idle))
+		WaitCountGauge.Update(stats.WaitCount)
+		WaitDurationGauge.Update(int64(stats.WaitDuration))
+		MaxIdleClosedGauge.Update(stats.MaxIdleClosed)
+		MaxLifetimeClosedGauge.Update(stats.MaxLifetimeClosed)
+	}
+
 }
 
 type dbImplement struct {
