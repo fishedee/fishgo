@@ -1,7 +1,10 @@
 package metric
 
 import (
+	. "github.com/fishedee/encoding"
+	. "github.com/fishedee/language"
 	"github.com/rcrowley/go-metrics"
+	"strings"
 	"sync"
 	"time"
 )
@@ -24,8 +27,8 @@ type MetricConfig struct {
 	User       string `config:"user"`
 	Password   string `config:"password"`
 }
+
 type Metric interface {
-	SetDefaultTags(defaultTags map[string]string)
 	GetCounter(name string) MetricCounter
 	GetGauge(name string) MetricGauge
 	GetGaugeFloat64(name string) MetricGaugeFloat64
@@ -38,11 +41,10 @@ type Metric interface {
 }
 
 type metricImplement struct {
-	registry    metrics.Registry
-	config      MetricConfig
-	defaultTags map[string]string
-	closeChan   chan bool
-	waitgroup   *sync.WaitGroup
+	registry  metrics.Registry
+	config    MetricConfig
+	closeChan chan bool
+	waitgroup *sync.WaitGroup
 }
 
 func NewMetric(config MetricConfig) (Metric, error) {
@@ -80,10 +82,6 @@ func (this *metricImplement) GetTimer(name string) metrics.Timer {
 	return metrics.GetOrRegisterTimer(name, this.registry)
 }
 
-func (this *metricImplement) SetDefaultTags(defaultTags map[string]string) {
-	this.defaultTags = defaultTags
-}
-
 func (this *metricImplement) Run() error {
 	metrics.RegisterDebugGCStats(this.registry)
 	metrics.RegisterRuntimeMemStats(this.registry)
@@ -117,7 +115,6 @@ func (this *metricImplement) Run() error {
 			this.config.Database,
 			this.config.User,
 			this.config.Password,
-			this.defaultTags,
 			this.closeChan,
 		)
 	}()
@@ -129,4 +126,73 @@ func (this *metricImplement) Run() error {
 
 func (this *metricImplement) Close() {
 	close(this.closeChan)
+}
+
+type metricTagsImplement struct {
+	metric     Metric
+	taggedName string
+}
+
+func (this *metricTagsImplement) GetCounter(name string) MetricCounter {
+	return this.metric.GetCounter(this.getName(name))
+}
+
+func (this *metricTagsImplement) GetGauge(name string) MetricGauge {
+	return this.metric.GetGauge(this.getName(name))
+}
+
+func (this *metricTagsImplement) GetGaugeFloat64(name string) MetricGaugeFloat64 {
+	return this.metric.GetGaugeFloat64(this.getName(name))
+}
+
+func (this *metricTagsImplement) GetHistogram(name string) MetricHistogram {
+	return this.metric.GetHistogram(this.getName(name))
+}
+
+func (this *metricTagsImplement) GetMeter(name string) MetricMeter {
+	return this.metric.GetMeter(this.getName(name))
+}
+
+func (this *metricTagsImplement) GetTimer(name string) MetricTimer {
+	return this.metric.GetTimer(this.getName(name))
+}
+
+func (this *metricTagsImplement) Run() error {
+	return this.metric.Run()
+}
+
+func (this *metricTagsImplement) Close() {
+	this.metric.Close()
+}
+
+func (this *metricTagsImplement) getName(data string) string {
+	questionIndex := strings.IndexByte(data, '?')
+	if questionIndex == -1 {
+		return data + "?" + this.taggedName
+	} else {
+		return data + "&" + this.taggedName
+	}
+}
+
+func getTaggedName(tags map[string]string) string {
+	tagList := []string{}
+	if tags != nil {
+		for k, v := range tags {
+			vEncode, err := EncodeUrl(v)
+			if err != nil {
+				panic(err)
+			}
+			tagList = append(tagList, k+"="+vEncode)
+		}
+	}
+	tagStr := Implode(tagList, "&")
+	return tagStr
+}
+
+func MetricWithDefaultTags(metric Metric, tags map[string]string) Metric {
+	taggedName := getTaggedName(tags)
+	return &metricTagsImplement{
+		metric:     metric,
+		taggedName: taggedName,
+	}
 }

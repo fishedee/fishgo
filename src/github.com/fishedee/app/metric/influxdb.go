@@ -14,27 +14,25 @@ import (
 )
 
 type reporter struct {
-	reg         metrics.Registry
-	interval    time.Duration
-	url         string
-	database    string
-	username    string
-	password    string
-	defaultTags map[string]string
-	client      client.Client
-	exitChan    chan bool
+	reg      metrics.Registry
+	interval time.Duration
+	url      string
+	database string
+	username string
+	password string
+	client   client.Client
+	exitChan chan bool
 }
 
-func InfluxDB(r metrics.Registry, d time.Duration, url, database, username, password string, defaultTags map[string]string, exitChan chan bool) {
+func InfluxDB(r metrics.Registry, d time.Duration, url, database, username, password string, exitChan chan bool) {
 	rep := &reporter{
-		reg:         r,
-		interval:    d,
-		url:         url,
-		database:    database,
-		username:    username,
-		password:    password,
-		defaultTags: defaultTags,
-		exitChan:    exitChan,
+		reg:      r,
+		interval: d,
+		url:      url,
+		database: database,
+		username: username,
+		password: password,
+		exitChan: exitChan,
 	}
 	if err := rep.makeClient(); err != nil {
 		panic(fmt.Sprintf("unable to make InfluxDB client. err=%v", err))
@@ -80,11 +78,6 @@ func (r *reporter) run() {
 
 func (r *reporter) getTags(name string) (string, map[string]string) {
 	result := map[string]string{}
-	if r.defaultTags != nil {
-		for k, v := range r.defaultTags {
-			result[k] = v
-		}
-	}
 	leftBraceIndex := strings.IndexByte(name, '?')
 	if leftBraceIndex == -1 {
 		return name, result

@@ -6,30 +6,13 @@ import (
 	. "github.com/fishedee/app/metric"
 	. "github.com/fishedee/app/proxy"
 	. "github.com/fishedee/encoding"
-	. "github.com/fishedee/language"
 	"reflect"
 	"sync"
 	"time"
 )
 
-func getTaggedName(tags map[string]string) string {
-	tagList := []string{}
-	if tags != nil {
-		for k, v := range tags {
-			vEncode, err := EncodeUrl(v)
-			if err != nil {
-				panic(err)
-			}
-			tagList = append(tagList, k+"="+vEncode)
-		}
-	}
-	tagStr := Implode(tagList, "&")
-	return tagStr
-}
-
-func NewModuleMetricHook(metric Metric, tags map[string]string) ProxyHook {
+func NewModuleMetricHook(metric Metric) ProxyHook {
 	contextType := reflect.TypeOf([]context.Context{}).Elem()
-	tagStr := getTaggedName(tags)
 	return func(ctx ProxyContext, origin reflect.Value) reflect.Value {
 		originFirstArgType := origin.Type().In(0)
 		if originFirstArgType.ConvertibleTo(contextType) == false {
@@ -72,7 +55,7 @@ func NewModuleMetricHook(metric Metric, tags map[string]string) ProxyHook {
 			pathTag := "path=" + pathEncode
 
 			//获取metric
-			metricName := "module.request?" + pathTag + "&" + moduleTag + "&" + tagStr
+			metricName := "module.request?" + pathTag + "&" + moduleTag
 			metricTimer := getTimer(metricName)
 
 			//调用接口
