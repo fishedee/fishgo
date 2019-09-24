@@ -48,7 +48,7 @@ type SqlfDB interface {
 
 type SqlfDBConfig struct {
 	Driver                string `config:"driver"`
-	SourceName            string `config:"sourceName"`
+	SourceName            string `config:"sourcename"`
 	Debug                 bool   `config:"debug"`
 	MaxOpenConnection     int    `config:"maxopenconnection"`
 	MaxIdleConnection     int    `config:"maxidleconnection"`
