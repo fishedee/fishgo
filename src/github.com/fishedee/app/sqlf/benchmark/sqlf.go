@@ -19,7 +19,7 @@ func (this *SqlfDb) Init() {
 		panic(err)
 	}
 	dsn := fmt.Sprintf("%s:%s@%s(%s:%d)/%s?parseTime=true", USERNAME, PASSWORD, NETWORK, SERVER, PORT, DATABASE)
-	this.db, err = NewSqlfDB(log, SqlfDBConfig{
+	this.db, err = NewSqlfDB(log,nil, SqlfDBConfig{
 		Driver:     "mysql",
 		SourceName: dsn,
 		Debug:      false,

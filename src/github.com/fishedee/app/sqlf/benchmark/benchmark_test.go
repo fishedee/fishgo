@@ -23,6 +23,7 @@ func TestAll(t *testing.T) {
 	drivers := []DbDriver{
 		&PureDb{},
 		&XormDb{},
+		&DbrDb{},
 		&SqlxDb{},
 		&SqlfDb{},
 	}
@@ -47,6 +48,17 @@ func BenchmarkPureDb(b *testing.B) {
 
 func BenchmarkXormDb(b *testing.B) {
 	db := &XormDb{}
+	db.Init()
+
+	b.ResetTimer()
+
+	for i := 0; i != b.N; i++ {
+		runTest(db)
+	}
+}
+
+func BenchmarkDbrDb(b *testing.B) {
+	db := &DbrDb{}
 	db.Init()
 
 	b.ResetTimer()
