@@ -2129,6 +2129,87 @@ func querySort_01e20a2d98037c6228fe46a9f25b6f3afa94cc6f(data interface{}, sortTy
 	return newData
 }
 
+func querySort_21a89d848f4663606bb436706b2468766a4bd198(data interface{}, sortType string) interface{} {
+	dataIn := data.([]language.Decimal)
+	newData := make([]language.Decimal, len(dataIn), len(dataIn))
+	copy(newData, dataIn)
+
+	language.QuerySortInternal(len(newData), func(i int, j int) int {
+		{
+			tempDecimalCmp := newData[i].Cmp(newData[j])
+			if tempDecimalCmp < 0 {
+				return 1
+			} else if tempDecimalCmp > 0 {
+				return -1
+			}
+		}
+
+		return 0
+	}, func(i int, j int) {
+		newData[j], newData[i] = newData[i], newData[j]
+	})
+	return newData
+}
+
+func querySort_3984d355d2e723bca314b4298b8199ea48d02fa4(data interface{}, sortType string) interface{} {
+	dataIn := data.([]Student)
+	newData := make([]Student, len(dataIn), len(dataIn))
+	copy(newData, dataIn)
+
+	language.QuerySortInternal(len(newData), func(i int, j int) int {
+		if newData[i].Name < newData[j].Name {
+			return -1
+		} else if newData[i].Name > newData[j].Name {
+			return 1
+		}
+
+		{
+			tempDecimalCmp := newData[i].Score.Cmp(newData[j].Score)
+			if tempDecimalCmp < 0 {
+				return 1
+			} else if tempDecimalCmp > 0 {
+				return -1
+			}
+		}
+
+		return 0
+	}, func(i int, j int) {
+		newData[j], newData[i] = newData[i], newData[j]
+	})
+	return newData
+}
+
+func querySort_3e5610abb58143b11a227c0338ad79745f949d87(data interface{}, sortType string) interface{} {
+	dataIn := data.([]Student)
+	newData := make([]Student, len(dataIn), len(dataIn))
+	copy(newData, dataIn)
+
+	language.QuerySortInternal(len(newData), func(i int, j int) int {
+		{
+			tempDecimalCmp := newData[i].Score.Cmp(newData[j].Score)
+			if tempDecimalCmp < 0 {
+				return -1
+			} else if tempDecimalCmp > 0 {
+				return 1
+			}
+		}
+
+		{
+			tempDecimalCmp := newData[i].Score2.Cmp(newData[j].Score2)
+			if tempDecimalCmp < 0 {
+				return 1
+			} else if tempDecimalCmp > 0 {
+				return -1
+			}
+		}
+
+		return 0
+	}, func(i int, j int) {
+		newData[j], newData[i] = newData[i], newData[j]
+	})
+	return newData
+}
+
 func querySort_69aeea64e4ceb06cec2898980c86869d76d5ded1(data interface{}, sortType string) interface{} {
 	dataIn := data.([]ContentType)
 	newData := make([]ContentType, len(dataIn), len(dataIn))
@@ -2525,6 +2606,12 @@ func init() {
 	language.QuerySelectMacroRegister([]ContentType{}, (func(ContentType) float64)(nil), querySelect_da391223926715b44206be57f539447211d3353f)
 
 	language.QuerySortMacroRegister([]ContentType{}, "CardMoney,Register desc", querySort_01e20a2d98037c6228fe46a9f25b6f3afa94cc6f)
+
+	language.QuerySortMacroRegister([]language.Decimal{}, ". desc", querySort_21a89d848f4663606bb436706b2468766a4bd198)
+
+	language.QuerySortMacroRegister([]Student{}, "Name asc,Score desc", querySort_3984d355d2e723bca314b4298b8199ea48d02fa4)
+
+	language.QuerySortMacroRegister([]Student{}, "Score asc,Score2 desc", querySort_3e5610abb58143b11a227c0338ad79745f949d87)
 
 	language.QuerySortMacroRegister([]ContentType{}, "Name desc", querySort_69aeea64e4ceb06cec2898980c86869d76d5ded1)
 

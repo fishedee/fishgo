@@ -349,6 +349,15 @@ func getLessCompareCode(line string, name1 string, extractFieldName1 string, nam
 				"} else if " + name1 + extractFieldName1 + ".After(" + name2 + extractFieldName2 + "){\n" +
 				"return " + lessFalseCode + "\n" +
 				"}\n"
+		} else if isNamed && tNamed.String() == "github.com/fishedee/language.Decimal" {
+			return "{ \n" +
+				" tempDecimalCmp := " + name1 + extractFieldName1 + ".Cmp(" + name2 + extractFieldName2 + ")\n" +
+				"if tempDecimalCmp < 0 {\n" +
+				"return " + lessTrueCode + "\n" +
+				"} else if tempDecimalCmp > 0 {\n" +
+				"return " + lessFalseCode + "\n" +
+				"}\n" +
+				"}\n"
 		} else {
 			Throw(1, "line:unknown how to sort type : %v", line, sortFieldType.String)
 			return ""

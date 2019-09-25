@@ -22,6 +22,12 @@ type ContentType struct {
 	Register  time.Time
 }
 
+type Student struct {
+	Name   string
+	Score  Decimal
+	Score2 Decimal
+}
+
 // QueryInnerStruct QueryInnerStruct
 type QueryInnerStruct struct {
 	MM int
@@ -458,6 +464,14 @@ func GetQuerySortTestCase() []TestCase {
 		{
 			func() interface{} {
 				return QuerySort(
+					[]Decimal{"-1", "1.2", "1.21", "0", "22.3"},
+					". desc")
+			},
+			[]Decimal{"22.3", "1.21", "1.2", "0", "-1"},
+		},
+		{
+			func() interface{} {
+				return QuerySort(
 					[]ContentType{
 						ContentType{"5", 0, true, -1.1, -1.1, oldTime},
 						ContentType{"z", 1, true, 0, 0, nowTime},
@@ -561,6 +575,40 @@ func GetQuerySortTestCase() []TestCase {
 				ContentType{"z", -1, true, 0, 0, nowTime},
 				ContentType{"", 5, false, 0, 0, zeroTime},
 				ContentType{"5", 10, true, -1.1, -1.1, oldTime},
+			},
+		},
+		{
+			func() interface{} {
+				return QuerySort(
+					[]Student{
+						Student{"fish", "2.1", "13.1"},
+						Student{"cat", "13.1", "23.1"},
+						Student{"dog", "12.1", "103.1"},
+						Student{"fish", "7", "83.1"},
+					}, "Name asc,Score desc")
+			},
+			[]Student{
+				Student{"cat", "13.1", "23.1"},
+				Student{"dog", "12.1", "103.1"},
+				Student{"fish", "7", "83.1"},
+				Student{"fish", "2.1", "13.1"},
+			},
+		},
+		{
+			func() interface{} {
+				return QuerySort(
+					[]Student{
+						Student{"fish", "2.1", "13.1"},
+						Student{"cat", "13.1", "23.1"},
+						Student{"dog", "2.1", "3.1"},
+						Student{"fish", "7", "83.1"},
+					}, "Score asc,Score2 desc")
+			},
+			[]Student{
+				Student{"fish", "2.1", "13.1"},
+				Student{"dog", "2.1", "3.1"},
+				Student{"fish", "7", "83.1"},
+				Student{"cat", "13.1", "23.1"},
 			},
 		},
 		{

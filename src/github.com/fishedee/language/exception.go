@@ -80,7 +80,7 @@ func CatchCrash(handler func(Exception)) {
 		if isException {
 			handler(*exception)
 		} else {
-			exception := newException(4, err, true, 1, fmt.Sprint(err))
+			exception := newException(3, err, true, 1, fmt.Sprint(err))
 			handler(*exception)
 		}
 	}
@@ -97,7 +97,7 @@ func Catch(handler func(Exception)) {
 				panic(exception)
 			}
 		} else {
-			exception := newException(4, err, true, 1, fmt.Sprint(err))
+			exception := newException(3, err, true, 1, fmt.Sprint(err))
 			panic(exception)
 		}
 	}
