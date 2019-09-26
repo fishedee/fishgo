@@ -4,7 +4,6 @@ import (
 	gosql "database/sql"
 	"errors"
 	"fmt"
-	. "github.com/fishedee/language"
 	"reflect"
 	"strings"
 	"sync"
@@ -147,13 +146,11 @@ func getTypeKind(t reflect.Type) int {
 }
 
 type sqlStructPublicField struct {
-	name          string
-	index         []int
-	isDecimalType bool
+	name  string
+	index []int
 }
 
 func getStructPublicField(t reflect.Type) []sqlStructPublicField {
-	decimalType := reflect.TypeOf(Decimal(""))
 	result := []sqlStructPublicField{}
 	numField := t.NumField()
 	for i := 0; i != numField; i++ {
@@ -161,14 +158,9 @@ func getStructPublicField(t reflect.Type) []sqlStructPublicField {
 		fieldName := field.Name
 		if fieldName[0] >= 'A' && fieldName[0] <= 'Z' {
 			fieldName = strings.ToLower(fieldName[0:1]) + fieldName[1:]
-			isDecimalType := false
-			if field.Type == decimalType {
-				isDecimalType = true
-			}
 			result = append(result, sqlStructPublicField{
-				name:          fieldName,
-				index:         field.Index,
-				isDecimalType: isDecimalType,
+				name:  fieldName,
+				index: field.Index,
 			})
 		}
 	}
@@ -318,11 +310,8 @@ func initSqlFromResult(t reflect.Type) sqlFromResultType {
 			if isExist == false {
 				return errors.New(fmt.Sprintf("%v dos not have column %v", structType.String(), column))
 			}
-			//if fieldInfo.isDecimalType == true {
-			//	tempScan[i] = temp.FieldByIndex(fieldInfo.index).Addr().Convert(stringPtrType).Interface()
-			//} else {
+
 			tempScan[i] = temp.FieldByIndex(fieldInfo.index).Addr().Interface()
-			//}
 		}
 
 		//写入数组

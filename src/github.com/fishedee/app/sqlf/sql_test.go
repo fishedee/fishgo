@@ -314,6 +314,6 @@ func testAll(t *testing.T, initDatabase func() SqlfDB) {
 }
 
 func TestAll(t *testing.T) {
-	//testAll(t, initSqliteDatabase)
+	testAll(t, initSqliteDatabase)
 	testAll(t, initMySqlDatabase)
 }

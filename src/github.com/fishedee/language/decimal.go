@@ -1,8 +1,8 @@
 package language
 
 import (
+	"bytes"
 	"database/sql/driver"
-	"errors"
 	"fmt"
 	"github.com/shopspring/decimal"
 	"reflect"
@@ -93,24 +93,48 @@ func (left Decimal) String() string {
 func (this Decimal) Value() (driver.Value, error) {
 	strVal := (*string)(&this)
 	if len(*strVal) == 0 {
-
+		return driver.Value("0"), nil
 	} else {
 		return driver.Value(*strVal), nil
 	}
 }
 
+func DelDecimalBackZero(value []byte) string {
+	pointIndex := bytes.IndexByte(value, '.')
+	if pointIndex == -1 {
+		return string(value)
+	}
+	i := len(value) - 1
+	for ; i > pointIndex; i-- {
+		if value[i] != '0' {
+			break
+		}
+	}
+	if i == pointIndex {
+		i = pointIndex - 1
+	}
+	return string(value[0 : i+1])
+}
+
 func (this *Decimal) Scan(value interface{}) error {
-	//fmt.Printf("t %v %v\n", reflect.TypeOf(value), string([]byte(value.([]uint8))))
-	strVal, isStr := value.(string)
-	if isStr == true {
-		*((*string)(this)) = strVal
+	switch v := value.(type) {
+	case []byte:
+		*((*string)(this)) = DelDecimalBackZero(v)
 		return nil
-	}
-	byteSliceVal, isByteSlice := value.([]byte)
-	if isByteSlice == true {
-		*((*string)(this)) = string(byteSliceVal)
+	case string:
+		*((*string)(this)) = DelDecimalBackZero([]byte(v))
 		return nil
+	case int64:
+		*((*string)(this)) = decimal.NewFromFloat(float64(v)).String()
+		return nil
+	case float32:
+		*((*string)(this)) = decimal.NewFromFloat(float64(v)).String()
+		return nil
+	case float64:
+		*((*string)(this)) = decimal.NewFromFloat(v).String()
+		return nil
+	default:
+		return fmt.Errorf("decimal can not scan by %v", reflect.TypeOf(value))
 	}
-	//fmt.Println(reflect.TypeOf(value))
-	return errors.New("decimal only scan by string or []byte")
+
 }

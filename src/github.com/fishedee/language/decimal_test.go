@@ -5,6 +5,25 @@ import (
 	"testing"
 )
 
+func TestDelBackZero(t *testing.T) {
+	testCase := []struct {
+		origin string
+		target string
+	}{
+		{"0.", "0"},
+		{"12300.", "12300"},
+		{"12300.01000", "12300.01"},
+		{"12300.010230000", "12300.01023"},
+		{"12300.0000", "12300"},
+		{"1230000", "1230000"},
+		{"123000090", "123000090"},
+	}
+
+	for index, singleTestCase := range testCase {
+		AssertEqual(t, DelDecimalBackZero([]byte(singleTestCase.origin)), singleTestCase.target, index)
+	}
+}
+
 func TestDecimalOperation(t *testing.T) {
 	testCase := []struct {
 		handler func(Decimal, Decimal) Decimal
