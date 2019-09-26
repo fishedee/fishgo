@@ -1,7 +1,11 @@
 package language
 
 import (
+	"database/sql/driver"
+	"errors"
+	"fmt"
 	"github.com/shopspring/decimal"
+	"reflect"
 )
 
 /*
@@ -84,4 +88,29 @@ func (left Decimal) Abs() Decimal {
 func (left Decimal) String() string {
 	l := getDecimal(left)
 	return l.String()
+}
+
+func (this Decimal) Value() (driver.Value, error) {
+	strVal := (*string)(&this)
+	if len(*strVal) == 0 {
+
+	} else {
+		return driver.Value(*strVal), nil
+	}
+}
+
+func (this *Decimal) Scan(value interface{}) error {
+	//fmt.Printf("t %v %v\n", reflect.TypeOf(value), string([]byte(value.([]uint8))))
+	strVal, isStr := value.(string)
+	if isStr == true {
+		*((*string)(this)) = strVal
+		return nil
+	}
+	byteSliceVal, isByteSlice := value.([]byte)
+	if isByteSlice == true {
+		*((*string)(this)) = string(byteSliceVal)
+		return nil
+	}
+	//fmt.Println(reflect.TypeOf(value))
+	return errors.New("decimal only scan by string or []byte")
 }

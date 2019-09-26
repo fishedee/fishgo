@@ -318,11 +318,11 @@ func initSqlFromResult(t reflect.Type) sqlFromResultType {
 			if isExist == false {
 				return errors.New(fmt.Sprintf("%v dos not have column %v", structType.String(), column))
 			}
-			if fieldInfo.isDecimalType == true {
-				tempScan[i] = temp.FieldByIndex(fieldInfo.index).Addr().Convert(stringPtrType).Interface()
-			} else {
-				tempScan[i] = temp.FieldByIndex(fieldInfo.index).Addr().Interface()
-			}
+			//if fieldInfo.isDecimalType == true {
+			//	tempScan[i] = temp.FieldByIndex(fieldInfo.index).Addr().Convert(stringPtrType).Interface()
+			//} else {
+			tempScan[i] = temp.FieldByIndex(fieldInfo.index).Addr().Interface()
+			//}
 		}
 
 		//写入数组

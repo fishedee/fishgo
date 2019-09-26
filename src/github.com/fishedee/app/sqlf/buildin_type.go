@@ -156,7 +156,7 @@ func initDecimalSqlTypeOperation() {
 	sqlTypeOperation := sqlTypeOperation{
 		toArgs: func(v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
 			builder.WriteByte('?')
-			in = append(in, string(v.(Decimal)))
+			in = append(in, v)
 			return in, nil
 		},
 		fromResult: func(v interface{}, rows *gosql.Rows) error {
@@ -180,7 +180,7 @@ func initDecimalSliceSqlTypeOperation() {
 			data := v.([]Decimal)
 			builder.WriteString(getSqlComma(len(data)))
 			for _, single := range data {
-				in = append(in, string(single))
+				in = append(in, single)
 			}
 			return in, nil
 		},

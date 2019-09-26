@@ -1,14 +1,29 @@
+//FIXME 需要加入mysql的测试
 package sqlf
 
 import (
+	. "github.com/fishedee/app/log"
 	. "github.com/fishedee/assert"
 	. "github.com/fishedee/language"
 	"testing"
 	"time"
 )
 
-func initDatabase() SqlfDB {
-	db := NewSqlfDbTest()
+func initSqliteDatabase() SqlfDB {
+	log, err := NewLog(LogConfig{
+		Driver: "console",
+	})
+	if err != nil {
+		panic(err)
+	}
+	db, err := NewSqlfDB(log, nil, SqlfDBConfig{
+		Driver:     "sqlite3",
+		SourceName: ":memory:",
+		Debug:      true,
+	})
+	if err != nil {
+		panic(err)
+	}
 	db.MustExec(`
 	create table t_user(
 		userId integer primary key autoincrement,
@@ -20,6 +35,38 @@ func initDatabase() SqlfDB {
 		modifyTime timestamp not null default 0
 	);
 	`)
+	return db
+}
+
+func initMySqlDatabase() SqlfDB {
+	log, err := NewLog(LogConfig{
+		Driver: "console",
+	})
+	if err != nil {
+		panic(err)
+	}
+	db, err := NewSqlfDB(log, nil, SqlfDBConfig{
+		Driver:     "mysql",
+		SourceName: "root:1@tcp(localhost:3306)/test?parseTime=true&loc=Local",
+		Debug:      true,
+	})
+	if err != nil {
+		panic(err)
+	}
+	db.MustExec(`
+	drop table if exists t_user;
+	`)
+	db.MustExec(`
+	create table t_user(
+		userId int not null auto_increment,
+		name char(32) not null,
+		age integer not null,
+		money decimal(14,2) not null,
+		loginTime datetime not null,
+		createTime datetime not null default '1970-01-01 08:00:00',
+		modifyTime datetime not null default '1970-01-01 08:00:00',
+		primary key(userId)
+	)engine=innodb default charset=utf8mb4;`)
 	return db
 }
 
@@ -51,7 +98,7 @@ func testStructType(t *testing.T, db SqlfCommon) {
 
 	//第一次插入数据，批量插入
 	userAdds := []UserAdd{
-		UserAdd{Name: "fish", Age: 12, Money: "100.1", LoginTime: time.Unix(1, 0)},
+		UserAdd{Name: "fish", Age: 12, Money: "", LoginTime: time.Unix(1, 0)},
 		UserAdd{Name: "cat", Age: 34, Money: "102.35", LoginTime: time.Unix(2, 0)},
 	}
 	db.MustExec("insert into t_user(?.column) values ?", userAdds, userAdds)
@@ -59,7 +106,7 @@ func testStructType(t *testing.T, db SqlfCommon) {
 	db.MustQuery(&users, "select ?.column from t_user", users)
 
 	AssertEqual(t, users, []User{
-		User{UserId: 1, Name: "fish", Age: 12, Money: "100.1", LoginTime: time.Unix(1, 0), CreateTime: time.Unix(0, 0), ModifyTime: time.Unix(0, 0)},
+		User{UserId: 1, Name: "fish", Age: 12, Money: "0", LoginTime: time.Unix(1, 0), CreateTime: time.Unix(0, 0), ModifyTime: time.Unix(0, 0)},
 		User{UserId: 2, Name: "cat", Age: 34, Money: "102.35", LoginTime: time.Unix(2, 0), CreateTime: time.Unix(0, 0), ModifyTime: time.Unix(0, 0)},
 	})
 
@@ -105,7 +152,7 @@ func testStructType(t *testing.T, db SqlfCommon) {
 	})
 }
 
-func TestStructType(t *testing.T) {
+func testStructTypeAll(t *testing.T, initDatabase func() SqlfDB) {
 	db := initDatabase()
 	testStructType(t, db)
 
@@ -113,6 +160,7 @@ func TestStructType(t *testing.T) {
 	defer db2.MustClose()
 	testStructType(t, db2)
 	db2.MustCommit()
+
 }
 
 func testBuildInType(t *testing.T, db SqlfCommon) {
@@ -137,7 +185,7 @@ func testBuildInType(t *testing.T, db SqlfCommon) {
 	AssertEqual(t, users, []User{})
 }
 
-func TestBuildInType(t *testing.T) {
+func testBuildInTypeAll(t *testing.T, initDatabase func() SqlfDB) {
 	db := initDatabase()
 	testBuildInType(t, db)
 
@@ -147,7 +195,7 @@ func TestBuildInType(t *testing.T) {
 	db2.MustCommit()
 }
 
-func TestTxCommit(t *testing.T) {
+func testTxCommit(t *testing.T, initDatabase func() SqlfDB) {
 	db := initDatabase()
 
 	tx := db.MustBegin()
@@ -172,7 +220,7 @@ func TestTxCommit(t *testing.T) {
 	})
 }
 
-func TestTxRollBack(t *testing.T) {
+func testTxRollBack(t *testing.T, initDatabase func() SqlfDB) {
 	db := initDatabase()
 
 	tx := db.MustBegin()
@@ -195,7 +243,7 @@ func TestTxRollBack(t *testing.T) {
 	AssertEqual(t, users, []User{})
 }
 
-func TestTxCloseCommit(t *testing.T) {
+func testTxCloseCommit(t *testing.T, initDatabase func() SqlfDB) {
 	db := initDatabase()
 
 	tx := db.MustBegin()
@@ -224,7 +272,7 @@ func TestTxCloseCommit(t *testing.T) {
 	})
 }
 
-func TestTxCloseRollback(t *testing.T) {
+func testTxCloseRollback(t *testing.T, initDatabase func() SqlfDB) {
 	db := initDatabase()
 
 	tx := db.MustBegin()
@@ -254,4 +302,18 @@ func TestTxCloseRollback(t *testing.T) {
 	db.MustQuery(&users, "select ?.column from t_user", users)
 
 	AssertEqual(t, users, []User{})
+}
+
+func testAll(t *testing.T, initDatabase func() SqlfDB) {
+	testStructTypeAll(t, initDatabase)
+	testBuildInTypeAll(t, initDatabase)
+	testTxCommit(t, initDatabase)
+	testTxRollBack(t, initDatabase)
+	testTxCloseCommit(t, initDatabase)
+	testTxCloseRollback(t, initDatabase)
+}
+
+func TestAll(t *testing.T) {
+	//testAll(t, initSqliteDatabase)
+	testAll(t, initMySqlDatabase)
 }
