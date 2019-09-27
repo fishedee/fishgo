@@ -183,6 +183,44 @@ func testBuildInType(t *testing.T, db SqlfCommon) {
 		[]time.Time{time.Unix(1, 0)},
 	)
 	AssertEqual(t, users, []User{})
+
+	//测试*int和*[]int的类型
+	db.MustExec("insert into t_user(name,age,money,loginTime) values(?,?,?,?)", "cat", 456, Decimal("78.13"), time.Unix(2, 0))
+
+	var count int
+	db.MustQuery(&count, "select count(*) from t_user")
+	AssertEqual(t, count, 2)
+
+	var userIds []int
+	db.MustQuery(&userIds, "select userId from t_user")
+	AssertEqual(t, userIds, []int{1, 2})
+
+	//测试*string和*[]string的类型
+	var name string
+	db.MustQuery(&name, "select name from t_user where userId = 2")
+	AssertEqual(t, name, "cat")
+
+	var names []string
+	db.MustQuery(&names, "select name from t_user")
+	AssertEqual(t, names, []string{"fish", "cat"})
+
+	//测试*Decimal和*[]Decimal的类型
+	var money Decimal
+	db.MustQuery(&money, "select money from t_user where userId = 2")
+	AssertEqual(t, money, Decimal("78.13"))
+
+	var moneys []Decimal
+	db.MustQuery(&moneys, "select money from t_user")
+	AssertEqual(t, moneys, []Decimal{"23", "78.13"})
+
+	//测试*time.Time和*[]time.Time的类型
+	var loginTime time.Time
+	db.MustQuery(&loginTime, "select loginTime from t_user where userId = 2")
+	AssertEqual(t, loginTime, time.Unix(2, 0))
+
+	var loginTimes []time.Time
+	db.MustQuery(&loginTimes, "select loginTime from t_user")
+	AssertEqual(t, loginTimes, []time.Time{time.Unix(1, 0), time.Unix(2, 0)})
 }
 
 func testBuildInTypeAll(t *testing.T, initDatabase func() SqlfDB) {
