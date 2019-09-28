@@ -134,14 +134,28 @@ func initSqlToArgs(t reflect.Type) sqlToArgsType {
 	if tKind == 1 {
 		structHandler := structToArgs(t)
 		return func(isInsert bool, v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
+			var err error
 			value := reflect.ValueOf(v)
-			return structHandler(isInsert, value, in, builder)
+			builder.WriteByte('(')
+			in, err = structHandler(isInsert, value, in, builder)
+			if err != nil {
+				return nil, err
+			}
+			builder.WriteByte(')')
+			return in, nil
 		}
 	} else if tKind == 2 {
 		structHandler := structToArgs(t.Elem())
 		return func(isInsert bool, v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
+			var err error
 			value := reflect.ValueOf(v).Elem()
-			return structHandler(isInsert, value, in, builder)
+			builder.WriteByte('(')
+			in, err = structHandler(isInsert, value, in, builder)
+			if err != nil {
+				return nil, err
+			}
+			builder.WriteByte(')')
+			return in, nil
 		}
 	} else {
 		structSliceToArgs := func(t reflect.Type) func(isInsert bool, value reflect.Value, in []interface{}, builder *strings.Builder) ([]interface{}, error) {

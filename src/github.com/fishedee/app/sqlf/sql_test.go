@@ -164,7 +164,7 @@ func testStructType(t *testing.T, db SqlfCommon) {
 		LoginTime: time.Unix(4, 0),
 	}
 	//这里的参数&符号不是必要的，省略后也可以正常运行，仅作测试使用
-	db.MustExec("insert into t_user(?.insertColumn) values (?.insertValue)", &userAdd, &userAdd)
+	db.MustExec("insert into t_user(?.insertColumn) values ?.insertValue", &userAdd, &userAdd)
 
 	db.MustExec("update t_user set createTime = ?,modifyTime = ?", time.Unix(0, 0), time.Unix(0, 0))
 
@@ -269,7 +269,7 @@ func testTxCommit(t *testing.T, initDatabase func() SqlfDB) {
 		Money:     "33",
 		LoginTime: time.Unix(4, 0),
 	}
-	tx.MustExec("insert into t_user(?.insertColumn) values (?.insertValue)", userAdd, userAdd)
+	tx.MustExec("insert into t_user(?.insertColumn) values ?.insertValue", userAdd, userAdd)
 
 	tx.MustCommit()
 
@@ -295,7 +295,7 @@ func testTxRollBack(t *testing.T, initDatabase func() SqlfDB) {
 		Money:     "33",
 		LoginTime: time.Unix(4, 0),
 	}
-	tx.MustExec("insert into t_user(?.insertColumn) values (?.insertValue)", userAdd, userAdd)
+	tx.MustExec("insert into t_user(?.insertColumn) values ?.insertValue", userAdd, userAdd)
 
 	tx.MustRollback()
 
@@ -323,7 +323,7 @@ func testTxCloseCommit(t *testing.T, initDatabase func() SqlfDB) {
 			Money:     "33",
 			LoginTime: time.Unix(4, 0),
 		}
-		tx.MustExec("insert into t_user(?.insertColumn) values (?.insertValue)", userAdd, userAdd)
+		tx.MustExec("insert into t_user(?.insertColumn) values ?.insertValue", userAdd, userAdd)
 
 		tx.MustCommit()
 	}()
@@ -357,7 +357,7 @@ func testTxCloseRollback(t *testing.T, initDatabase func() SqlfDB) {
 			Money:     "33",
 			LoginTime: time.Unix(4, 0),
 		}
-		tx.MustExec("insert into t_user(?.insertColumn) values (?.insertValue)", userAdd, userAdd)
+		tx.MustExec("insert into t_user(?.insertColumn) values ?.insertValue", userAdd, userAdd)
 
 		panic("ud")
 
