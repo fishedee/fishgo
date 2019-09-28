@@ -12,7 +12,7 @@ func initTimeSqlTypeOperation() {
 	a := time.Time{}
 	stringType := reflect.TypeOf(a)
 	sqlTypeOperation := sqlTypeOperation{
-		toArgs: func(v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
+		toArgs: func(isInsert bool, v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
 			builder.WriteByte('?')
 			in = append(in, v)
 			return in, nil
@@ -20,7 +20,7 @@ func initTimeSqlTypeOperation() {
 		fromResult: func(v interface{}, rows *gosql.Rows) error {
 			return errors.New("time.Time dos not support setValue")
 		},
-		column: func(builder *strings.Builder) error {
+		column: func(isInsert bool, builder *strings.Builder) error {
 			return errors.New("time.Time dos not support column")
 		},
 		setValue: func(v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
@@ -34,7 +34,7 @@ func initTimePtrSqlTypeOperation() {
 	var a *time.Time
 	timePtrType := reflect.TypeOf(a)
 	sqlTypeOperation := sqlTypeOperation{
-		toArgs: func(v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
+		toArgs: func(isInsert bool, v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
 			data := v.(*time.Time)
 			builder.WriteByte('?')
 			in = append(in, *data)
@@ -51,7 +51,7 @@ func initTimePtrSqlTypeOperation() {
 				return errors.New("has no result")
 			}
 		},
-		column: func(builder *strings.Builder) error {
+		column: func(isInsert bool, builder *strings.Builder) error {
 			return errors.New("*time.Time dos not support column")
 		},
 		setValue: func(v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
@@ -65,7 +65,7 @@ func initTimeSliceSqlTypeOperation() {
 	a := []time.Time{}
 	stringSliceType := reflect.TypeOf(a)
 	sqlTypeOperation := sqlTypeOperation{
-		toArgs: func(v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
+		toArgs: func(isInsert bool, v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
 			data := v.([]time.Time)
 			builder.WriteString(getSqlComma(len(data)))
 			for _, single := range data {
@@ -76,7 +76,7 @@ func initTimeSliceSqlTypeOperation() {
 		fromResult: func(v interface{}, rows *gosql.Rows) error {
 			return errors.New("[]time.Time dos not support setValue")
 		},
-		column: func(builder *strings.Builder) error {
+		column: func(isInsert bool, builder *strings.Builder) error {
 			return errors.New("[]time.Time dos not support column")
 		},
 		setValue: func(v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
@@ -90,7 +90,7 @@ func initTimeSlicePtrSqlTypeOperation() {
 	var a *[]time.Time
 	stringSlicePtrType := reflect.TypeOf(a)
 	sqlTypeOperation := sqlTypeOperation{
-		toArgs: func(v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
+		toArgs: func(isInsert bool, v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
 			data := *(v.(*[]time.Time))
 			builder.WriteString(getSqlComma(len(data)))
 			for _, single := range data {
@@ -112,7 +112,7 @@ func initTimeSlicePtrSqlTypeOperation() {
 			*data = result
 			return nil
 		},
-		column: func(builder *strings.Builder) error {
+		column: func(isInsert bool, builder *strings.Builder) error {
 			return errors.New("*[]time.Time dos not support column")
 		},
 		setValue: func(v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {

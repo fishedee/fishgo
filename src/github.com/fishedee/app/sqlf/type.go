@@ -9,11 +9,19 @@ import (
 	"sync"
 )
 
-type sqlToArgsType = func(v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error)
+const (
+	NormalColumn      = "?.column"
+	NormalValue       = "?"
+	InsertColumn      = "?.insertColumn"
+	InsertValue       = "?.insertValue"
+	UpdateColumnValue = "?.updateColumnValue"
+)
+
+type sqlToArgsType = func(isInsert bool, v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error)
 
 type sqlFromResultType = func(v interface{}, rows *gosql.Rows) error
 
-type sqlColumnType = func(builder *strings.Builder) error
+type sqlColumnType = func(isInsert bool, builder *strings.Builder) error
 
 type sqlSetValueType = func(v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error)
 
@@ -47,6 +55,21 @@ func notWordChar(data uint8) bool {
 	}
 }
 
+func checkStartWith(query string, match string) bool {
+	if len(query) < len(match) {
+		return false
+	}
+	if query[0:len(match)] != match {
+		return false
+	}
+	if len(query) == len(match) ||
+		notWordChar(query[len(match)]) == true {
+		return true
+	} else {
+		return false
+	}
+}
+
 func genSql(query string, args []interface{}) (string, []interface{}, error) {
 	//获得operation
 	operation := make([]sqlTypeOperation, len(args), len(args))
@@ -71,26 +94,38 @@ func genSql(query string, args []interface{}) (string, []interface{}, error) {
 		if argsIndex >= len(args) {
 			return "", nil, errors.New(fmt.Sprintf("invalid ? index %v,%v", argsIndex, len(args)))
 		}
-		columnSql := "?.column"
-		setValueSql := "?.setValue"
-		if len(query) > len(columnSql) && query[0:len(columnSql)] == columnSql && notWordChar(query[len(columnSql)]) == true {
-			//提取column的name
-			query = query[len(columnSql):]
-			err = operation[argsIndex].column(&sqlBuilder)
+		if checkStartWith(query, InsertColumn) {
+			//提取insert的column
+			query = query[len(InsertColumn):]
+			err = operation[argsIndex].column(true, &sqlBuilder)
 			if err != nil {
 				return "", nil, err
 			}
-		} else if len(query) > len(setValueSql) && query[0:len(setValueSql)] == setValueSql && notWordChar(query[len(setValueSql)]) == true {
-			//提取set sql
-			query = query[len(setValueSql):]
+		} else if checkStartWith(query, NormalColumn) {
+			//提取normal的column
+			query = query[len(NormalColumn):]
+			err = operation[argsIndex].column(false, &sqlBuilder)
+			if err != nil {
+				return "", nil, err
+			}
+		} else if checkStartWith(query, UpdateColumnValue) {
+			//提取update的column与value
+			query = query[len(UpdateColumnValue):]
 			realArgs, err = operation[argsIndex].setValue(args[argsIndex], realArgs, &sqlBuilder)
+			if err != nil {
+				return "", nil, err
+			}
+		} else if checkStartWith(query, InsertValue) {
+			//提取insert的value
+			query = query[len(InsertValue):]
+			realArgs, err = operation[argsIndex].toArgs(true, args[argsIndex], realArgs, &sqlBuilder)
 			if err != nil {
 				return "", nil, err
 			}
 		} else {
 			//普通的提取方式
 			query = query[1:]
-			realArgs, err = operation[argsIndex].toArgs(args[argsIndex], realArgs, &sqlBuilder)
+			realArgs, err = operation[argsIndex].toArgs(false, args[argsIndex], realArgs, &sqlBuilder)
 			if err != nil {
 				return "", nil, err
 			}

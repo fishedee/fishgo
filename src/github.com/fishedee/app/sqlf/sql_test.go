@@ -1,4 +1,3 @@
-//FIXME 需要加入mysql的测试
 package sqlf
 
 import (
@@ -70,40 +69,49 @@ func initMySqlDatabase() SqlfDB {
 	return db
 }
 
+func checkNowTime(t *testing.T, inTime time.Time) {
+	now := time.Now()
+	AssertEqual(t, now.Sub(inTime) <= time.Second, true)
+}
+
+func checkTime(t *testing.T, inTime time.Time, targetTime time.Time) {
+	AssertEqual(t, targetTime.Sub(inTime) <= time.Second || targetTime.Sub(inTime) >= time.Second, true)
+}
+
 type User struct {
-	UserId     int
+	UserId     int `sqlf:"autoincr"`
 	Name       string
 	Age        int
 	Money      Decimal
 	LoginTime  time.Time
-	CreateTime time.Time
-	ModifyTime time.Time
+	CreateTime time.Time `sqlf:"created"`
+	ModifyTime time.Time `sqlf:"updated"`
 }
-
-type UserAdd struct {
-	Name      string
-	Age       int
-	Money     Decimal
-	LoginTime time.Time
-}
-
-type UserMod UserAdd
 
 func testStructType(t *testing.T, db SqlfCommon) {
 	//初始化，查询为空
 	users := []User{}
-	db.MustQuery(&users, "select * from t_user")
+	db.MustQuery(&users, "select * from t_user", User{})
 
 	AssertEqual(t, users, []User{})
 
 	//第一次插入数据，批量插入
-	userAdds := []UserAdd{
-		UserAdd{Name: "fish", Age: 12, Money: "", LoginTime: time.Unix(1, 0)},
-		UserAdd{Name: "cat", Age: 34, Money: "102.35", LoginTime: time.Unix(2, 0)},
+	userAdds := []User{
+		User{Name: "fish", Age: 12, Money: "", LoginTime: time.Unix(1, 0)},
+		User{Name: "cat", Age: 34, Money: "102.35", LoginTime: time.Unix(2, 0)},
 	}
-	db.MustExec("insert into t_user(?.column) values ?", userAdds, userAdds)
+	db.MustExec("insert into t_user(?.insertColumn) values ?.insertValue", userAdds, userAdds)
 
 	db.MustQuery(&users, "select ?.column from t_user", users)
+
+	now := time.Now()
+	for _, user := range users {
+		checkNowTime(t, user.CreateTime)
+		checkNowTime(t, user.ModifyTime)
+	}
+	db.MustExec("update t_user set createTime = ?,modifyTime = ?", time.Unix(0, 0), time.Unix(0, 0))
+
+	db.MustQuery(&users, "select * from t_user")
 
 	AssertEqual(t, users, []User{
 		User{UserId: 1, Name: "fish", Age: 12, Money: "0", LoginTime: time.Unix(1, 0), CreateTime: time.Unix(0, 0), ModifyTime: time.Unix(0, 0)},
@@ -119,14 +127,27 @@ func testStructType(t *testing.T, db SqlfCommon) {
 		User{UserId: 2, Name: "cat", Age: 34, Money: "102.35", LoginTime: time.Unix(2, 0), CreateTime: time.Unix(0, 0), ModifyTime: time.Unix(0, 0)},
 	})
 
+	prevTime := now
+	time.Sleep(time.Second * 2)
+
 	//更新一个数据
-	userMod := UserMod{
+	userMod := User{
+		UserId:    10001,
 		Name:      "cat2",
 		Age:       789,
 		Money:     "91.23",
 		LoginTime: time.Unix(3, 0),
 	}
-	db.MustExec("update t_user set ?.setValue where userId = ?", userMod, 2)
+	db.MustExec("update t_user set ?.updateColumnValue where userId = ?", userMod, 2)
+
+	db.MustQuery(&users, "select ?.column from t_user", users)
+
+	for _, user := range users {
+		checkTime(t, user.CreateTime, prevTime)
+		checkNowTime(t, user.ModifyTime)
+	}
+
+	db.MustExec("update t_user set createTime = ?,modifyTime = ?", time.Unix(0, 0), time.Unix(0, 0))
 
 	db.MustQuery(&users, "select ?.column from t_user", users)
 
@@ -135,14 +156,17 @@ func testStructType(t *testing.T, db SqlfCommon) {
 	})
 
 	//添加一个数据
-	userAdd := UserAdd{
+	userAdd := User{
+		UserId:    10004,
 		Name:      "bird",
 		Age:       56,
 		Money:     "33",
 		LoginTime: time.Unix(4, 0),
 	}
 	//这里的参数&符号不是必要的，省略后也可以正常运行，仅作测试使用
-	db.MustExec("insert into t_user(?.column) values (?)", &userAdd, &userAdd)
+	db.MustExec("insert into t_user(?.insertColumn) values (?.insertValue)", &userAdd, &userAdd)
+
+	db.MustExec("update t_user set createTime = ?,modifyTime = ?", time.Unix(0, 0), time.Unix(0, 0))
 
 	db.MustQuery(&users, "select ?.column from t_user", users)
 
@@ -239,18 +263,19 @@ func testTxCommit(t *testing.T, initDatabase func() SqlfDB) {
 	tx := db.MustBegin()
 
 	//添加一个数据
-	userAdd := UserAdd{
+	userAdd := User{
 		Name:      "bird",
 		Age:       56,
 		Money:     "33",
 		LoginTime: time.Unix(4, 0),
 	}
-	tx.MustExec("insert into t_user(?.column) values (?)", userAdd, userAdd)
+	tx.MustExec("insert into t_user(?.insertColumn) values (?.insertValue)", userAdd, userAdd)
 
 	tx.MustCommit()
 
-	var users []User
+	db.MustExec("update t_user set createTime = ?,modifyTime = ?", time.Unix(0, 0), time.Unix(0, 0))
 
+	var users []User
 	db.MustQuery(&users, "select ?.column from t_user", users)
 
 	AssertEqual(t, users, []User{
@@ -264,15 +289,17 @@ func testTxRollBack(t *testing.T, initDatabase func() SqlfDB) {
 	tx := db.MustBegin()
 
 	//添加一个数据
-	userAdd := UserAdd{
+	userAdd := User{
 		Name:      "bird",
 		Age:       56,
 		Money:     "33",
 		LoginTime: time.Unix(4, 0),
 	}
-	tx.MustExec("insert into t_user(?.column) values (?)", userAdd, userAdd)
+	tx.MustExec("insert into t_user(?.insertColumn) values (?.insertValue)", userAdd, userAdd)
 
 	tx.MustRollback()
+
+	db.MustExec("update t_user set createTime = ?,modifyTime = ?", time.Unix(0, 0), time.Unix(0, 0))
 
 	var users []User
 
@@ -290,16 +317,18 @@ func testTxCloseCommit(t *testing.T, initDatabase func() SqlfDB) {
 		defer tx.MustClose()
 
 		//添加一个数据
-		userAdd := UserAdd{
+		userAdd := User{
 			Name:      "bird",
 			Age:       56,
 			Money:     "33",
 			LoginTime: time.Unix(4, 0),
 		}
-		tx.MustExec("insert into t_user(?.column) values (?)", userAdd, userAdd)
+		tx.MustExec("insert into t_user(?.insertColumn) values (?.insertValue)", userAdd, userAdd)
 
 		tx.MustCommit()
 	}()
+
+	db.MustExec("update t_user set createTime = ?,modifyTime = ?", time.Unix(0, 0), time.Unix(0, 0))
 
 	var users []User
 
@@ -322,18 +351,20 @@ func testTxCloseRollback(t *testing.T, initDatabase func() SqlfDB) {
 		defer tx.MustClose()
 
 		//添加一个数据
-		userAdd := UserAdd{
+		userAdd := User{
 			Name:      "bird",
 			Age:       56,
 			Money:     "33",
 			LoginTime: time.Unix(4, 0),
 		}
-		tx.MustExec("insert into t_user(?.column) values (?)", userAdd, userAdd)
+		tx.MustExec("insert into t_user(?.insertColumn) values (?.insertValue)", userAdd, userAdd)
 
 		panic("ud")
 
 		tx.MustCommit()
 	}()
+
+	db.MustExec("update t_user set createTime = ?,modifyTime = ?", time.Unix(0, 0), time.Unix(0, 0))
 
 	var users []User
 
