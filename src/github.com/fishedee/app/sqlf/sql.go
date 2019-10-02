@@ -102,6 +102,7 @@ func NewSqlfDB(log Log, metric Metric, config SqlfDBConfig) (SqlfDB, error) {
 		db:      db,
 		log:     log,
 		isDebug: isDebug,
+		driver:  config.Driver,
 	}, nil
 }
 
@@ -135,11 +136,12 @@ type dbImplement struct {
 	db      *gosql.DB
 	log     Log
 	isDebug bool
+	driver  string
 }
 
 func (this *dbImplement) Query(data interface{}, query string, args ...interface{}) error {
 	sqlRunner := func() (string, error) {
-		sql, args, err := genSql(query, args)
+		sql, args, err := genSql(this.driver, query, args)
 		if err != nil {
 			return query, err
 		}
@@ -148,7 +150,7 @@ func (this *dbImplement) Query(data interface{}, query string, args ...interface
 			return sql, err
 		}
 		defer rows.Close()
-		err = extractResult(data, rows)
+		err = extractResult(this.driver, data, rows)
 		if err != nil {
 			return sql, err
 		}
@@ -168,7 +170,7 @@ func (this *dbImplement) MustQuery(data interface{}, query string, args ...inter
 func (this *dbImplement) Exec(query string, args ...interface{}) (SqlfResult, error) {
 	var execResult SqlfResult
 	sqlRunner := func() (string, error) {
-		sql, args, err := genSql(query, args)
+		sql, args, err := genSql(this.driver, query, args)
 		if err != nil {
 			return query, err
 		}
@@ -204,6 +206,7 @@ func (this *dbImplement) Begin() (SqlfTx, error) {
 		tx:          tx,
 		isDebug:     this.isDebug,
 		log:         this.log,
+		driver:      this.driver,
 		hasCommit:   false,
 		hasRollback: false,
 	}, nil
@@ -259,6 +262,7 @@ func (this *resultImplement) MustRowsAffected() int64 {
 type txImplement struct {
 	tx          *gosql.Tx
 	log         Log
+	driver      string
 	isDebug     bool
 	hasCommit   bool
 	hasRollback bool
@@ -266,7 +270,7 @@ type txImplement struct {
 
 func (this *txImplement) Query(data interface{}, query string, args ...interface{}) error {
 	sqlRunner := func() (string, error) {
-		sql, args, err := genSql(query, args)
+		sql, args, err := genSql(this.driver, query, args)
 		if err != nil {
 			return query, err
 		}
@@ -275,7 +279,7 @@ func (this *txImplement) Query(data interface{}, query string, args ...interface
 			return sql, err
 		}
 		defer rows.Close()
-		err = extractResult(data, rows)
+		err = extractResult(this.driver, data, rows)
 		if err != nil {
 			return sql, err
 		}
@@ -295,7 +299,7 @@ func (this *txImplement) MustQuery(data interface{}, query string, args ...inter
 func (this *txImplement) Exec(query string, args ...interface{}) (SqlfResult, error) {
 	var execResult SqlfResult
 	sqlRunner := func() (string, error) {
-		sql, args, err := genSql(query, args)
+		sql, args, err := genSql(this.driver, query, args)
 		if err != nil {
 			return query, err
 		}

@@ -17,13 +17,13 @@ const (
 	UpdateColumnValue = "?.updateColumnValue"
 )
 
-type sqlToArgsType = func(isInsert bool, v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error)
+type sqlToArgsType = func(driver string, isInsert bool, v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error)
 
-type sqlFromResultType = func(v interface{}, rows *gosql.Rows) error
+type sqlFromResultType = func(driver string, v interface{}, rows *gosql.Rows) error
 
-type sqlColumnType = func(isInsert bool, builder *strings.Builder) error
+type sqlColumnType = func(driver string, isInsert bool, builder *strings.Builder) error
 
-type sqlSetValueType = func(v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error)
+type sqlSetValueType = func(driver string, v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error)
 
 type sqlTypeOperation struct {
 	toArgs     sqlToArgsType
@@ -38,9 +38,9 @@ var (
 	stringPtrType       = reflect.TypeOf((*string)(nil))
 )
 
-func extractResult(data interface{}, rows *gosql.Rows) error {
+func extractResult(driver string, data interface{}, rows *gosql.Rows) error {
 	operation := getSqlOperationFromInterface(data)
-	return operation.fromResult(data, rows)
+	return operation.fromResult(driver, data, rows)
 }
 
 func notWordChar(data uint8) bool {
@@ -70,7 +70,7 @@ func checkStartWith(query string, match string) bool {
 	}
 }
 
-func genSql(query string, args []interface{}) (string, []interface{}, error) {
+func genSql(driver string, query string, args []interface{}) (string, []interface{}, error) {
 	//获得operation
 	operation := make([]sqlTypeOperation, len(args), len(args))
 	for i, arg := range args {
@@ -97,35 +97,35 @@ func genSql(query string, args []interface{}) (string, []interface{}, error) {
 		if checkStartWith(query, InsertColumn) {
 			//提取insert的column
 			query = query[len(InsertColumn):]
-			err = operation[argsIndex].column(true, &sqlBuilder)
+			err = operation[argsIndex].column(driver, true, &sqlBuilder)
 			if err != nil {
 				return "", nil, err
 			}
 		} else if checkStartWith(query, NormalColumn) {
 			//提取normal的column
 			query = query[len(NormalColumn):]
-			err = operation[argsIndex].column(false, &sqlBuilder)
+			err = operation[argsIndex].column(driver, false, &sqlBuilder)
 			if err != nil {
 				return "", nil, err
 			}
 		} else if checkStartWith(query, UpdateColumnValue) {
 			//提取update的column与value
 			query = query[len(UpdateColumnValue):]
-			realArgs, err = operation[argsIndex].setValue(args[argsIndex], realArgs, &sqlBuilder)
+			realArgs, err = operation[argsIndex].setValue(driver, args[argsIndex], realArgs, &sqlBuilder)
 			if err != nil {
 				return "", nil, err
 			}
 		} else if checkStartWith(query, InsertValue) {
 			//提取insert的value
 			query = query[len(InsertValue):]
-			realArgs, err = operation[argsIndex].toArgs(true, args[argsIndex], realArgs, &sqlBuilder)
+			realArgs, err = operation[argsIndex].toArgs(driver, true, args[argsIndex], realArgs, &sqlBuilder)
 			if err != nil {
 				return "", nil, err
 			}
 		} else {
 			//普通的提取方式
 			query = query[1:]
-			realArgs, err = operation[argsIndex].toArgs(false, args[argsIndex], realArgs, &sqlBuilder)
+			realArgs, err = operation[argsIndex].toArgs(driver, false, args[argsIndex], realArgs, &sqlBuilder)
 			if err != nil {
 				return "", nil, err
 			}

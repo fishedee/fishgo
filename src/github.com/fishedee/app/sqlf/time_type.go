@@ -9,21 +9,30 @@ import (
 )
 
 func initTimeSqlTypeOperation() {
+	zeroTime := time.Time{}
+	zeroTimeString := zeroTime.Local().Format("2006-01-02T15:04:05")
+
 	a := time.Time{}
 	stringType := reflect.TypeOf(a)
 	sqlTypeOperation := sqlTypeOperation{
-		toArgs: func(isInsert bool, v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
+		toArgs: func(driver string, isInsert bool, v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
+			data := v.(time.Time)
 			builder.WriteByte('?')
-			in = append(in, v)
+			if data.IsZero() && driver == "mysql" {
+				in = append(in, zeroTimeString)
+			} else {
+				in = append(in, v)
+			}
+
 			return in, nil
 		},
-		fromResult: func(v interface{}, rows *gosql.Rows) error {
+		fromResult: func(driver string, v interface{}, rows *gosql.Rows) error {
 			return errors.New("time.Time dos not support setValue")
 		},
-		column: func(isInsert bool, builder *strings.Builder) error {
+		column: func(driver string, isInsert bool, builder *strings.Builder) error {
 			return errors.New("time.Time dos not support column")
 		},
-		setValue: func(v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
+		setValue: func(driver string, v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
 			return nil, errors.New("time.Time dos not support setValue")
 		},
 	}
@@ -31,16 +40,23 @@ func initTimeSqlTypeOperation() {
 }
 
 func initTimePtrSqlTypeOperation() {
+	zeroTime := time.Time{}
+	zeroTimeString := zeroTime.Local().Format("2006-01-02T15:04:05")
+
 	var a *time.Time
 	timePtrType := reflect.TypeOf(a)
 	sqlTypeOperation := sqlTypeOperation{
-		toArgs: func(isInsert bool, v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
+		toArgs: func(driver string, isInsert bool, v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
 			data := v.(*time.Time)
 			builder.WriteByte('?')
-			in = append(in, *data)
+			if data.IsZero() && driver == "mysql" {
+				in = append(in, zeroTimeString)
+			} else {
+				in = append(in, *data)
+			}
 			return in, nil
 		},
-		fromResult: func(v interface{}, rows *gosql.Rows) error {
+		fromResult: func(driver string, v interface{}, rows *gosql.Rows) error {
 			if rows.Next() {
 				err := rows.Scan(v)
 				if err != nil {
@@ -51,10 +67,10 @@ func initTimePtrSqlTypeOperation() {
 				return errors.New("has no result")
 			}
 		},
-		column: func(isInsert bool, builder *strings.Builder) error {
+		column: func(driver string, isInsert bool, builder *strings.Builder) error {
 			return errors.New("*time.Time dos not support column")
 		},
-		setValue: func(v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
+		setValue: func(driver string, v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
 			return nil, errors.New("*time.Time dos not support setValue")
 		},
 	}
@@ -62,24 +78,31 @@ func initTimePtrSqlTypeOperation() {
 }
 
 func initTimeSliceSqlTypeOperation() {
+	zeroTime := time.Time{}
+	zeroTimeString := zeroTime.Local().Format("2006-01-02T15:04:05")
+
 	a := []time.Time{}
 	stringSliceType := reflect.TypeOf(a)
 	sqlTypeOperation := sqlTypeOperation{
-		toArgs: func(isInsert bool, v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
+		toArgs: func(driver string, isInsert bool, v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
 			data := v.([]time.Time)
 			builder.WriteString(getSqlComma(len(data)))
 			for _, single := range data {
-				in = append(in, single)
+				if single.IsZero() && driver == "mysql" {
+					in = append(in, zeroTimeString)
+				} else {
+					in = append(in, single)
+				}
 			}
 			return in, nil
 		},
-		fromResult: func(v interface{}, rows *gosql.Rows) error {
+		fromResult: func(driver string, v interface{}, rows *gosql.Rows) error {
 			return errors.New("[]time.Time dos not support setValue")
 		},
-		column: func(isInsert bool, builder *strings.Builder) error {
+		column: func(driver string, isInsert bool, builder *strings.Builder) error {
 			return errors.New("[]time.Time dos not support column")
 		},
-		setValue: func(v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
+		setValue: func(driver string, v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
 			return nil, errors.New("[]time.Time dos not support setValue")
 		},
 	}
@@ -87,18 +110,25 @@ func initTimeSliceSqlTypeOperation() {
 }
 
 func initTimeSlicePtrSqlTypeOperation() {
+	zeroTime := time.Time{}
+	zeroTimeString := zeroTime.Local().Format("2006-01-02T15:04:05")
+
 	var a *[]time.Time
 	stringSlicePtrType := reflect.TypeOf(a)
 	sqlTypeOperation := sqlTypeOperation{
-		toArgs: func(isInsert bool, v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
+		toArgs: func(driver string, isInsert bool, v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
 			data := *(v.(*[]time.Time))
 			builder.WriteString(getSqlComma(len(data)))
 			for _, single := range data {
-				in = append(in, single)
+				if single.IsZero() && driver == "mysql" {
+					in = append(in, zeroTimeString)
+				} else {
+					in = append(in, single)
+				}
 			}
 			return in, nil
 		},
-		fromResult: func(v interface{}, rows *gosql.Rows) error {
+		fromResult: func(driver string, v interface{}, rows *gosql.Rows) error {
 			data := v.(*[]time.Time)
 			result := []time.Time{}
 			var temp time.Time
@@ -112,10 +142,10 @@ func initTimeSlicePtrSqlTypeOperation() {
 			*data = result
 			return nil
 		},
-		column: func(isInsert bool, builder *strings.Builder) error {
+		column: func(driver string, isInsert bool, builder *strings.Builder) error {
 			return errors.New("*[]time.Time dos not support column")
 		},
-		setValue: func(v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
+		setValue: func(driver string, v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
 			return nil, errors.New("*[]time.Time dos not support setValue")
 		},
 	}

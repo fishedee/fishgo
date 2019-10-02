@@ -33,6 +33,14 @@ func initSqliteDatabase() SqlfDB {
 		createTime timestamp not null default 0,
 		modifyTime timestamp not null default 0
 	);
+
+	create table t_item(
+		itemId integer primary key autoincrement,
+		name char(32) not null,
+		onShelfTime timestamp not null,
+		createTime timestamp not null default 0,
+		modifyTime timestamp not null default 0
+	);
 	`)
 	return db
 }
@@ -56,6 +64,9 @@ func initMySqlDatabase() SqlfDB {
 	drop table if exists t_user;
 	`)
 	db.MustExec(`
+	drop table if exists t_item;
+	`)
+	db.MustExec(`
 	create table t_user(
 		userId int not null auto_increment,
 		name char(32) not null,
@@ -65,6 +76,16 @@ func initMySqlDatabase() SqlfDB {
 		createTime datetime not null default '1970-01-01 08:00:00',
 		modifyTime datetime not null default '1970-01-01 08:00:00',
 		primary key(userId)
+	)engine=innodb default charset=utf8mb4;`)
+
+	db.MustExec(`
+	create table t_item(
+		itemId integer not null auto_increment,
+		name char(32) not null,
+		onShelfTime datetime not null default '1970-01-01 08:00:00',
+		createTime datetime not null default '1970-01-01 08:00:00',
+		modifyTime datetime not null default '1970-01-01 08:00:00',
+		primary key(itemId)
 	)engine=innodb default charset=utf8mb4;`)
 	return db
 }
@@ -373,6 +394,40 @@ func testTxCloseRollback(t *testing.T, initDatabase func() SqlfDB) {
 	AssertEqual(t, users, []User{})
 }
 
+type Item struct {
+	ItemId      int `sqlf:"autoincr"`
+	Name        string
+	OnShelfTime time.Time
+	CreateTime  time.Time
+	ModifyTime  time.Time
+}
+
+func testZeroTime(t *testing.T, initDatabase func() SqlfDB) {
+	//使用struct的time注入
+	db := initDatabase()
+
+	db.MustExec("insert into t_item(?.insertColumn) values ?.insertValue", Item{}, Item{
+		Name:        "fish",
+		OnShelfTime: time.Time{},
+	})
+
+	var items []Item
+	db.MustQuery(&items, "select * from t_item")
+
+	AssertEqual(t, items[0].OnShelfTime.IsZero(), true)
+
+	//使用time注入
+	db2 := initDatabase()
+
+	db2.MustExec("insert into t_item(name,onShelfTime,createTime) values (?,?,?)", "cat", time.Time{}, &time.Time{})
+
+	var items2 []Item
+	db2.MustQuery(&items2, "select * from t_item")
+
+	AssertEqual(t, items2[0].OnShelfTime.IsZero(), true)
+	AssertEqual(t, items2[0].CreateTime.IsZero(), true)
+}
+
 func testAll(t *testing.T, initDatabase func() SqlfDB) {
 	testStructTypeAll(t, initDatabase)
 	testBuildInTypeAll(t, initDatabase)
@@ -380,6 +435,7 @@ func testAll(t *testing.T, initDatabase func() SqlfDB) {
 	testTxRollBack(t, initDatabase)
 	testTxCloseCommit(t, initDatabase)
 	testTxCloseRollback(t, initDatabase)
+	testZeroTime(t, initDatabase)
 }
 
 func TestAll(t *testing.T) {

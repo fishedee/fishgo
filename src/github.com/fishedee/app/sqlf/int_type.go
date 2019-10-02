@@ -11,18 +11,18 @@ func initIntSqlTypeOperation() {
 	var a int = 10
 	intType := reflect.TypeOf(a)
 	sqlTypeOperation := sqlTypeOperation{
-		toArgs: func(isInsert bool, v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
+		toArgs: func(driver string, isInsert bool, v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
 			builder.WriteByte('?')
 			in = append(in, v)
 			return in, nil
 		},
-		fromResult: func(v interface{}, rows *gosql.Rows) error {
+		fromResult: func(driver string, v interface{}, rows *gosql.Rows) error {
 			return errors.New("int dos not support setValue")
 		},
-		column: func(isInsert bool, builder *strings.Builder) error {
+		column: func(driver string, isInsert bool, builder *strings.Builder) error {
 			return errors.New("int dos not support column")
 		},
-		setValue: func(v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
+		setValue: func(driver string, v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
 			return nil, errors.New("int dos not support setValue")
 		},
 	}
@@ -33,13 +33,13 @@ func initIntPtrSqlTypeOperation() {
 	var a *int
 	intPtrType := reflect.TypeOf(a)
 	sqlTypeOperation := sqlTypeOperation{
-		toArgs: func(isInsert bool, v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
+		toArgs: func(driver string, isInsert bool, v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
 			data := v.(*int)
 			builder.WriteByte('?')
 			in = append(in, *data)
 			return in, nil
 		},
-		fromResult: func(v interface{}, rows *gosql.Rows) error {
+		fromResult: func(driver string, v interface{}, rows *gosql.Rows) error {
 			if rows.Next() {
 				err := rows.Scan(v)
 				if err != nil {
@@ -50,10 +50,10 @@ func initIntPtrSqlTypeOperation() {
 				return errors.New("has no result")
 			}
 		},
-		column: func(isInsert bool, builder *strings.Builder) error {
+		column: func(driver string, isInsert bool, builder *strings.Builder) error {
 			return errors.New("*int dos not support column")
 		},
-		setValue: func(v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
+		setValue: func(driver string, v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
 			return nil, errors.New("*int dos not support setValue")
 		},
 	}
@@ -64,7 +64,7 @@ func initIntSliceSqlTypeOperation() {
 	a := []int{10}
 	intSliceType := reflect.TypeOf(a)
 	sqlTypeOperation := sqlTypeOperation{
-		toArgs: func(isInsert bool, v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
+		toArgs: func(driver string, isInsert bool, v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
 			data := v.([]int)
 			builder.WriteString(getSqlComma(len(data)))
 			for _, single := range data {
@@ -72,13 +72,13 @@ func initIntSliceSqlTypeOperation() {
 			}
 			return in, nil
 		},
-		fromResult: func(v interface{}, rows *gosql.Rows) error {
+		fromResult: func(driver string, v interface{}, rows *gosql.Rows) error {
 			return errors.New("[]int dos not support setValue")
 		},
-		column: func(isInsert bool, builder *strings.Builder) error {
+		column: func(driver string, isInsert bool, builder *strings.Builder) error {
 			return errors.New("[]int dos not support column")
 		},
-		setValue: func(v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
+		setValue: func(driver string, v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
 			return nil, errors.New("[]int dos not support setValue")
 		},
 	}
@@ -89,7 +89,7 @@ func initIntSlicePtrSqlTypeOperation() {
 	var a *[]int
 	intSlicePtrType := reflect.TypeOf(a)
 	sqlTypeOperation := sqlTypeOperation{
-		toArgs: func(isInsert bool, v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
+		toArgs: func(driver string, isInsert bool, v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
 			data := *(v.(*[]int))
 			builder.WriteString(getSqlComma(len(data)))
 			for _, single := range data {
@@ -97,7 +97,7 @@ func initIntSlicePtrSqlTypeOperation() {
 			}
 			return in, nil
 		},
-		fromResult: func(v interface{}, rows *gosql.Rows) error {
+		fromResult: func(driver string, v interface{}, rows *gosql.Rows) error {
 			data := v.(*[]int)
 			result := []int{}
 			var temp int
@@ -111,10 +111,10 @@ func initIntSlicePtrSqlTypeOperation() {
 			*data = result
 			return nil
 		},
-		column: func(isInsert bool, builder *strings.Builder) error {
+		column: func(driver string, isInsert bool, builder *strings.Builder) error {
 			return errors.New("*[]int dos not support column")
 		},
-		setValue: func(v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
+		setValue: func(driver string, v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
 			return nil, errors.New("*[]int dos not support setValue")
 		},
 	}
