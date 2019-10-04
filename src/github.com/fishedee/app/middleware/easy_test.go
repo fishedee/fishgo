@@ -69,7 +69,7 @@ func TestEasy(t *testing.T) {
 
 	factory := NewRouterFactory()
 	d := &dStruct{}
-	factory.Use(NewLogMiddleware(log))
+	factory.Use(NewLogMiddleware(log, nil))
 	factory.Use(middleware)
 	factory.GET("/a", a_json)
 	factory.GET("/b", b_Json)
@@ -89,7 +89,7 @@ func TestEasy(t *testing.T) {
 	r2, _ := http.NewRequest("GET", "http://example.com/b?key2=mmc", nil)
 	w2 := &fakeWriter{}
 	router.ServeHTTP(w2, r2)
-	AssertEqual(t, jsonToArray(w2.Read()), map[string]interface{}{"code": 10001.0, "msg": "my god"})
+	AssertEqual(t, jsonToArray(w2.Read()), map[string]interface{}{"code": 10001.0, "msg": "my god", "data": nil})
 
 	r3, _ := http.NewRequest("GET", "http://example.com/c", nil)
 	w3 := &fakeWriter{}
@@ -99,12 +99,12 @@ func TestEasy(t *testing.T) {
 	r4, _ := http.NewRequest("GET", "http://example.com/d", nil)
 	w4 := &fakeWriter{}
 	router.ServeHTTP(w4, r4)
-	AssertEqual(t, jsonToArray(w4.Read()), map[string]interface{}{"code": 1.0, "msg": "my god2"})
+	AssertEqual(t, jsonToArray(w4.Read()), map[string]interface{}{"code": 1.0, "msg": "my god2", "data": nil})
 
 	r5, _ := http.NewRequest("GET", "http://example.com/e", nil)
 	w5 := &fakeWriter{}
 	router.ServeHTTP(w5, r5)
-	AssertEqual(t, jsonToArray(w5.Read()), map[string]interface{}{"code": 10002.0, "msg": "my god3"})
+	AssertEqual(t, jsonToArray(w5.Read()), map[string]interface{}{"code": 10002.0, "msg": "my god3", "data": nil})
 
 	r6, _ := http.NewRequest("GET", "http://example.com/f", nil)
 	w6 := &fakeWriter{}
@@ -122,10 +122,10 @@ func TestEasy2(t *testing.T) {
 	renderFactory, _ := NewRenderFactory(RenderConfig{})
 	validatorFactory, _ := NewValidatorFactory(ValidatorConfig{})
 	sessionFactory, _ := NewSessionFactory(SessionConfig{Driver: "memory", CookieName: "fishmm"})
-	middleware := NewEasyMiddleware(log, validatorFactory, sessionFactory, renderFactory)
+	middleware := NewEasyMiddleware(log, validatorFactory, sessionFactory, renderFactory, nil)
 
 	factory := NewRouterFactory()
-	factory.Use(NewLogMiddleware(log))
+	factory.Use(NewLogMiddleware(log, nil))
 	factory.Use(middleware)
 	factory.Use(func(prev RouterMiddlewareContext) RouterMiddlewareContext {
 		lastHandler, isOk := prev.Handler.(func(ctx context.Context, v Validator, s Session) interface{})

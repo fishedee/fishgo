@@ -16,6 +16,9 @@ import (
 type Decimal string
 
 func NewDecimal(in string) (Decimal, error) {
+	if len(in) == 0 {
+		return Decimal("0"), nil
+	}
 	_, err := decimal.NewFromString(in)
 	if err != nil {
 		return "", err
@@ -136,5 +139,21 @@ func (this *Decimal) Scan(value interface{}) error {
 	default:
 		return fmt.Errorf("decimal can not scan by %v", reflect.TypeOf(value))
 	}
+}
 
+func (this *Decimal) UnmarshalJSON(data []byte) error {
+	str := string(data)
+	if len(str) > 0 && str[0] == '"' {
+		str = str[1:]
+	}
+	if len(str) > 0 && str[len(str)-1] == '"' {
+		str = str[0 : len(str)-1]
+	}
+	result, err := NewDecimal(str)
+	if err != nil {
+		panic(str)
+		return err
+	}
+	*this = result
+	return nil
 }

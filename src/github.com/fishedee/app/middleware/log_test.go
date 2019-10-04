@@ -13,7 +13,7 @@ func TestLog(t *testing.T) {
 	})
 
 	factory := NewRouterFactory()
-	factory.Use(NewLogMiddleware(log))
+	factory.Use(NewLogMiddleware(log, nil))
 	factory.GET("/a", func(w http.ResponseWriter, r *http.Request) {
 
 	})

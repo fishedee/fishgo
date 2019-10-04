@@ -1,8 +1,10 @@
 package validator
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	. "github.com/fishedee/app/quicktag"
 	. "github.com/fishedee/encoding"
 	. "github.com/fishedee/language"
 	"io"
@@ -42,6 +44,8 @@ type Validator interface {
 	MustBindQuery(obj interface{})
 	BindForm(obj interface{}) error
 	MustBindForm(obj interface{})
+	BindJson(obj interface{}) error
+	MustBindJson(obj interface{})
 	Bind(obj interface{}) error
 	MustBind(obj interface{})
 
@@ -88,14 +92,16 @@ func (this *validatorFactoryImplement) Create(r *http.Request, param map[string]
 }
 
 type validatorImplement struct {
-	config      ValidatorConfig
-	request     *http.Request
-	param       map[string]string
-	query       map[string]interface{}
-	form        map[string]interface{}
-	file        map[string]*multipart.FileHeader
-	parseResult error
-	hasParse    bool
+	config       ValidatorConfig
+	request      *http.Request
+	param        map[string]string
+	query        map[string]interface{}
+	form         map[string]interface{}
+	file         map[string]*multipart.FileHeader
+	jsonForm     []byte
+	jsonQuickTag *QuickTag
+	parseResult  error
+	hasParse     bool
 }
 
 func newValidator(r *http.Request, param map[string]string, config ValidatorConfig) Validator {
@@ -112,10 +118,11 @@ func newValidator(r *http.Request, param map[string]string, config ValidatorConf
 		config.MaxFileMemorySize = 1024 * 1024 * 10
 	}
 	return &validatorImplement{
-		request:  r,
-		param:    param,
-		hasParse: false,
-		config:   config,
+		request:      r,
+		param:        param,
+		hasParse:     false,
+		config:       config,
+		jsonQuickTag: NewQuickTag("json"),
 	}
 }
 
@@ -155,6 +162,7 @@ func (this *validatorImplement) parseInner() error {
 	}
 
 	//解析body参数
+	this.jsonForm = []byte{}
 	this.form = map[string]interface{}{}
 	this.file = map[string]*multipart.FileHeader{}
 	if this.request.Body == nil {
@@ -173,6 +181,13 @@ func (this *validatorImplement) parseInner() error {
 		if err != nil {
 			return err
 		}
+	} else if ct == "application/json" {
+		bodyReader := &LimitedReader{this.request.Body, int64(this.config.MaxFormSize)}
+		byteArray, err := ioutil.ReadAll(bodyReader)
+		if err != nil {
+			return err
+		}
+		this.jsonForm = byteArray
 	} else if ct == "multipart/form-data" {
 		boundary, ok := ctParam["boundary"]
 		if !ok {
@@ -325,6 +340,9 @@ func (this *validatorImplement) MustFile(key string) *multipart.FileHeader {
 }
 
 func (this *validatorImplement) BindParam(obj interface{}) error {
+	if len(this.param) == 0 {
+		return nil
+	}
 	return MapToArray(this.param, obj, "validator")
 }
 
@@ -339,6 +357,9 @@ func (this *validatorImplement) BindQuery(obj interface{}) error {
 	err := this.parse()
 	if err != nil {
 		return err
+	}
+	if len(this.query) == 0 {
+		return nil
 	}
 	return MapToArray(this.query, obj, "validator")
 }
@@ -355,11 +376,34 @@ func (this *validatorImplement) BindForm(obj interface{}) error {
 	if err != nil {
 		return err
 	}
+	if len(this.form) == 0 {
+		return nil
+	}
 	return MapToArray(this.form, obj, "validator")
 }
 
 func (this *validatorImplement) MustBindForm(obj interface{}) {
 	err := this.BindForm(obj)
+	if err != nil {
+		Throw(1, err.Error())
+	}
+}
+
+func (this *validatorImplement) BindJson(obj interface{}) error {
+	err := this.parse()
+	if err != nil {
+		return err
+	}
+	if len(this.jsonForm) == 0 {
+		return nil
+	}
+	quickTagObj := this.jsonQuickTag.GetTagInstance(obj)
+
+	return json.Unmarshal(this.jsonForm, quickTagObj)
+}
+
+func (this *validatorImplement) MustBindJson(obj interface{}) {
+	err := this.BindJson(obj)
 	if err != nil {
 		Throw(1, err.Error())
 	}
@@ -380,6 +424,10 @@ func (this *validatorImplement) Bind(obj interface{}) error {
 		return err
 	}
 	err = this.BindForm(obj)
+	if err != nil {
+		return err
+	}
+	err = this.BindJson(obj)
 	if err != nil {
 		return err
 	}

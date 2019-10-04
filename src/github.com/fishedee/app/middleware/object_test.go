@@ -64,7 +64,7 @@ func TestRouterObject(t *testing.T) {
 	renderFactory, _ := NewRenderFactory(RenderConfig{})
 	validatorFactory, _ := NewValidatorFactory(ValidatorConfig{})
 	sessionFactory, _ := NewSessionFactory(SessionConfig{Driver: "memory", CookieName: "fishmm"})
-	middleware := NewEasyMiddleware(log, validatorFactory, sessionFactory, renderFactory)
+	middleware := NewEasyMiddleware(log, validatorFactory, sessionFactory, renderFactory, nil)
 
 	routerFactory := NewRouterFactory()
 	routerFactory.NotFound(func(w http.ResponseWriter, r *http.Request) {
