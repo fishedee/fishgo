@@ -17,7 +17,7 @@ func TestRenderBasic(t *testing.T) {
 	}{
 		{"raw", []byte("123"), "123", "text/plain; charset=utf-8"},
 		{"text", "456", "456", "text/plain; charset=utf-8"},
-		{"json", map[string]string{"a": "123", "b": "456"}, "{\"a\":\"123\",\"b\":\"456\"}", "application/x-javascript; charset=utf-8"},
+		{"json", map[string]string{"a": "123", "b": "456"}, "{\"a\":\"123\",\"b\":\"456\"}\n", "application/json; charset=utf-8"},
 		{"html", []interface{}{"index.html", map[string]interface{}{"Name": "Fish"}}, "Hello Fish", "text/html; charset=utf-8"},
 		{"html", []interface{}{"index2.html", map[string]interface{}{"User": "Fish"}}, "<html><body><div>Fish</div></body></html>", "text/html; charset=utf-8"},
 	}
