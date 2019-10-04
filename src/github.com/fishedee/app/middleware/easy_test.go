@@ -65,7 +65,7 @@ func TestEasy(t *testing.T) {
 	renderFactory, _ := NewRenderFactory(RenderConfig{})
 	validatorFactory, _ := NewValidatorFactory(ValidatorConfig{})
 	sessionFactory, _ := NewSessionFactory(SessionConfig{Driver: "memory", CookieName: "fishmm"})
-	middleware := NewEasyMiddleware(log, validatorFactory, sessionFactory, renderFactory)
+	middleware := NewEasyMiddleware(log, validatorFactory, sessionFactory, renderFactory, nil)
 
 	factory := NewRouterFactory()
 	d := &dStruct{}

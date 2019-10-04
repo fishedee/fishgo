@@ -3,6 +3,7 @@ package middleware
 import (
 	. "github.com/fishedee/app/log"
 	. "github.com/fishedee/app/metric"
+	. "github.com/fishedee/app/quicktag"
 	. "github.com/fishedee/app/render"
 	. "github.com/fishedee/app/router"
 	. "github.com/fishedee/app/session"
@@ -17,6 +18,7 @@ func NewEasyMiddleware(log Log, validatorFactory ValidatorFactory, sessionFactor
 	if metric != nil {
 		serverError = metric.GetCounter("server.error")
 	}
+	jsonQuickTag := NewQuickTag("json")
 
 	return func(prev RouterMiddlewareContext) RouterMiddlewareContext {
 		lastHandler, isOk := prev.Handler.(func(v Validator, s Session) interface{})
@@ -66,7 +68,7 @@ func NewEasyMiddleware(log Log, validatorFactory ValidatorFactory, sessionFactor
 					return map[string]interface{}{
 						"code": 0,
 						"msg":  "",
-						"data": result,
+						"data": jsonQuickTag.GetTagInstance(result),
 					}
 				}
 			} else if renderName == "html" {

@@ -1,4 +1,4 @@
-package json
+package quicktag
 
 import (
 	"fmt"
@@ -9,14 +9,14 @@ import (
 	"unsafe"
 )
 
-type quickTag struct {
+type QuickTag struct {
 	tag       string
 	cache     sync.Map
 	mutex     sync.Mutex
 	basicType map[reflect.Kind]bool
 }
 
-func newQuickTag(tag string) *quickTag {
+func NewQuickTag(tag string) *QuickTag {
 	basicTypeMap := map[reflect.Kind]bool{}
 
 	basicType := []reflect.Kind{
@@ -41,7 +41,7 @@ func newQuickTag(tag string) *quickTag {
 	for _, kind := range basicType {
 		basicTypeMap[kind] = true
 	}
-	return &quickTag{
+	return &QuickTag{
 		tag:       tag,
 		cache:     sync.Map{},
 		mutex:     sync.Mutex{},
@@ -49,7 +49,7 @@ func newQuickTag(tag string) *quickTag {
 	}
 }
 
-func (this *quickTag) getTagType(t reflect.Type) reflect.Type {
+func (this *QuickTag) GetTagType(t reflect.Type) reflect.Type {
 	result, isExist := this.cache.Load(t)
 	if isExist {
 		return *(result.(*reflect.Type))
@@ -62,7 +62,7 @@ func (this *quickTag) getTagType(t reflect.Type) reflect.Type {
 	return this.getTagTypeInner(hasVisit, t)
 }
 
-func (this *quickTag) getTagTypeInner(hasVisit map[reflect.Type]bool, t reflect.Type) reflect.Type {
+func (this *QuickTag) getTagTypeInner(hasVisit map[reflect.Type]bool, t reflect.Type) reflect.Type {
 	timeType := reflect.TypeOf(time.Time{})
 
 	cacheType, isExist := this.cache.Load(t)
@@ -104,7 +104,7 @@ func (this *quickTag) getTagTypeInner(hasVisit map[reflect.Type]bool, t reflect.
 	return resultType
 }
 
-func (this *quickTag) getStructType(hasVisit map[reflect.Type]bool, t reflect.Type) reflect.Type {
+func (this *QuickTag) getStructType(hasVisit map[reflect.Type]bool, t reflect.Type) reflect.Type {
 	numField := t.NumField()
 	newStructFields := []reflect.StructField{}
 
@@ -127,7 +127,7 @@ func (this *quickTag) getStructType(hasVisit map[reflect.Type]bool, t reflect.Ty
 	return reflect.StructOf(newStructFields)
 }
 
-func (this *quickTag) getTag(field reflect.StructField) reflect.StructTag {
+func (this *QuickTag) getTag(field reflect.StructField) reflect.StructTag {
 	tag := field.Tag
 	firstName := strings.ToLower(field.Name[0:1]) + field.Name[1:]
 	secondSet := ""
@@ -155,15 +155,18 @@ type emptyInterface struct {
 	pv unsafe.Pointer
 }
 
-func (this *quickTag) pointerOfType(t reflect.Type) unsafe.Pointer {
+func (this *QuickTag) pointerOfType(t reflect.Type) unsafe.Pointer {
 	p := *(*emptyInterface)(unsafe.Pointer(&t))
 	return p.pv
 }
 
-func (this *quickTag) getTagTypeInstance(src interface{}) interface{} {
+func (this *QuickTag) GetTagInstance(src interface{}) interface{} {
+	if src == nil {
+		return nil
+	}
 	srcType := reflect.TypeOf(src)
 	eface := *(*emptyInterface)(unsafe.Pointer(&src))
-	eface.pt = this.pointerOfType(this.getTagType(srcType))
+	eface.pt = this.pointerOfType(this.GetTagType(srcType))
 	dst := *(*interface{})(unsafe.Pointer(&eface))
 	return dst
 }

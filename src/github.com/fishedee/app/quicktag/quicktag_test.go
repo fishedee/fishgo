@@ -1,11 +1,45 @@
-package json
+package quicktag
 
 import (
+	"bytes"
+	"encoding/json"
 	. "github.com/fishedee/assert"
 	"reflect"
 	"testing"
 	"time"
 )
+
+var (
+	jsonQuickTag *QuickTag
+)
+
+func jsonMarshal(data interface{}) ([]byte, error) {
+	quickTagInstance := jsonQuickTag.GetTagInstance(data)
+
+	buffer := bytes.NewBuffer(nil)
+	encoder := json.NewEncoder(buffer)
+	encoder.SetEscapeHTML(false)
+	encoder.SetIndent("", "")
+	err := encoder.Encode(quickTagInstance)
+	if err != nil {
+		return nil, err
+	}
+	return buffer.Bytes(), nil
+}
+
+func jsonUnmarshal(in []byte, data interface{}) error {
+	quickTagInstance := jsonQuickTag.GetTagInstance(data)
+
+	err := json.Unmarshal(in, quickTagInstance)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func init() {
+	jsonQuickTag = NewQuickTag("json")
+}
 
 type User struct {
 	UserId     int
@@ -26,7 +60,15 @@ type Class struct {
 	Level    int `json:"-"`
 }
 
-func TestMarshal(t *testing.T) {
+func TestNil(t *testing.T) {
+	var data interface{}
+
+	data = nil
+
+	AssertEqual(t, jsonQuickTag.GetTagInstance(data), nil)
+}
+
+func TestMarshalAndUnmarshal(t *testing.T) {
 	testCases := []struct {
 		data interface{}
 		str  string
@@ -61,7 +103,7 @@ func TestMarshal(t *testing.T) {
 
 	//序列化
 	for _, singleTestCase := range testCases {
-		str, err := JsonMarshal(singleTestCase.data)
+		str, err := jsonMarshal(singleTestCase.data)
 		AssertEqual(t, err, nil)
 		AssertEqual(t, string(str), singleTestCase.str+"\n")
 	}
@@ -70,7 +112,7 @@ func TestMarshal(t *testing.T) {
 	for _, singleTestCase := range testCases {
 		typ := reflect.TypeOf(singleTestCase.data)
 		temp := reflect.New(typ).Interface()
-		err := JsonUnmarshal([]byte(singleTestCase.str), temp)
+		err := jsonUnmarshal([]byte(singleTestCase.str), temp)
 		AssertEqual(t, err, nil)
 		AssertEqual(t, reflect.ValueOf(temp).Elem().Interface(), singleTestCase.data)
 	}

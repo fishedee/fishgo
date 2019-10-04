@@ -1,7 +1,7 @@
 package render
 
 import (
-	. "github.com/fishedee/encoding"
+	"encoding/json"
 	"net/http"
 )
 
@@ -17,11 +17,14 @@ func (this *JsonFormatter) Format(w http.ResponseWriter, r *http.Request, data i
 	w.Header().Add("Cache-Control", "private, no-store, no-cache, must-revalidate, max-age=0")
 	w.Header().Add("Cache-Control", "post-check=0, pre-check=0")
 	w.Header().Set("Pragma", "no-cache")
-	dataByte, err := EncodeJson(data)
+
+	encoder := json.NewEncoder(w)
+	encoder.SetEscapeHTML(false)
+	encoder.SetIndent("", "")
+	err := encoder.Encode(data)
 	if err != nil {
 		return err
 	}
-	w.Write(dataByte)
 	return nil
 }
 
