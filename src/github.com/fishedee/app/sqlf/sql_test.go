@@ -54,7 +54,7 @@ func initMySqlDatabase() SqlfDB {
 	}
 	db, err := NewSqlfDB(log, nil, SqlfDBConfig{
 		Driver:     "mysql",
-		SourceName: "root:1@tcp(localhost:3306)/test?parseTime=true&loc=Local",
+		SourceName: "root:Yinghao23367847@tcp(localhost:3306)/test?parseTime=true&loc=Local",
 		Debug:      true,
 	})
 	if err != nil {
@@ -403,7 +403,7 @@ type Item struct {
 }
 
 func testZeroTime(t *testing.T, initDatabase func() SqlfDB) {
-	//使用struct的time注入
+	//使用struct的time注入insert
 	db := initDatabase()
 
 	db.MustExec("insert into t_item(?.insertColumn) values ?.insertValue", Item{}, Item{
@@ -412,6 +412,15 @@ func testZeroTime(t *testing.T, initDatabase func() SqlfDB) {
 	})
 
 	var items []Item
+	db.MustQuery(&items, "select * from t_item")
+
+	AssertEqual(t, items[0].OnShelfTime.IsZero(), true)
+
+	db.MustExec("update t_item set ?.updateColumnValue", Item{
+		Name:        "fish",
+		OnShelfTime: time.Time{},
+	})
+
 	db.MustQuery(&items, "select * from t_item")
 
 	AssertEqual(t, items[0].OnShelfTime.IsZero(), true)
