@@ -3,7 +3,7 @@ package log
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/astaxie/beego/logs"
+	"github.com/fishedee/app/log/logs"
 	. "github.com/fishedee/language"
 	"github.com/k0kubun/pp"
 	"path"
