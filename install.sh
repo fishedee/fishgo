@@ -5,3 +5,4 @@ go install github.com/fishedee/web/fishgen
 go install github.com/fishedee/web/fishcmd
 go install github.com/fishedee/app/mock
 go install github.com/fishedee/language/querygen
+go install github.com/akavel/rsrc
