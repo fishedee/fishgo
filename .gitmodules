@@ -244,3 +244,6 @@
 [submodule "src/github.com/influxdata/influxdb1-client"]
 	path = src/github.com/influxdata/influxdb1-client
 	url = git@github.com:influxdata/influxdb1-client.git
+[submodule "src/gopkg.in/Knetic/govaluate.v3"]
+	path = src/gopkg.in/Knetic/govaluate.v3
+	url = git@github.com:Knetic/govaluate.git
