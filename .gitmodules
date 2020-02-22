@@ -247,3 +247,6 @@
 [submodule "src/gopkg.in/Knetic/govaluate.v3"]
 	path = src/gopkg.in/Knetic/govaluate.v3
 	url = git@github.com:Knetic/govaluate.git
+[submodule "src/github.com/mattn/go-isatty"]
+	path = src/github.com/mattn/go-isatty
+	url = git@github.com:mattn/go-isatty.git
