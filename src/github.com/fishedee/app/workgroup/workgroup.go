@@ -2,6 +2,7 @@ package workgroup
 
 import (
 	. "github.com/fishedee/app/log"
+	. "github.com/fishedee/language"
 	"os"
 	"os/signal"
 	"sync"
@@ -57,6 +58,9 @@ func (this *workGroupImplement) Run() error {
 		waitgroup.Add(1)
 		go func(singleTask WorkGroupTask) {
 			defer waitgroup.Done()
+			defer CatchCrash(func(e Exception) {
+				errChan <- e
+			})
 			err := singleTask.Run()
 			if err != nil {
 				errChan <- err
