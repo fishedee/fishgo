@@ -39,7 +39,6 @@ import (
 	"sync"
 
 	"github.com/astaxie/beego/session"
-	"github.com/fishedee/encoding"
 	"github.com/garyburd/redigo/redis"
 )
 
@@ -104,7 +103,7 @@ func (rs *RedisSessionStore) SessionRelease(w http.ResponseWriter) {
 	c := rs.p.Get()
 	defer c.Close()
 
-	b, err := encoding.EncodePhp(rs.values)
+	b, err := EncodePhp(rs.values)
 	if err != nil {
 		panic(err)
 	}
@@ -188,7 +187,7 @@ func (rp *RedisProvider) SessionRead(sid string) (session.Store, error) {
 	if len(kvs) == 0 {
 		kv = make(map[interface{}]interface{})
 	} else {
-		kv, err = encoding.DecodePhp([]byte(kvs))
+		kv, err = DecodePhp([]byte(kvs))
 		if err != nil {
 			return nil, err
 		}
@@ -235,7 +234,7 @@ func (rp *RedisProvider) SessionRegenerate(oldsid, sid string) (session.Store, e
 	if len(kvs) == 0 {
 		kv = make(map[interface{}]interface{})
 	} else {
-		kv, err = encoding.DecodePhp([]byte(kvs))
+		kv, err = DecodePhp([]byte(kvs))
 		if err != nil {
 			return nil, err
 		}

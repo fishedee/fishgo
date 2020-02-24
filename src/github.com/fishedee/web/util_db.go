@@ -72,16 +72,17 @@ type Database interface {
 }
 
 type DatabaseConfig struct {
-	Driver        string
-	Host          string
-	Port          int
-	User          string
-	Passowrd      string
-	Charset       string
-	Collation     string
-	Database      string
-	Debug         bool
-	MaxConnection int
+	Driver            string
+	Host              string
+	Port              int
+	User              string
+	Passowrd          string
+	Charset           string
+	Collation         string
+	Database          string
+	Debug             bool
+	MaxConnection     int
+	MaxIdleConnection int
 }
 
 type databaseImplement struct {
@@ -126,6 +127,10 @@ func NewDatabase(config DatabaseConfig) (Database, error) {
 	if config.MaxConnection > 0 {
 		tempDb.SetMaxOpenConns(config.MaxConnection)
 	}
+	if config.MaxIdleConnection > 0 {
+		tempDb.SetMaxIdleConns(config.MaxIdleConnection)
+		tempDb.DB().SetConnMaxLifetime(time.Hour * 7)
+	}
 	tempDb.Ping()
 	return &databaseImplement{
 		Engine: tempDb,
@@ -143,6 +148,7 @@ func NewDatabaseFromConfig(configName string) (Database, error) {
 	dbcharset := globalBasic.Config.GetString(configName + "charset")
 	dbcollation := globalBasic.Config.GetString(configName + "collation")
 	dbmaxconnection := globalBasic.Config.GetString(configName + "maxconnection")
+	dbmaxidleconnection := globalBasic.Config.GetString(configName + "maxidleconnection")
 	dbdebug := globalBasic.Config.GetString(configName + "debug")
 
 	config := DatabaseConfig{}
@@ -156,6 +162,7 @@ func NewDatabaseFromConfig(configName string) (Database, error) {
 	config.Collation = dbcollation
 	config.Debug, _ = strconv.ParseBool(dbdebug)
 	config.MaxConnection, _ = strconv.Atoi(dbmaxconnection)
+	config.MaxIdleConnection, _ = strconv.Atoi(dbmaxidleconnection)
 
 	return NewDatabase(config)
 }
