@@ -69,6 +69,7 @@ type Database interface {
 	Close() error
 	NewSession() DatabaseSession
 	UpdateBatch(rowsSlicePtr interface{}, indexColName string) (int64, error)
+	GetStats() sql.DBStats
 }
 
 type DatabaseConfig struct {
@@ -169,6 +170,10 @@ func NewDatabaseFromConfig(configName string) (Database, error) {
 
 type zeroable interface {
 	IsZero() bool
+}
+
+func (this *databaseImplement) GetStats() sql.DBStats {
+	return this.Engine.DB().Stats()
 }
 
 func (this *databaseImplement) rValue(bean interface{}) reflect.Value {

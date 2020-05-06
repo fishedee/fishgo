@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"reflect"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -24,10 +25,16 @@ type handlerType struct {
 }
 
 func (this *handlerType) ServeHTTP(response http.ResponseWriter, request *http.Request) {
+	requestId := atomic.AddInt64(&oldestStayRequestId, 1)
+
+	oldestStay.Push(requestId, request)
+
 	beginTime := time.Now().UnixNano()
 	this.handleRequest(request, response)
 	endTime := time.Now().UnixNano()
 	globalBasic.Log.Debug("%s %s : %s", request.Method, request.URL.String(), time.Duration(endTime-beginTime).String())
+
+	oldestStay.Pop(requestId)
 }
 
 func (this *handlerType) firstLowerName(name string) string {
@@ -134,6 +141,10 @@ func (this *handlerType) runRequestBusiness(target ControllerInterface, method r
 
 var handler handlerType
 
+var oldestStay *OldestStayContainer
+
+var oldestStayRequestId int64
+
 func InitRoute(namespace string, target ControllerInterface) {
 	handler.addRoute(namespace, target)
 }
@@ -160,10 +171,37 @@ func Run() error {
 	return runServer(&handler)
 }
 
+type AppRouterSlowItem struct {
+	RequestTime time.Time
+	Duration    time.Duration
+	Request     *http.Request
+}
+
+func AppRouterSlowList() []AppRouterSlowItem {
+	elems := oldestStay.OldestStay()
+	result := []AppRouterSlowItem{}
+	now := time.Now()
+	for _, elem := range elems {
+		requestTime := time.Unix(0, elem.Timestamp)
+		duration := now.Sub(requestTime)
+		result = append(result, AppRouterSlowItem{
+			RequestTime: requestTime,
+			Duration:    duration,
+			Request:     elem.Value.(*http.Request),
+		})
+	}
+	return result
+}
+
 func RunAppRouter(factory *router.RouterFactory) error {
 	factory.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		handler.ServeHTTP(w, r)
 	})
 	httpHandler := factory.Create()
 	return runServer(httpHandler)
+}
+
+func init() {
+	//可以最大取前50个滞留请求
+	oldestStay = NewOldestStayContainer(50)
 }
