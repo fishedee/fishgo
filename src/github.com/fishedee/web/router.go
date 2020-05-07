@@ -177,8 +177,8 @@ type AppRouterSlowItem struct {
 	Request     *http.Request
 }
 
-func AppRouterSlowList() []AppRouterSlowItem {
-	elems := oldestStay.OldestStay()
+func AppRouterSlowList(topSize int) []AppRouterSlowItem {
+	elems := oldestStay.OldestStay(topSize)
 	result := []AppRouterSlowItem{}
 	now := time.Now()
 	for _, elem := range elems {
@@ -202,6 +202,5 @@ func RunAppRouter(factory *router.RouterFactory) error {
 }
 
 func init() {
-	//可以最大取前50个滞留请求
-	oldestStay = NewOldestStayContainer(50)
+	oldestStay = NewOldestStayContainer()
 }

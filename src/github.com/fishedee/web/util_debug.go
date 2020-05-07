@@ -1,14 +1,11 @@
 package web
 
 import (
-	"fmt"
-	"sort"
 	"sync"
 	"time"
 )
 
 type OldestStayContainer struct {
-	topSize int
 	stayMap sync.Map
 }
 
@@ -18,9 +15,8 @@ type OldestStayElem struct {
 	Value     interface{}
 }
 
-func NewOldestStayContainer(size int) *OldestStayContainer {
+func NewOldestStayContainer() *OldestStayContainer {
 	return &OldestStayContainer{
-		topSize: size,
 		stayMap: sync.Map{},
 	}
 }
@@ -37,58 +33,74 @@ func (this *OldestStayContainer) Pop(key int64) {
 	this.stayMap.Delete(key)
 }
 
-func (this *OldestStayContainer) OldestStay() []OldestStayElem {
-	heap := make([]OldestStayElem, this.topSize+1, this.topSize+1)
+func (this *OldestStayContainer) OldestStay(topSize int) []OldestStayElem {
+	heap := make([]OldestStayElem, topSize+1, topSize+1)
 	heapSize := 0
 
 	this.stayMap.Range(func(key interface{}, value interface{}) bool {
 		elem := value.(*OldestStayElem)
-		heapSize = this.pushHeap(heap, heapSize, elem)
-		fmt.Println(heap[1 : heapSize+1])
+		heapSize = this.pushHeap(heap, heapSize, topSize, elem)
 		return true
 	})
 
-	result := heap[1 : heapSize+1]
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].Timestamp < result[j].Timestamp
-	})
-	return result
+	//堆排序
+	var temp OldestStayElem
+	oldHeapSize := heapSize
+	for heapSize > 1 {
+		temp = heap[1]
+		heap[1] = heap[heapSize]
+		heap[heapSize] = temp
+		heapSize--
+
+		this.adjustDownHeap(heap, heapSize)
+	}
+	return heap[1 : oldHeapSize+1]
 }
 
-func (this *OldestStayContainer) pushHeap(heap []OldestStayElem, heapSize int, elem *OldestStayElem) int {
+func (this *OldestStayContainer) adjustUpHeap(heap []OldestStayElem, heapSize int) {
 	var temp OldestStayElem
-	if heapSize < this.topSize {
+	for i := heapSize; i/2 >= 1; i = i / 2 {
+		parent := i / 2
+		if heap[i].Timestamp > heap[parent].Timestamp {
+			temp = heap[i]
+			heap[i] = heap[parent]
+			heap[parent] = temp
+		}
+	}
+}
+
+func (this *OldestStayContainer) adjustDownHeap(heap []OldestStayElem, heapSize int) {
+	var temp OldestStayElem
+	i := 1
+	for {
+		maxest := i
+		if i*2 <= heapSize && heap[i*2].Timestamp > heap[i].Timestamp {
+			maxest = i * 2
+		}
+		if i*2+1 <= heapSize && heap[i*2+1].Timestamp > heap[maxest].Timestamp {
+			maxest = i*2 + 1
+		}
+		if maxest == i {
+			break
+		}
+		temp = heap[i]
+		heap[i] = heap[maxest]
+		heap[maxest] = temp
+		i = maxest
+	}
+}
+
+func (this *OldestStayContainer) pushHeap(heap []OldestStayElem, heapSize int, topSize int, elem *OldestStayElem) int {
+	if heapSize < topSize {
 		//堆未满，向上调整
 		heap[heapSize+1] = *elem
 		heapSize++
-		for i := heapSize; i/2 >= 1; i = i / 2 {
-			parent := i / 2
-			if heap[i].Timestamp > heap[parent].Timestamp {
-				temp = heap[i]
-				heap[i] = heap[parent]
-				heap[parent] = temp
-			}
-		}
+		this.adjustUpHeap(heap, heapSize)
 	} else {
 		//堆已满，向下调整
 		if heap[1].Timestamp > elem.Timestamp {
 			heap[1] = *elem
-			i := 1
-			for {
-				maxest := i
-				if i*2 <= heapSize && heap[i*2].Timestamp > heap[i].Timestamp {
-					maxest = i * 2
-				}
-				if i*2+1 <= heapSize && heap[i*2+1].Timestamp > heap[maxest].Timestamp {
-					maxest = i*2 + 1
-				}
-				if maxest == i {
-					break
-				}
-				temp = heap[i]
-				heap[i] = heap[maxest]
-				heap[maxest] = temp
-			}
+			this.adjustDownHeap(heap, heapSize)
 		}
 	}
 	return heapSize
