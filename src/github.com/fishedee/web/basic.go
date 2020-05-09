@@ -153,3 +153,7 @@ func destroyBasic() {
 		globalBasic.Queue.Close()
 	}
 }
+
+func GetAppBasic() Basic {
+	return globalBasic
+}

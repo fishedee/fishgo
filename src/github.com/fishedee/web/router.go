@@ -22,9 +22,23 @@ type methodInfo struct {
 
 type handlerType struct {
 	routerControllerMethod map[string]methodInfo
+	handlerFunc            http.HandlerFunc
+}
+
+func (this *handlerType) initMiddlewares(middlewars []AppRouterMiddlware) {
+	var result http.HandlerFunc
+	result = this.innerServeHTTP
+	for i := len(middlewares) - 1; i >= 0; i-- {
+		result = middlewares[i](result)
+	}
+	this.handlerFunc = result
 }
 
 func (this *handlerType) ServeHTTP(response http.ResponseWriter, request *http.Request) {
+	this.handlerFunc(response, request)
+}
+
+func (this *handlerType) innerServeHTTP(response http.ResponseWriter, request *http.Request) {
 	requestId := atomic.AddInt64(&oldestStayRequestId, 1)
 
 	oldestStay.Push(requestId, request)
@@ -145,6 +159,10 @@ var oldestStay *OldestStayContainer
 
 var oldestStayRequestId int64
 
+var middlewares []AppRouterMiddlware
+
+type AppRouterMiddlware func(http.HandlerFunc) http.HandlerFunc
+
 func InitRoute(namespace string, target ControllerInterface) {
 	handler.addRoute(namespace, target)
 }
@@ -168,6 +186,7 @@ func runServer(httpHandler http.Handler) error {
 }
 
 func Run() error {
+	handler.initMiddlewares(middlewares)
 	return runServer(&handler)
 }
 
@@ -193,7 +212,12 @@ func AppRouterSlowList(topSize int) []AppRouterSlowItem {
 	return result
 }
 
+func InitRouteMiddleware(middleware AppRouterMiddlware) {
+	middlewares = append(middlewares, middleware)
+}
+
 func RunAppRouter(factory *router.RouterFactory) error {
+	handler.initMiddlewares(middlewares)
 	factory.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		handler.ServeHTTP(w, r)
 	})
