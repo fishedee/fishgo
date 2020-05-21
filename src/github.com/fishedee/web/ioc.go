@@ -7,13 +7,22 @@ import (
 )
 
 var (
-	iocMutex     sync.RWMutex
-	iocType      = map[reflect.Type][]uintptr{}
-	iocBasicType = reflect.TypeOf(&Basic{})
+	iocMutex          sync.RWMutex
+	iocType           = map[reflect.Type][]uintptr{}
+	iocTypeIndexMutex sync.RWMutex
+	iocTypeIndex      = map[reflect.Type][][]int{}
+	iocBasicType      = reflect.TypeOf(&Basic{})
 )
 
 func getIocTypeIndexInner(modelType reflect.Type) [][]int {
-	result := [][]int{}
+	iocTypeIndexMutex.RLock()
+	result, ok := iocTypeIndex[modelType]
+	iocTypeIndexMutex.RUnlock()
+	if ok {
+		return result
+	}
+
+	result = [][]int{}
 	numField := modelType.NumField()
 	for i := 0; i != numField; i++ {
 		singleFiled := modelType.Field(i)
@@ -28,6 +37,10 @@ func getIocTypeIndexInner(modelType reflect.Type) [][]int {
 			}
 		}
 	}
+
+	iocTypeIndexMutex.Lock()
+	iocTypeIndex[modelType] = result
+	iocTypeIndexMutex.Unlock()
 	return result
 }
 
