@@ -88,7 +88,7 @@ func NewSqlfDB(log Log, metric Metric, config SqlfDBConfig) (SqlfDB, error) {
 	db.SetMaxIdleConns(config.MaxIdleConnection)
 	if config.MaxConnectionLifeTime <= 0 {
 		//每个连接默认最长使用7小时
-		config.MaxConnectionLifeTime = 3600 * 7
+		config.MaxConnectionLifeTime = 3600 * 3
 	}
 	db.SetConnMaxLifetime(time.Duration(int64(time.Second) * int64(config.MaxConnectionLifeTime)))
 	err = db.Ping()

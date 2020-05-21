@@ -6,6 +6,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -116,6 +117,7 @@ func (this *jwtToken) getClaims(token *jwt.Token) jwt.MapClaims {
 		return jwt.MapClaims{}
 	}
 
+	//校验过期时间
 	expireUnixNanoStr, ok := claims["_expire"].(string)
 	if !ok {
 		return jwt.MapClaims{}
@@ -128,9 +130,45 @@ func (this *jwtToken) getClaims(token *jwt.Token) jwt.MapClaims {
 	if expireUnixNano < nowTimeNano {
 		return jwt.MapClaims{}
 	}
+
+	//校验IP
+	remoteIP, ok := claims["_remoteIP"].(string)
+	if !ok {
+		return jwt.MapClaims{}
+	}
+	if remoteIP != this.remoteIP() {
+		return jwt.MapClaims{}
+	}
 	return claims
 
 }
+
+func (this *jwtToken) proxyAddr() []string {
+	if ips := this.r.Header.Get("X-Forwarded-For"); ips != "" {
+		return strings.Split(ips, ",")
+	}
+	return []string{}
+}
+
+func (this *jwtToken) remoteAddr() string {
+	ips := this.proxyAddr()
+	if len(ips) > 0 && ips[0] != "" {
+		return ips[0]
+	}
+	return this.r.RemoteAddr
+}
+
+func (this *jwtToken) remoteIP() string {
+	addr := this.remoteAddr()
+	ip := strings.Split(addr, ":")
+	if len(ip) > 0 {
+		if ip[0] != "" {
+			return ip[0]
+		}
+	}
+	return "127.0.0.1"
+}
+
 func (this *jwtToken) Begin() error {
 	//获取cookie中的数值
 	cookieValue := ""
@@ -171,6 +209,7 @@ func (this *jwtToken) Commit() error {
 	expires := time.Now().Add(time.Duration(this.config.CookieLifeTime) * time.Second)
 	token := jwt.New(jwt.SigningMethodHS256)
 	this.claims["_expire"] = strconv.FormatInt(expires.UnixNano(), 10)
+	this.claims["_remoteIP"] = this.remoteIP()
 	token.Claims = this.claims
 	tokenString, err := token.SignedString([]byte(this.config.SecretKey))
 	if err != nil {
