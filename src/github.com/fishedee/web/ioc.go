@@ -10,11 +10,22 @@ var (
 	iocMutex          sync.RWMutex
 	iocType           = map[reflect.Type][]uintptr{}
 	iocTypeIndexMutex sync.RWMutex
-	iocTypeIndex      = map[reflect.Type][][]int{}
+	iocTypeIndex      = map[reflect.Type]*iocTypeIndexInfo{}
 	iocBasicType      = reflect.TypeOf(&Basic{})
 )
 
-func getIocTypeIndexInner(modelType reflect.Type) [][]int {
+type iocTypeIndexInfoField struct {
+	index    int
+	children *iocTypeIndexInfo
+}
+
+type iocTypeIndexInfo struct {
+	maxDepth int
+	count    int
+	fields   []iocTypeIndexInfoField
+}
+
+func getIocTypeIndexInner(modelType reflect.Type) *iocTypeIndexInfo {
 	iocTypeIndexMutex.RLock()
 	result, ok := iocTypeIndex[modelType]
 	iocTypeIndexMutex.RUnlock()
@@ -22,19 +33,30 @@ func getIocTypeIndexInner(modelType reflect.Type) [][]int {
 		return result
 	}
 
-	result = [][]int{}
+	result = &iocTypeIndexInfo{}
 	numField := modelType.NumField()
 	for i := 0; i != numField; i++ {
 		singleFiled := modelType.Field(i)
 		if singleFiled.Type == iocBasicType {
-			result = append(result, []int{i})
+			result.fields = append(result.fields, iocTypeIndexInfoField{
+				index:    i,
+				children: nil,
+			})
+			if result.maxDepth < 1 {
+				result.maxDepth = 1
+			}
+			result.count++
 		} else if singleFiled.Type.Kind() == reflect.Struct &&
 			singleFiled.PkgPath == "" {
-			singleResultArray := getIocTypeIndexInner(singleFiled.Type)
-			for _, singleResult := range singleResultArray {
-				data := append([]int{i}, singleResult...)
-				result = append(result, data)
+			children := getIocTypeIndexInner(singleFiled.Type)
+			result.fields = append(result.fields, iocTypeIndexInfoField{
+				index:    i,
+				children: children,
+			})
+			if result.maxDepth < children.maxDepth+1 {
+				result.maxDepth = children.maxDepth + 1
 			}
+			result.count += children.count
 		}
 	}
 
@@ -42,6 +64,17 @@ func getIocTypeIndexInner(modelType reflect.Type) [][]int {
 	iocTypeIndex[modelType] = result
 	iocTypeIndexMutex.Unlock()
 	return result
+}
+
+func walkIocTypeIndexInfoDfs(info *iocTypeIndexInfo, currentIndex []int, currentPlace int, handler func([]int)) {
+	for _, field := range info.fields {
+		currentIndex[currentPlace] = field.index
+		if field.children == nil {
+			handler(currentIndex[0 : currentPlace+1])
+		} else {
+			walkIocTypeIndexInfoDfs(field.children, currentIndex, currentPlace+1, handler)
+		}
+	}
 }
 
 func getIocTypeIndex(target reflect.Type) []uintptr {
@@ -52,15 +85,18 @@ func getIocTypeIndex(target reflect.Type) []uintptr {
 	if ok {
 		return result
 	}
-	index := getIocTypeIndexInner(target)
+	info := getIocTypeIndexInner(target)
 	newData := reflect.New(target).Elem()
 	newDataBasicAddr := newData.UnsafeAddr()
-	result = nil
-	for _, singleIndex := range index {
+	result = make([]uintptr, info.count, info.count)
+	resultIndex := 0
+	currentIndex := make([]int, info.maxDepth, info.maxDepth)
+	walkIocTypeIndexInfoDfs(info, currentIndex, 0, func(singleIndex []int) {
 		singleNewData := newData.FieldByIndex(singleIndex)
 		singleNewDataAddr := singleNewData.UnsafeAddr()
-		result = append(result, singleNewDataAddr-newDataBasicAddr)
-	}
+		result[resultIndex] = singleNewDataAddr - newDataBasicAddr
+		resultIndex++
+	})
 
 	iocMutex.Lock()
 	iocType[target] = result
