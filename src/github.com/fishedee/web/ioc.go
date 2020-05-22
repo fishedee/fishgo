@@ -49,6 +49,9 @@ func getIocTypeIndexInner(modelType reflect.Type) *iocTypeIndexInfo {
 		} else if singleFiled.Type.Kind() == reflect.Struct &&
 			singleFiled.PkgPath == "" {
 			children := getIocTypeIndexInner(singleFiled.Type)
+			if children.count == 0 {
+				continue
+			}
 			result.fields = append(result.fields, iocTypeIndexInfoField{
 				index:    i,
 				children: children,
