@@ -8,44 +8,50 @@ import (
 	"strings"
 )
 
-var appName string
-var appBinName string
-var goPath string
-var goPathSrc string
-var goPathBin string
-var goPathPkg string
+var goPath []string
+var goPathSrc []string
+var goPathBin []string
+var goPathPkg []string
 var workingDir string
 var appAllDirectory []string
 
 func InitConfig() error {
 	var err error
-	goPath = os.Getenv("GOPATH")
-	goPath = strings.TrimRight(goPath, "/")
-	if IsExistDir(goPath) == false {
-		return fmt.Errorf("$GOPATH [%v] is not exist", goPath)
+	osGoPath := strings.Split(os.Getenv("GOPATH"), ":")
+	for _, singleGoPath := range osGoPath {
+		singleGoPath = strings.TrimRight(singleGoPath, "/")
+		if singleGoPath == "" {
+			continue
+		}
+
+		goPath = append(goPath, singleGoPath)
+		if IsExistDir(singleGoPath) == false {
+			return fmt.Errorf("$GOPATH [%v] is not exist", singleGoPath)
+		}
+
+		src := singleGoPath + "/src"
+		goPathSrc = append(goPathSrc, src)
+		if IsExistDir(src) == false {
+			return fmt.Errorf("$GOPATH/src [%v] is not exist", src)
+		}
+
+		bin := singleGoPath + "/bin"
+		goPathBin = append(goPathBin, bin)
+		if IsExistDir(bin) == false {
+			return fmt.Errorf("$GOPATH/bin [%v] is not exist", bin)
+		}
+
+		goPathPkg = append(goPathPkg,singleGoPath + "/pkg/" + runtime.GOOS + "_" + runtime.GOARCH)
+
 	}
 
-	goPathSrc = goPath + "/src"
-	if IsExistDir(goPathSrc) == false {
-		return fmt.Errorf("$GOPATH/src [%v] is not exist", goPathSrc)
-	}
-
-	goPathBin = goPath + "/bin"
-	if IsExistDir(goPathBin) == false {
-		return fmt.Errorf("$GOPATH/bin [%v] is not exist", goPathBin)
-	}
-
-	goPathPkg = goPath + "/pkg/" + runtime.GOOS + "_" + runtime.GOARCH
 
 	workingDir, err = os.Getwd()
 	if err != nil {
 		return err
 	}
 	workingDir = strings.TrimRight(workingDir, "/")
-	appName = ""
 
-	workingDirArray := strings.Split(workingDir, "/")
-	appBinName = workingDirArray[len(workingDirArray)-1]
 	appAllDirectory, err = getAllAppDirectory(workingDir)
 	if err != nil {
 		return fmt.Errorf("GetAllAppDirectory Fail [%v]", err)
@@ -81,34 +87,11 @@ func getAllAppDirectory(dir string) ([]string, error) {
 	return result, nil
 }
 
-func GetAppName() string {
-	return appName
-}
-
 func GetAppAllDirectory() []string {
 	return appAllDirectory
 }
 
-func GetAppInstallPath() string {
-	return goPathBin + "/" + appBinName
-}
-
-func GetAppCurrentPath() string {
-	return workingDir + "/" + appBinName
-}
-
-func GetWorkginDir() string {
-	return workingDir
-}
-
-func GetGoPathSrc() string {
+func GetGoPathSrc() []string {
 	return goPathSrc
 }
 
-func GetGoPathPkg() string {
-	return goPathPkg
-}
-
-func GetGoPathBin() string {
-	return goPathBin
-}

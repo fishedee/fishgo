@@ -95,6 +95,9 @@ func generateSingleFunction(fun FunctionInfo) (string, error) {
 var dirDeclTypeCache map[string]map[string]bool
 
 func getDirDeclTypeInner(dir string) (map[string]bool, error) {
+	if IsExistDir(dir) == false {
+		return nil,nil
+	}
 	fileInfo, err := ioutil.ReadDir(dir)
 	if err != nil {
 		return nil, err
@@ -143,31 +146,39 @@ func generateSingleFileImport(data []ParserInfo, source string) (string, error) 
 		name: ".",
 		path: "github.com/fishedee/language",
 	}
-	for _, singleParserInfo := range data {
-		for _, singleImport := range singleParserInfo.imports {
-			if singleImport.name == "_" {
-				continue
-			}
-			if singleImport.name == "." {
-				dirImportTypes, err := getDirDeclType(os.Getenv("GOPATH") + "/src/" + singleImport.path)
-				if err != nil {
-					return "", err
+	osGoPath := strings.Split(os.Getenv("GOPATH"), ":")
+	for _, singleGoPath := range osGoPath {
+		singleGoPath = strings.TrimRight(singleGoPath, "/")
+		if singleGoPath == "" {
+			continue
+		}
+		for _, singleParserInfo := range data {
+			for _, singleImport := range singleParserInfo.imports {
+				if singleImport.name == "_" {
+					continue
 				}
-				for singleImportType, _ := range dirImportTypes {
-					if singleImportType[0] < 'A' || singleImportType[0] > 'Z' {
-						continue
+				if singleImport.name == "." {
+					dirImportTypes, err := getDirDeclType(singleGoPath + "/src/" + singleImport.path)
+					if err != nil {
+						return "", err
 					}
-					nameImport[singleImportType] = singleImport
-				}
-			} else {
-				if singleImport.name != "" {
-					nameImport[singleImport.name] = singleImport
+					for singleImportType, _ := range dirImportTypes {
+						if singleImportType[0] < 'A' || singleImportType[0] > 'Z' {
+							continue
+						}
+						nameImport[singleImportType] = singleImport
+					}
 				} else {
-					nameImport[path.Base(singleImport.path)] = singleImport
+					if singleImport.name != "" {
+						nameImport[singleImport.name] = singleImport
+					} else {
+						nameImport[path.Base(singleImport.path)] = singleImport
+					}
 				}
 			}
 		}
 	}
+
 	dirImportTypes, err := getDirDeclType(data[0].dir)
 	if err != nil {
 		return "", err
@@ -341,6 +352,11 @@ func Generator(data map[string][]os.FileInfo) error {
 		}
 	}
 	return nil
+}
+
+func IsExistDir(dirName string) bool {
+	_, err := ioutil.ReadDir(dirName)
+	return err == nil
 }
 
 func init() {
