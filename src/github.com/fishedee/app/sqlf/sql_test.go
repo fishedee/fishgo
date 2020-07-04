@@ -41,6 +41,14 @@ func initSqliteDatabase() SqlfDB {
 		createTime timestamp not null default 0,
 		modifyTime timestamp not null default 0
 	);
+
+	create table t_article(
+		articleId integer primary key autoincrement,
+		data text not null,
+		remark char(32) not null,
+		createTime timestamp not null default 0,
+		modifyTime timestamp not null default 0
+	);
 	`)
 	return db
 }
@@ -54,7 +62,7 @@ func initMySqlDatabase() SqlfDB {
 	}
 	db, err := NewSqlfDB(log, nil, SqlfDBConfig{
 		Driver:     "mysql",
-		SourceName: "root:Yinghao23367847@tcp(localhost:3306)/test?parseTime=true&loc=Local",
+		SourceName: "root:1@tcp(localhost:3306)/test?parseTime=true&loc=Local",
 		Debug:      true,
 	})
 	if err != nil {
@@ -65,6 +73,9 @@ func initMySqlDatabase() SqlfDB {
 	`)
 	db.MustExec(`
 	drop table if exists t_item;
+	`)
+	db.MustExec(`
+	drop table if exists t_article;
 	`)
 	db.MustExec(`
 	create table t_user(
@@ -87,6 +98,16 @@ func initMySqlDatabase() SqlfDB {
 		modifyTime datetime not null default '1970-01-01 08:00:00',
 		primary key(itemId)
 	)engine=innodb default charset=utf8mb4;`)
+
+	db.MustExec(`
+	create table t_article(
+		articleId integer not null auto_increment,
+		data mediumtext not null,
+		remark char(32) not null,
+		createTime datetime not null default '1970-01-01 08:00:00',
+		modifyTime datetime not null default '1970-01-01 08:00:00',
+		primary key(articleId)
+	)engine=innodb default charset=utf8mb4;`)
 	return db
 }
 
@@ -105,6 +126,14 @@ type User struct {
 	Age        int
 	Money      Decimal
 	LoginTime  time.Time
+	CreateTime time.Time `sqlf:"created"`
+	ModifyTime time.Time `sqlf:"updated"`
+}
+
+type Article struct {
+	ArticleId  int `sqlf:"autoincr"`
+	Data       []byte
+	Remark     string
 	CreateTime time.Time `sqlf:"created"`
 	ModifyTime time.Time `sqlf:"updated"`
 }
@@ -195,6 +224,30 @@ func testStructType(t *testing.T, db SqlfCommon) {
 		User{UserId: 2, Name: "cat2", Age: 789, Money: "91.23", LoginTime: time.Unix(3, 0), CreateTime: time.Unix(0, 0), ModifyTime: time.Unix(0, 0)},
 		User{UserId: 3, Name: "bird", Age: 56, Money: "33", LoginTime: time.Unix(4, 0), CreateTime: time.Unix(0, 0), ModifyTime: time.Unix(0, 0)},
 	})
+
+	//初始化，查询为空
+	articles := []Article{}
+	db.MustQuery(&articles, "select * from t_article", Article{})
+
+	AssertEqual(t, articles, []Article{})
+
+	//插入数据
+	articleAdds := []Article{
+		Article{Data: []byte(`{"name":"fish","age":123}`), Remark: "m1"},
+		Article{Data: []byte(`{"name":"cat","age":789}`), Remark: "m2"},
+	}
+
+	db.MustExec("insert into t_article(?.insertColumn) values ?.insertValue", articleAdds, articleAdds)
+
+	db.MustExec("update t_article set createTime = ?,modifyTime = ?", time.Unix(0, 0), time.Unix(0, 0))
+
+	db.MustQuery(&articles, "select ?.column from t_article", articles)
+
+	AssertEqual(t, articles, []Article{
+		Article{ArticleId: 1, Data: []byte(`{"name":"fish","age":123}`), Remark: "m1", CreateTime: time.Unix(0, 0), ModifyTime: time.Unix(0, 0)},
+		Article{ArticleId: 2, Data: []byte(`{"name":"cat","age":789}`), Remark: "m2", CreateTime: time.Unix(0, 0), ModifyTime: time.Unix(0, 0)},
+	})
+
 }
 
 func testStructTypeAll(t *testing.T, initDatabase func() SqlfDB) {
@@ -266,6 +319,27 @@ func testBuildInType(t *testing.T, db SqlfCommon) {
 	var loginTimes []time.Time
 	db.MustQuery(&loginTimes, "select loginTime from t_user")
 	AssertEqual(t, loginTimes, []time.Time{time.Unix(1, 0), time.Unix(2, 0)})
+
+	//测试[]byte类型
+	db.MustExec("insert into t_article(data,remark) values(?,?)", []byte(`{"name":"fish","age":123}`), "m1")
+	db.MustExec("insert into t_article(data,remark) values(?,?)", []byte(`{"name":"cat","age":456}`), "m2")
+
+	articles := []Article{}
+
+	db.MustQuery(&articles, "select * from t_article where data in (?) and remark in (?)",
+		[][]byte{[]byte(`{"name":"fish","age":123}`), []byte(`{"name":"cat","age":456}`)},
+		[]string{"123", "456"},
+	)
+	AssertEqual(t, articles, []Article{})
+
+	var data []byte
+	db.MustQuery(&data, "select data from t_article limit 0,1")
+	AssertEqual(t, data, []byte(`{"name":"fish","age":123}`))
+
+	var datas [][]byte
+	db.MustQuery(&datas, "select data from t_article")
+	AssertEqual(t, datas, [][]byte{[]byte(`{"name":"fish","age":123}`), []byte(`{"name":"cat","age":456}`)})
+
 }
 
 func testBuildInTypeAll(t *testing.T, initDatabase func() SqlfDB) {

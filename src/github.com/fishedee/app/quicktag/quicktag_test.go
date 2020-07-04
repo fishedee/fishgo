@@ -3,6 +3,7 @@ package quicktag
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	. "github.com/fishedee/assert"
 	"reflect"
 	"testing"
@@ -60,6 +61,11 @@ type Class struct {
 	Level    int `json:"-"`
 }
 
+type Article struct {
+	ArticleId int
+	Data      json.RawMessage
+}
+
 func TestNil(t *testing.T) {
 	var data interface{}
 
@@ -99,6 +105,13 @@ func TestMarshalAndUnmarshal(t *testing.T) {
 			},
 			`{"classId":5,"name":"class1","students":[{"userId":6,"name":"dog","createTime":"1970-01-01 08:00:03"},{"userId":7,"name":"apple","createTime":"1970-01-01 08:00:04"}],"sss":78}`,
 		},
+		{
+			Article{
+				ArticleId: 1,
+				Data:      []byte(`{"userId":3,"name":"fish"}`),
+			},
+			`{"articleId":1,"data":{"userId":3,"name":"fish"}}`,
+		},
 	}
 
 	//序列化
@@ -113,6 +126,7 @@ func TestMarshalAndUnmarshal(t *testing.T) {
 		typ := reflect.TypeOf(singleTestCase.data)
 		temp := reflect.New(typ).Interface()
 		err := jsonUnmarshal([]byte(singleTestCase.str), temp)
+		fmt.Println(err)
 		AssertEqual(t, err, nil)
 		AssertEqual(t, reflect.ValueOf(temp).Elem().Interface(), singleTestCase.data)
 	}

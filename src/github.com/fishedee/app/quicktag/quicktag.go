@@ -1,6 +1,7 @@
 package quicktag
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"strings"
@@ -64,6 +65,7 @@ func (this *QuickTag) GetTagType(t reflect.Type) reflect.Type {
 
 func (this *QuickTag) getTagTypeInner(hasVisit map[reflect.Type]bool, t reflect.Type) reflect.Type {
 	timeType := reflect.TypeOf(time.Time{})
+	rawMessageType := reflect.TypeOf(json.RawMessage{})
 
 	cacheType, isExist := this.cache.Load(t)
 	if isExist {
@@ -74,7 +76,8 @@ func (this *QuickTag) getTagTypeInner(hasVisit map[reflect.Type]bool, t reflect.
 	var resultType reflect.Type
 
 	kind := t.Kind()
-	if this.basicType[kind] == true {
+	if this.basicType[kind] == true ||
+		t == rawMessageType {
 		resultType = t
 	} else if kind == reflect.Ptr {
 		tempType := this.getTagTypeInner(hasVisit, t.Elem())
