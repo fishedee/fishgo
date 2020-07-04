@@ -1,6 +1,7 @@
 package sqlf
 
 import (
+	"encoding/json"
 	. "github.com/fishedee/app/log"
 	. "github.com/fishedee/assert"
 	. "github.com/fishedee/language"
@@ -45,7 +46,7 @@ func initSqliteDatabase() SqlfDB {
 	create table t_article(
 		articleId integer primary key autoincrement,
 		data text not null,
-		remark char(32) not null,
+		remark text not null,
 		createTime timestamp not null default 0,
 		modifyTime timestamp not null default 0
 	);
@@ -103,7 +104,7 @@ func initMySqlDatabase() SqlfDB {
 	create table t_article(
 		articleId integer not null auto_increment,
 		data mediumtext not null,
-		remark char(32) not null,
+		remark mediumtext not null,
 		createTime datetime not null default '1970-01-01 08:00:00',
 		modifyTime datetime not null default '1970-01-01 08:00:00',
 		primary key(articleId)
@@ -133,7 +134,7 @@ type User struct {
 type Article struct {
 	ArticleId  int `sqlf:"autoincr"`
 	Data       []byte
-	Remark     string
+	Remark     json.RawMessage
 	CreateTime time.Time `sqlf:"created"`
 	ModifyTime time.Time `sqlf:"updated"`
 }
@@ -233,8 +234,8 @@ func testStructType(t *testing.T, db SqlfCommon) {
 
 	//插入数据
 	articleAdds := []Article{
-		Article{Data: []byte(`{"name":"fish","age":123}`), Remark: "m1"},
-		Article{Data: []byte(`{"name":"cat","age":789}`), Remark: "m2"},
+		Article{Data: []byte(`{"name":"fish","age":123}`), Remark: json.RawMessage(`{"name2":"fish","age2":123}`)},
+		Article{Data: []byte(`{"name":"cat","age":789}`), Remark: json.RawMessage(`{"name2":"cat","age2":789}`)},
 	}
 
 	db.MustExec("insert into t_article(?.insertColumn) values ?.insertValue", articleAdds, articleAdds)
@@ -244,8 +245,8 @@ func testStructType(t *testing.T, db SqlfCommon) {
 	db.MustQuery(&articles, "select ?.column from t_article", articles)
 
 	AssertEqual(t, articles, []Article{
-		Article{ArticleId: 1, Data: []byte(`{"name":"fish","age":123}`), Remark: "m1", CreateTime: time.Unix(0, 0), ModifyTime: time.Unix(0, 0)},
-		Article{ArticleId: 2, Data: []byte(`{"name":"cat","age":789}`), Remark: "m2", CreateTime: time.Unix(0, 0), ModifyTime: time.Unix(0, 0)},
+		Article{ArticleId: 1, Data: []byte(`{"name":"fish","age":123}`), Remark: json.RawMessage(`{"name2":"fish","age2":123}`), CreateTime: time.Unix(0, 0), ModifyTime: time.Unix(0, 0)},
+		Article{ArticleId: 2, Data: []byte(`{"name":"cat","age":789}`), Remark: json.RawMessage(`{"name2":"cat","age2":789}`), CreateTime: time.Unix(0, 0), ModifyTime: time.Unix(0, 0)},
 	})
 
 }
@@ -321,14 +322,14 @@ func testBuildInType(t *testing.T, db SqlfCommon) {
 	AssertEqual(t, loginTimes, []time.Time{time.Unix(1, 0), time.Unix(2, 0)})
 
 	//测试[]byte类型
-	db.MustExec("insert into t_article(data,remark) values(?,?)", []byte(`{"name":"fish","age":123}`), "m1")
-	db.MustExec("insert into t_article(data,remark) values(?,?)", []byte(`{"name":"cat","age":456}`), "m2")
+	db.MustExec("insert into t_article(data,remark) values(?,?)", []byte(`{"name":"fish","age":123}`), json.RawMessage(`{"name2":"fish","age2":123}`))
+	db.MustExec("insert into t_article(data,remark) values(?,?)", []byte(`{"name":"cat","age":456}`), json.RawMessage(`{"name2":"cat","age2":456}`))
 
 	articles := []Article{}
 
 	db.MustQuery(&articles, "select * from t_article where data in (?) and remark in (?)",
 		[][]byte{[]byte(`{"name":"fish","age":123}`), []byte(`{"name":"cat","age":456}`)},
-		[]string{"123", "456"},
+		[]json.RawMessage{json.RawMessage("123"), json.RawMessage("456")},
 	)
 	AssertEqual(t, articles, []Article{})
 
@@ -339,6 +340,14 @@ func testBuildInType(t *testing.T, db SqlfCommon) {
 	var datas [][]byte
 	db.MustQuery(&datas, "select data from t_article")
 	AssertEqual(t, datas, [][]byte{[]byte(`{"name":"fish","age":123}`), []byte(`{"name":"cat","age":456}`)})
+
+	var remark json.RawMessage
+	db.MustQuery(&remark, "select remark from t_article limit 0,1")
+	AssertEqual(t, remark, json.RawMessage(`{"name2":"fish","age2":123}`))
+
+	var remarks []json.RawMessage
+	db.MustQuery(&remarks, "select remark from t_article")
+	AssertEqual(t, remarks, []json.RawMessage{json.RawMessage(`{"name2":"fish","age2":123}`), json.RawMessage(`{"name2":"cat","age2":456}`)})
 
 }
 
