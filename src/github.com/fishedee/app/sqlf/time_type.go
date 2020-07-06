@@ -8,8 +8,6 @@ import (
 	"time"
 )
 
-var SQLF_ZERO_TIME time.Time
-
 //在sqlite3中，并没有时间类型，它其实是个字符串类型。
 //在sqlite3中的驱动中，时间会被Format为"2006-01-02 15:04:05.999999999-07:00"，也就是说，普通的时间格式为2020-07-01 00:00:00+08:00
 func initTimeSqlTypeOperation() {
@@ -131,5 +129,4 @@ func init() {
 	initTimePtrSqlTypeOperation()
 	initTimeSliceSqlTypeOperation()
 	initTimeSlicePtrSqlTypeOperation()
-	SQLF_ZERO_TIME = time.Date(2000, 1, 1, 0, 0, 0, 0, time.Local)
 }
