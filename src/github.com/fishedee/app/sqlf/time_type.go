@@ -8,24 +8,17 @@ import (
 	"time"
 )
 
+var SQLF_ZERO_TIME time.Time
+
 //在sqlite3中，并没有时间类型，它其实是个字符串类型。
 //在sqlite3中的驱动中，时间会被Format为"2006-01-02 15:04:05.999999999-07:00"，也就是说，普通的时间格式为2020-07-01 00:00:00+08:00
 func initTimeSqlTypeOperation() {
-	zeroTime := time.Time{}
-	zeroTimeString := zeroTime.Local().Format("2006-01-02T15:04:05")
-
 	a := time.Time{}
 	stringType := reflect.TypeOf(a)
 	sqlTypeOperation := sqlTypeOperation{
 		toArgs: func(driver string, isInsert bool, v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
-			data := v.(time.Time)
 			builder.WriteByte('?')
-			if data.IsZero() && driver == "mysql" {
-				in = append(in, zeroTimeString)
-			} else {
-				in = append(in, v)
-			}
-
+			in = append(in, v)
 			return in, nil
 		},
 		fromResult: func(driver string, v interface{}, rows *gosql.Rows) error {
@@ -42,20 +35,13 @@ func initTimeSqlTypeOperation() {
 }
 
 func initTimePtrSqlTypeOperation() {
-	zeroTime := time.Time{}
-	zeroTimeString := zeroTime.Local().Format("2006-01-02T15:04:05")
-
 	var a *time.Time
 	timePtrType := reflect.TypeOf(a)
 	sqlTypeOperation := sqlTypeOperation{
 		toArgs: func(driver string, isInsert bool, v interface{}, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
 			data := v.(*time.Time)
 			builder.WriteByte('?')
-			if data.IsZero() && driver == "mysql" {
-				in = append(in, zeroTimeString)
-			} else {
-				in = append(in, *data)
-			}
+			in = append(in, *data)
 			return in, nil
 		},
 		fromResult: func(driver string, v interface{}, rows *gosql.Rows) error {
@@ -80,9 +66,6 @@ func initTimePtrSqlTypeOperation() {
 }
 
 func initTimeSliceSqlTypeOperation() {
-	zeroTime := time.Time{}
-	zeroTimeString := zeroTime.Local().Format("2006-01-02T15:04:05")
-
 	a := []time.Time{}
 	stringSliceType := reflect.TypeOf(a)
 	sqlTypeOperation := sqlTypeOperation{
@@ -90,11 +73,7 @@ func initTimeSliceSqlTypeOperation() {
 			data := v.([]time.Time)
 			builder.WriteString(getSqlComma(len(data)))
 			for _, single := range data {
-				if single.IsZero() && driver == "mysql" {
-					in = append(in, zeroTimeString)
-				} else {
-					in = append(in, single)
-				}
+				in = append(in, single)
 			}
 			return in, nil
 		},
@@ -112,9 +91,6 @@ func initTimeSliceSqlTypeOperation() {
 }
 
 func initTimeSlicePtrSqlTypeOperation() {
-	zeroTime := time.Time{}
-	zeroTimeString := zeroTime.Local().Format("2006-01-02T15:04:05")
-
 	var a *[]time.Time
 	stringSlicePtrType := reflect.TypeOf(a)
 	sqlTypeOperation := sqlTypeOperation{
@@ -122,11 +98,7 @@ func initTimeSlicePtrSqlTypeOperation() {
 			data := *(v.(*[]time.Time))
 			builder.WriteString(getSqlComma(len(data)))
 			for _, single := range data {
-				if single.IsZero() && driver == "mysql" {
-					in = append(in, zeroTimeString)
-				} else {
-					in = append(in, single)
-				}
+				in = append(in, single)
 			}
 			return in, nil
 		},
@@ -159,4 +131,5 @@ func init() {
 	initTimePtrSqlTypeOperation()
 	initTimeSliceSqlTypeOperation()
 	initTimeSlicePtrSqlTypeOperation()
+	SQLF_ZERO_TIME = time.Date(2000, 1, 1, 0, 0, 0, 0, time.Local)
 }

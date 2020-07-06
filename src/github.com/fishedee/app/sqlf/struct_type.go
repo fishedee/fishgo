@@ -111,8 +111,6 @@ func initSqlToArgs(t reflect.Type) sqlToArgsType {
 
 	structToArgs := func(t reflect.Type) func(driver string, isInsert bool, v reflect.Value, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
 		fields := getStructPublicField(t)
-		zeroTime := time.Time{}
-		zeroTimeString := zeroTime.Local().Format("2006-01-02T15:04:05")
 		return func(driver string, isInsert bool, v reflect.Value, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
 			if isInsert == false {
 				return nil, errors.New("struct can not to args in none insert ")
@@ -125,14 +123,6 @@ func initSqlToArgs(t reflect.Type) sqlToArgsType {
 				}
 				if field.isCreated || field.isUpdated {
 					in = append(in, time.Now())
-				} else if field.isTimeType {
-					timeInterface := v.FieldByIndex(field.index).Interface()
-					t := timeInterface.(time.Time)
-					if t.IsZero() && driver == "mysql" {
-						in = append(in, zeroTimeString)
-					} else {
-						in = append(in, timeInterface)
-					}
 				} else {
 					in = append(in, v.FieldByIndex(field.index).Interface())
 				}
@@ -328,8 +318,6 @@ func initSqlSetValue(t reflect.Type) sqlSetValueType {
 	}
 	structSetValue := func(t reflect.Type) func(driver string, v reflect.Value, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
 		fields := getStructPublicField(t)
-		zeroTime := time.Time{}
-		zeroTimeString := zeroTime.Local().Format("2006-01-02T15:04:05")
 
 		return func(driver string, v reflect.Value, in []interface{}, builder *strings.Builder) ([]interface{}, error) {
 			hasData := false
@@ -349,14 +337,6 @@ func initSqlSetValue(t reflect.Type) sqlSetValueType {
 				if field.isUpdated == true {
 					//updated字段设置为当前时间
 					in = append(in, time.Now())
-				} else if field.isTimeType {
-					timeInterface := v.FieldByIndex(field.index).Interface()
-					t := timeInterface.(time.Time)
-					if t.IsZero() && driver == "mysql" {
-						in = append(in, zeroTimeString)
-					} else {
-						in = append(in, timeInterface)
-					}
 				} else {
 					in = append(in, v.FieldByIndex(field.index).Interface())
 				}

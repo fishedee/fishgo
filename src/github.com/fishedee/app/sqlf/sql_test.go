@@ -18,7 +18,7 @@ func initSqliteDatabase() SqlfDB {
 	}
 	db, err := NewSqlfDB(log, nil, SqlfDBConfig{
 		Driver:     "sqlite3",
-		SourceName: ":memory:",
+		SourceName: ":memory:?_loc=auto",
 		Debug:      true,
 	})
 	if err != nil {
@@ -63,7 +63,7 @@ func initMySqlDatabase() SqlfDB {
 	}
 	db, err := NewSqlfDB(log, nil, SqlfDBConfig{
 		Driver:     "mysql",
-		SourceName: "root:1@tcp(localhost:3306)/test?parseTime=true&loc=Local",
+		SourceName: "root:Yinghao23367847@tcp(localhost:3306)/test?parseTime=true&loc=Local",
 		Debug:      true,
 	})
 	if err != nil {
@@ -491,33 +491,38 @@ func testZeroTime(t *testing.T, initDatabase func() SqlfDB) {
 
 	db.MustExec("insert into t_item(?.insertColumn) values ?.insertValue", Item{}, Item{
 		Name:        "fish",
-		OnShelfTime: time.Time{},
+		OnShelfTime: SQLF_ZERO_TIME,
+		CreateTime:  SQLF_ZERO_TIME,
+		ModifyTime:  SQLF_ZERO_TIME,
 	})
 
 	var items []Item
 	db.MustQuery(&items, "select * from t_item")
 
-	AssertEqual(t, items[0].OnShelfTime.IsZero(), true)
+	t.Logf("%v", items[0].OnShelfTime)
+	AssertEqual(t, items[0].OnShelfTime == SQLF_ZERO_TIME, true)
 
 	db.MustExec("update t_item set ?.updateColumnValue", Item{
 		Name:        "fish",
-		OnShelfTime: time.Time{},
+		OnShelfTime: SQLF_ZERO_TIME,
+		CreateTime:  SQLF_ZERO_TIME,
+		ModifyTime:  SQLF_ZERO_TIME,
 	})
 
 	db.MustQuery(&items, "select * from t_item")
 
-	AssertEqual(t, items[0].OnShelfTime.IsZero(), true)
+	AssertEqual(t, items[0].OnShelfTime == SQLF_ZERO_TIME, true)
 
 	//使用time注入
 	db2 := initDatabase()
 
-	db2.MustExec("insert into t_item(name,onShelfTime,createTime) values (?,?,?)", "cat", time.Time{}, &time.Time{})
+	db2.MustExec("insert into t_item(name,onShelfTime,createTime) values (?,?,?)", "cat", SQLF_ZERO_TIME, &SQLF_ZERO_TIME)
 
 	var items2 []Item
 	db2.MustQuery(&items2, "select * from t_item")
 
-	AssertEqual(t, items2[0].OnShelfTime.IsZero(), true)
-	AssertEqual(t, items2[0].CreateTime.IsZero(), true)
+	AssertEqual(t, items2[0].OnShelfTime == SQLF_ZERO_TIME, true)
+	AssertEqual(t, items2[0].CreateTime == SQLF_ZERO_TIME, true)
 }
 
 func testAll(t *testing.T, initDatabase func() SqlfDB) {
