@@ -59,7 +59,7 @@ func (this *workGroupImplement) Run() error {
 		go func(singleTask WorkGroupTask) {
 			defer waitgroup.Done()
 			defer CatchCrash(func(e Exception) {
-				errChan <- e
+				errChan <- &e
 			})
 			err := singleTask.Run()
 			if err != nil {

@@ -63,7 +63,7 @@ func (this *Exception) GetStackTraceLine(i int) string {
 	return this.stack[i]
 }
 
-func (this Exception) Error() string {
+func (this *Exception) Error() string {
 	return fmt.Sprintf("[Code:%d] [Message:%s] [Stack:%s]", this.GetCode(), this.GetMessage(), this.GetStackTrace())
 }
 
