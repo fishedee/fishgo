@@ -75,7 +75,7 @@
 	url = git@github.com:coocood/freecache.git
 [submodule "src/github.com/mholt/caddy"]
 	path = src/github.com/mholt/caddy
-	url = git@github.com:mholt/caddy.git
+	url = git@github.com:caddyserver/caddy.git
 [submodule "src/github.com/flynn/go-shlex"]
 	path = src/github.com/flynn/go-shlex
 	url = git@github.com:flynn-archive/go-shlex.git
@@ -87,10 +87,10 @@
 	url = git@github.com:go-errors/errors.git
 [submodule "src/github.com/go-xorm/xorm"]
 	path = src/github.com/go-xorm/xorm
-	url = git@github.com:go-xorm/xorm.git
+	url = https://gitea.com/xorm/xorm.git
 [submodule "src/github.com/go-xorm/core"]
 	path = src/github.com/go-xorm/core
-	url = git@github.com:go-xorm/core.git
+	url = https://gitea.com/xorm/core.git
 [submodule "src/github.com/gwoo/goforever"]
 	path = src/github.com/gwoo/goforever
 	url = git@github.com:gwoo/goforever.git
