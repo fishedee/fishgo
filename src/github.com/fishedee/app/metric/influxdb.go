@@ -11,6 +11,7 @@ import (
 	"log"
 	"strings"
 	"time"
+	"math"
 )
 
 type reporter struct {
@@ -98,6 +99,14 @@ func (r *reporter) getTags(name string) (string, map[string]string) {
 	return measurement, result
 }
 
+func (r *reporter) getRate( data float64) float64{
+	if math.IsInf(data,0) || math.IsNaN(data){
+		return 0
+	}else{
+		return data
+	}
+}
+
 func (r *reporter) send() error {
 	bp, err := client.NewBatchPoints(client.BatchPointsConfig{
 		Database: r.database,
@@ -171,7 +180,7 @@ func (r *reporter) send() error {
 				"m1":       ms.Rate1(),
 				"m5":       ms.Rate5(),
 				"m15":      ms.Rate15(),
-				"meanrate": ms.RateMean(),
+				"meanrate": r.getRate(ms.RateMean()),
 			}
 			pt, err := client.NewPoint(measurement, tags, fields, now)
 			if err != nil {
@@ -197,7 +206,7 @@ func (r *reporter) send() error {
 				"m1":       ms.Rate1(),
 				"m5":       ms.Rate5(),
 				"m15":      ms.Rate15(),
-				"meanrate": ms.RateMean(),
+				"meanrate": r.getRate(ms.RateMean()),
 			}
 			pt, err := client.NewPoint(measurement, tags, fields, now)
 			if err != nil {
