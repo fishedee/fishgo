@@ -77,6 +77,10 @@ func getFieldInfo(field reflect.StructField) sqlStructPublicField {
 	if setNumber >= 2 {
 		panic(fmt.Sprintf("only one tag specify %v.%v", field.PkgPath, field.Name))
 	}
+	nameTag, isExist := field.Tag.Lookup("sqlname")
+	if( isExist ){
+		fieldName = nameTag
+	}
 	return sqlStructPublicField{
 		name:       fieldName,
 		index:      field.Index,
